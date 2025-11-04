@@ -26,6 +26,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
+import { useTheme, useMediaQuery } from "@mui/material";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -53,6 +54,10 @@ function DashboardNavbar({ absolute, light, isMini }) {
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, darkMode } = controller;
   const route = useLocation().pathname.split("/").slice(1);
+  
+  // Check if screen is mobile (below 1200px)
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
 
   useEffect(() => {
     // Setting the navbar type
@@ -94,6 +99,11 @@ function DashboardNavbar({ absolute, light, isMini }) {
       return colorValue;
     },
   });
+
+  // Only render navbar on mobile devices
+  if (!isMobile) {
+    return null;
+  }
 
   return (
     <AppBar

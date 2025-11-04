@@ -3,6 +3,8 @@
  * Fetches listing data from Hostaway API
  */
 
+console.log('🔥 Room.js file is being loaded!');
+
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
@@ -510,17 +512,15 @@ async function fetchActualCheckIns() {
 /**
  * Fetch all listings from Hostaway
  */
-async function fetchHostawayListings(listingId = null) {
+async function fetchHostawayListings(listingId = null, includeActualCheckIns = true) {
   try {
     // Fetch cleaning status from Teable first
-    console.log('🧹 Fetching cleaning status from Teable...');
     const cleaningStatusMap = await fetchCleaningStatusFromTeable();
-    console.log('🧹 Received cleaning status map:', cleaningStatusMap);
     
-    // Fetch actual check-ins from Hostaway
-    console.log('🏨 Fetching actual check-ins from Hostaway...');
-    const checkedInListingIds = await fetchActualCheckIns();
-    console.log('🏨 Received checked-in listing IDs:', Array.from(checkedInListingIds));
+    // Fetch actual check-ins from Hostaway (optional)
+    console.log(`🔄 fetchHostawayListings - includeActualCheckIns: ${includeActualCheckIns}`);
+    const checkedInListingIds = includeActualCheckIns ? await fetchActualCheckIns() : new Set();
+    console.log(`✅ fetchHostawayListings - checkedInListingIds size: ${checkedInListingIds.size}`);
     
     const url = listingId 
       ? `https://api.hostaway.com/v1/listings/${listingId}`
@@ -536,7 +536,12 @@ async function fetchHostawayListings(listingId = null) {
     });
 
     if (!response.ok) {
-      throw new Error(`Hostaway API error: ${response.status} ${response.statusText}`);
+      console.error(`❌ Hostaway API error: ${response.status} ${response.statusText}`);
+      console.error(`❌ Request URL: ${url}`);
+      console.error(`❌ Token configured: ${!!process.env.HOSTAWAY_AUTH_TOKEN}`);
+      const errorText = await response.text();
+      console.error(`❌ Response body: ${errorText}`);
+      throw new Error(`Hostaway API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -547,21 +552,13 @@ async function fetchHostawayListings(listingId = null) {
 
     // Helper function to get full listing name
     const getFullListingName = (listing) => {
-      // Debug: Log available name fields
-      console.log(`🏠 Listing ${listing.id} name fields:`, {
-        name: listing.name,
-        internalListingName: listing.internalListingName
-      });
-
       // Priority 1: Use internalListingName if available
       if (listing.internalListingName && listing.internalListingName.trim() !== '') {
-        console.log(`✅ Using internalListingName for ${listing.id}: ${listing.internalListingName}`);
         return listing.internalListingName;
       }
       
       // Priority 2: Use name field
       if (listing.name && listing.name.trim() !== '') {
-        console.log(`✅ Using name for ${listing.id}: ${listing.name}`);
         return listing.name;
       }
       
@@ -588,61 +585,51 @@ async function fetchHostawayListings(listingId = null) {
           cleaningStatus: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const status = teableData?.cleaningStatus || 'Not Clean';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): cleaning status = "${status}"`);
             return status;
           })(),
           activity: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const activity = teableData?.activity || 'Unknown';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): activity = "${activity}"`);
             return activity;
           })(),
           reservationId: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const reservationId = teableData?.reservationId || '';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationId = "${reservationId}"`);
             return reservationId;
           })(),
           checkInDate: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const checkInDate = teableData?.checkInDate || '';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkInDate = "${checkInDate}"`);
             return checkInDate;
           })(),
           checkOutDate: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const checkOutDate = teableData?.checkOutDate || '';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkOutDate = "${checkOutDate}"`);
+            // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkOutDate = "${checkOutDate}"`);
             return checkOutDate;
           })(),
           reservationStatus: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const reservationStatus = teableData?.reservationStatus || '';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationStatus = "${reservationStatus}"`);
+            // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationStatus = "${reservationStatus}"`);
             return reservationStatus;
           })(),
           guestName: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const guestName = teableData?.guestName || '';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): guestName = "${guestName}"`);
+            // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): guestName = "${guestName}"`);
             return guestName;
           })(),
           hwStatus: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const hwStatus = teableData?.hwStatus || 'Not Clean';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hwStatus = "${hwStatus}"`);
-            if (!teableData) {
-              console.log(`⚠️ No Teable data found for listing ID ${listing.id}`);
-            }
+            // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hwStatus = "${hwStatus}"`);
             return hwStatus;
           })(),
           hkStatus: (() => {
             const teableData = cleaningStatusMap[String(listing.id)];
             const hkStatus = teableData?.hkStatus || 'Not Clean';
-            console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hkStatus = "${hkStatus}"`);
-            if (!teableData) {
-              console.log(`⚠️ No Teable data found for listing ID ${listing.id}`);
-            }
+            // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hkStatus = "${hkStatus}"`);
             return hkStatus;
           })(),
           hwStatusRaw: (() => {
@@ -744,7 +731,56 @@ async function fetchHostawayListings(listingId = null) {
       }
     } else {
       // Multiple listings response
-      listings = data.result?.map(listing => ({
+      // Filter for Pakistan listings only before processing
+      const allListings = data.result || [];
+      const pakistanListings = allListings.filter(listing => {
+        const listingName = listing.internalListingName || listing.name || '';
+        const fullName = listing.name || '';
+        const address = listing.address || '';
+        const city = listing.city || '';
+        const country = listing.country || '';
+        
+        // Comprehensive non-Pakistan filtering (same as availability endpoint)
+        const isNonPakistan = 
+          // Country-based filtering
+          country === 'United States' || 
+          country === 'US' ||
+          country === 'Canada' || 
+          country === 'CA' ||
+          country === 'United Arab Emirates' ||
+          country === 'UAE' ||
+          
+          // City-based filtering
+          city && ['new york', 'toronto', 'vancouver', 'montreal', 'dubai', 'abu dhabi'].includes(city.toLowerCase()) ||
+          
+          // Name-based filtering for Dubai properties
+          fullName.toLowerCase().includes('paramount') ||
+          fullName.toLowerCase().includes('damac') ||
+          fullName.toLowerCase().includes('business bay') ||
+          fullName.toLowerCase().includes('dubai') ||
+          fullName.toLowerCase().includes('emirates') ||
+          fullName.toLowerCase().includes('uae') ||
+          
+          // Internal name filtering
+          listingName.includes("Bay's Edge") ||
+          listingName.includes("Upper Crest") ||
+          listingName.includes("Arch Tower") ||
+          
+          // Address-based filtering
+          address.toLowerCase().includes('dubai') ||
+          address.toLowerCase().includes('emirates') ||
+          address.toLowerCase().includes('uae');
+        
+        if (isNonPakistan) {
+          console.log(`🚫 Non-Pakistan listing filtered from listings endpoint: ${listing.id} - "${listingName}" (${city}, ${country})`);
+        }
+        
+        return !isNonPakistan; // Return Pakistan listings only
+      });
+      
+      console.log(`✅ Listings endpoint - Filtered to ${pakistanListings.length} Pakistan listings from ${allListings.length} total`);
+      
+      listings = pakistanListings.map(listing => ({
         id: listing.id,
         name: getFullListingName(listing),
         address: listing.address || 'Address not available',
@@ -758,61 +794,54 @@ async function fetchHostawayListings(listingId = null) {
         cleaningStatus: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const status = teableData?.cleaningStatus || 'Not Clean';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): cleaning status = "${status}"`);
           return status;
         })(),
         activity: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const activity = teableData?.activity || 'Unknown';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): activity = "${activity}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): activity = "${activity}"`);
           return activity;
         })(),
         reservationId: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const reservationId = teableData?.reservationId || '';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationId = "${reservationId}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationId = "${reservationId}"`);
           return reservationId;
         })(),
         checkInDate: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const checkInDate = teableData?.checkInDate || '';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkInDate = "${checkInDate}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkInDate = "${checkInDate}"`);
           return checkInDate;
         })(),
         checkOutDate: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const checkOutDate = teableData?.checkOutDate || '';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkOutDate = "${checkOutDate}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): checkOutDate = "${checkOutDate}"`);
           return checkOutDate;
         })(),
         reservationStatus: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const reservationStatus = teableData?.reservationStatus || '';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationStatus = "${reservationStatus}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): reservationStatus = "${reservationStatus}"`);
           return reservationStatus;
         })(),
         guestName: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const guestName = teableData?.guestName || '';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): guestName = "${guestName}"`);
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): guestName = "${guestName}"`);
           return guestName;
         })(),
         hwStatus: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const hwStatus = teableData?.hwStatus || 'Not Clean';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hwStatus = "${hwStatus}"`);
-          if (!teableData) {
-            console.log(`⚠️ No Teable data found for listing ID ${listing.id}`);
-          }
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hwStatus = "${hwStatus}"`);
           return hwStatus;
         })(),
         hkStatus: (() => {
           const teableData = cleaningStatusMap[String(listing.id)];
           const hkStatus = teableData?.hkStatus || 'Not Clean';
-          console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hkStatus = "${hkStatus}"`);
-          if (!teableData) {
-            console.log(`⚠️ No Teable data found for listing ID ${listing.id}`);
-          }
+          // console.log(`🏠 Listing ${listing.id} (${listing.internalListingName}): hkStatus = "${hkStatus}"`);
           return hkStatus;
         })(),
         hwStatusRaw: (() => {
@@ -916,14 +945,18 @@ async function fetchHostawayListings(listingId = null) {
     return {
       success: true,
       count: listings.length,
+      data: listings,
       listings: listings
     };
 
   } catch (error) {
     console.error('❌ Error fetching Hostaway listings:', error.message);
+    console.error('❌ Full error:', error);
+    console.error('❌ Error stack:', error.stack);
     return {
       success: false,
       error: error.message,
+      data: [],
       listings: []
     };
   }
@@ -940,7 +973,6 @@ router.get('/listings', async (req, res) => {
     const result = await fetchHostawayListings();
     
     if (result.success) {
-      console.log(`✅ Successfully fetched ${result.count} listings`);
       res.json({
         success: true,
         message: `Found ${result.count} listings`,
@@ -1113,15 +1145,116 @@ router.get('/cleaning-status', async (req, res) => {
  * GET /api/rooms/health
  * Health check endpoint
  */
-router.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Room API is healthy',
-    timestamp: new Date().toISOString(),
-    token_configured: !!process.env.HOSTAWAY_AUTH_TOKEN,
-    fetch_available: typeof fetch !== 'undefined',
-    node_version: process.version
-  });
+router.get('/health', async (req, res) => {
+  try {
+    // Test Hostaway API connection
+    let hostawayStatus = 'unknown';
+    let hostawayError = null;
+    
+    if (process.env.HOSTAWAY_AUTH_TOKEN) {
+      try {
+        const testResponse = await fetch('https://api.hostaway.com/v1/listings?limit=1', {
+          method: 'GET',
+          headers: {
+            'Authorization': `${process.env.HOSTAWAY_AUTH_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (testResponse.ok) {
+          hostawayStatus = 'connected';
+        } else {
+          hostawayStatus = 'error';
+          hostawayError = `${testResponse.status} ${testResponse.statusText}`;
+        }
+      } catch (error) {
+        hostawayStatus = 'error';
+        hostawayError = error.message;
+      }
+    } else {
+      hostawayStatus = 'no_token';
+    }
+
+    res.json({
+      success: true,
+      message: 'Room API is healthy',
+      timestamp: new Date().toISOString(),
+      token_configured: !!process.env.HOSTAWAY_AUTH_TOKEN,
+      hostaway_status: hostawayStatus,
+      hostaway_error: hostawayError,
+      fetch_available: typeof fetch !== 'undefined',
+      node_version: process.version
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/rooms/test-hostaway
+ * Test Hostaway API connection
+ */
+router.get('/test-hostaway', async (req, res) => {
+  try {
+    console.log('🧪 Testing Hostaway API connection...');
+    console.log('🔑 Token configured:', !!process.env.HOSTAWAY_AUTH_TOKEN);
+    
+    if (!process.env.HOSTAWAY_AUTH_TOKEN) {
+      return res.json({
+        success: false,
+        message: 'HOSTAWAY_AUTH_TOKEN not configured',
+        token_configured: false
+      });
+    }
+
+    const testUrl = 'https://api.hostaway.com/v1/listings?limit=1';
+    console.log('🌐 Testing URL:', testUrl);
+    
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `${process.env.HOSTAWAY_AUTH_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('📊 Response status:', response.status, response.statusText);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Hostaway API working! Got', data.result?.length || 0, 'listings');
+      
+      res.json({
+        success: true,
+        message: 'Hostaway API connection successful',
+        status: response.status,
+        listings_count: data.result?.length || 0
+      });
+    } else {
+      const errorText = await response.text();
+      console.error('❌ Hostaway API error:', response.status, errorText);
+      
+      res.json({
+        success: false,
+        message: 'Hostaway API connection failed',
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error testing Hostaway:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test Hostaway connection',
+      error: error.message
+    });
+  }
 });
 
 /**
@@ -1355,5 +1488,480 @@ router.get('/test-teable', async (req, res) => {
     });
   }
 });
+
+/**
+ * GET /api/rooms/availability
+ * 🏠 Room Availability & Cleaning Status
+ * Fetches Hostaway calendar data and groups by room type
+ */
+router.get('/availability', async (req, res) => {
+  try {
+    console.log('🏠 Room availability endpoint called');
+    console.log('🔑 Token configured:', !!process.env.HOSTAWAY_AUTH_TOKEN);
+    
+    // Room availability based on calendar data only (no actual check-in logic)
+    console.log('🔄 Room availability - Using calendar data only, NO actual check-ins');
+    console.log('🔄 Room availability endpoint - STARTING PROCESSING');
+    
+    // Fetch listings directly from Hostaway API to get external names
+    console.log('🌐 Fetching listings directly from Hostaway API for external names...');
+    const hostawayResponse = await fetch('https://api.hostaway.com/v1/listings', {
+      method: 'GET',
+      headers: {
+        'Authorization': `${process.env.HOSTAWAY_AUTH_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!hostawayResponse.ok) {
+      console.error('❌ Failed to fetch listings from Hostaway API:', hostawayResponse.status);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch listings from Hostaway API',
+        error: `HTTP ${hostawayResponse.status}`
+      });
+    }
+    
+    const hostawayData = await hostawayResponse.json();
+    const allListings = hostawayData.result || [];
+    console.log('✅ Fetched', allListings.length, 'listings directly from Hostaway API');
+    console.log('✅ Room availability - Got all listings count:', allListings.length);
+    
+    // Filter for Pakistan listings only - exclude specific non-Pakistan properties
+    const listings = allListings.filter(listing => {
+      const listingName = listing.internalListingName || listing.name || '';
+      const fullName = listing.name || '';
+      const address = listing.address || '';
+      const city = listing.city || '';
+      const country = listing.country || '';
+      
+      // Comprehensive non-Pakistan filtering
+      const isNonPakistan = 
+        // Country-based filtering
+        country === 'United States' || 
+        country === 'US' ||
+        country === 'Canada' || 
+        country === 'CA' ||
+        country === 'United Arab Emirates' ||
+        country === 'UAE' ||
+        
+        // City-based filtering
+        city && ['new york', 'toronto', 'vancouver', 'montreal', 'dubai', 'abu dhabi'].includes(city.toLowerCase()) ||
+        
+        // Name-based filtering for Dubai properties
+        fullName.toLowerCase().includes('paramount') ||
+        fullName.toLowerCase().includes('damac') ||
+        fullName.toLowerCase().includes('business bay') ||
+        fullName.toLowerCase().includes('dubai') ||
+        fullName.toLowerCase().includes('emirates') ||
+        fullName.toLowerCase().includes('uae') ||
+        
+        // Internal name filtering
+        listingName.includes("Bay's Edge") ||
+        listingName.includes("Upper Crest") ||
+        listingName.includes("Arch Tower") ||
+        
+        // Address-based filtering
+        address.toLowerCase().includes('dubai') ||
+        address.toLowerCase().includes('emirates') ||
+        address.toLowerCase().includes('uae');
+      
+      if (isNonPakistan) {
+        console.log(`🚫 Non-Pakistan listing filtered: ${listing.id} - "${listingName}" (${city}, ${country})`);
+      } else {
+        console.log(`✅ Pakistan listing included: ${listing.id} - "${listingName}" (${city}, ${country})`);
+      }
+      
+      return !isNonPakistan; // Return Pakistan listings only
+    });
+    
+    console.log('✅ Room availability - Pakistan listings count:', listings.length);
+    
+    // Get today's date for calendar check
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Room type mapping and counters
+    const roomTypes = {
+      'Studio': { 
+        available: 0, reserved: 0, blocked: 0, total: 0,
+        apartments: { available: [], reserved: [], blocked: [] }
+      },
+      '1BR': { 
+        available: 0, reserved: 0, blocked: 0, total: 0,
+        apartments: { available: [], reserved: [], blocked: [] }
+      },
+      '2BR': { 
+        available: 0, reserved: 0, blocked: 0, total: 0,
+        apartments: { available: [], reserved: [], blocked: [] }
+      },
+      '2BR Premium': { 
+        available: 0, reserved: 0, blocked: 0, total: 0,
+        apartments: { available: [], reserved: [], blocked: [] }
+      },
+      '3BR': { 
+        available: 0, reserved: 0, blocked: 0, total: 0,
+        apartments: { available: [], reserved: [], blocked: [] }
+      }
+    };
+    
+    // Process each listing
+    console.log('🔄 Processing', listings.length, 'listings for availability...');
+    for (const listing of listings) {
+      try {
+        // Determine room type from listing name or bedrooms
+        let roomType = 'Studio'; // default
+        
+        // Use the correct field names from direct Hostaway API
+        const listingName = listing.name || listing.internalListingName || ''; // name is the external listing name from Hostaway API
+        const externalName = listing.name || ''; // External/public name from Hostaway API
+        const internalName = listing.internalListingName || '';
+        const listingId = listing.id;
+        
+        // Dynamic premium room identification with detailed logging
+        console.log(`🔍 Checking listing ${listingId}:`);
+        console.log(`   - All available fields:`, Object.keys(listing));
+        console.log(`   - Internal name: "${listing.internalListingName}"`);
+        console.log(`   - External name: "${externalName}"`);
+        console.log(`   - Name: "${listing.name}"`);
+        console.log(`   - Title: "${listing.title}"`);
+        console.log(`   - ExternalListingName: "${listing.externalListingName}"`);
+        console.log(`   - Bedrooms: ${listing.bedrooms}, bedroomsNumber: ${listing.bedroomsNumber}, basePrice: ${listing.basePrice}`);
+        
+        // Specific premium apartment IDs (the actual premium apartments)
+        const premiumApartmentIds = [288688, 305055, 309909, 323227]; // 1F-12, GF-04, GF-06, 4F-42
+        
+        // Only use specific apartment IDs for premium detection (disable name/price detection)
+        const isPremiumById = premiumApartmentIds.includes(listing.id);
+        const isPremium = isPremiumById;
+        
+        if (isPremiumById) console.log(`🏆 Premium by ID: ${listingId} - ${listing.name}`);
+        if (isPremium) {
+          console.log(`🏆 PREMIUM DETECTED: ${listingId} - ${listingName}`);
+          console.log(`   - Internal: ${listing.internalListingName}`);
+          console.log(`   - External: ${listing.externalListingName}`);
+          console.log(`   - Price: ${listing.basePrice}`);
+        }
+        
+        // Primary method: Check for Studio first (name-based since bedroomsNumber is unreliable for studios)
+        if (listingName && (listingName.toLowerCase().includes('studio') || 
+                           (listing.internalListingName && listing.internalListingName.toLowerCase().includes('(s)')))) {
+          roomType = 'Studio';
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from name-based studio detection: "${listingName}")`);
+        }
+        // Secondary method: Use bedroomsNumber field for non-studios
+        else if (listing.bedroomsNumber !== undefined && listing.bedroomsNumber !== null) {
+          if (listing.bedroomsNumber === 1) {
+            roomType = '1BR';
+          } else if (listing.bedroomsNumber === 2) {
+            roomType = isPremium ? '2BR Premium' : '2BR';
+          } else if (listing.bedroomsNumber >= 3) {
+            roomType = '3BR';
+          }
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedroomsNumber: ${listing.bedroomsNumber}, premium: ${isPremium})`);
+        }
+        // Fallback method: Use bedrooms field
+        else if (listing.bedrooms !== undefined && listing.bedrooms !== null) {
+          if (listing.bedrooms === 0) {
+            roomType = 'Studio';
+          } else if (listing.bedrooms === 1) {
+            roomType = '1BR';
+          } else if (listing.bedrooms === 2) {
+            roomType = isPremium ? '2BR Premium' : '2BR';
+          } else if (listing.bedrooms >= 3) {
+            roomType = '3BR';
+          }
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedrooms: ${listing.bedrooms}, premium: ${isPremium})`);
+        }
+        // Last resort: Name-based detection
+        else if (listingName) {
+          const name = listingName.toLowerCase();
+          console.log(`🔍 Analyzing name: "${name}" for room type detection`);
+          
+          if (name.includes('studio') || name.includes('(s)')) {
+            roomType = 'Studio';
+          } else if (name.includes('3br') || name.includes('3 br') || name.includes('3-br') || name.includes('(3b)') || 
+                     name.includes('3 bedroom') || name.includes('three bedroom')) {
+            roomType = '3BR';
+          } else if ((name.includes('2br') || name.includes('2 br') || name.includes('2-br') || name.includes('(2b)') ||
+                     name.includes('2 bedroom') || name.includes('two bedroom')) && isPremium) {
+            roomType = '2BR Premium';
+          } else if (name.includes('2br') || name.includes('2 br') || name.includes('2-br') || name.includes('(2b)') ||
+                     name.includes('2 bedroom') || name.includes('two bedroom')) {
+            roomType = '2BR';
+          } else if (name.includes('1br') || name.includes('1 br') || name.includes('1-br') || name.includes('(1b)') ||
+                     name.includes('1 bedroom') || name.includes('1-bedroom') || name.includes('one bedroom')) {
+            roomType = '1BR';
+          }
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from name: "${listingName}")`);
+        }
+        
+        
+        // Initialize room type if not exists
+        if (!roomTypes[roomType]) {
+          roomTypes[roomType] = { available: 0, reserved: 0, blocked: 0, total: 0 };
+        }
+        
+        roomTypes[roomType].total++;
+        
+        // Fetch calendar data for this listing
+        const calendarUrl = `https://api.hostaway.com/v1/listings/${listing.id}/calendar?startDate=${todayStr}&endDate=${todayStr}`;
+        
+        const calendarResponse = await fetch(calendarUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `${process.env.HOSTAWAY_AUTH_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Cache-control': 'no-cache'
+          }
+        });
+        
+        if (calendarResponse.ok) {
+          const calendarData = await calendarResponse.json();
+          
+          // Check availability for today
+          let isAvailable = true;
+          let isReserved = false;
+          let isBlocked = false;
+          
+          // Use calendar data only for room availability
+          if (calendarData.result && calendarData.result.length > 0) {
+            const todayEntry = calendarData.result.find(entry => entry.date === todayStr);
+            
+            if (todayEntry) {
+              console.log(`🔍 Calendar entry for ${listing.id} (${roomType}):`, JSON.stringify(todayEntry, null, 2));
+              
+              // Check if explicitly blocked first
+              if (todayEntry.status === 'blocked' || todayEntry.countBlockedUnits > 0) {
+                isBlocked = true;
+                isAvailable = false;
+                console.log(`🚫 Blocked: ${listing.id} (${roomType}) - Explicitly blocked in calendar`);
+              }
+              // Check if room has reservations (reserved)
+              else if (todayEntry.reservations && todayEntry.reservations.length > 0) {
+                isReserved = true;
+                isAvailable = false;
+                console.log(`📋 Reserved: ${listing.id} (${roomType}) - Has ${todayEntry.reservations.length} reservations`);
+              }
+              // Check calendar availability status
+              else if (todayEntry.isAvailable === false || todayEntry.isAvailable === 0) {
+                // Not available but not explicitly blocked or reserved - treat as reserved
+                isReserved = true;
+                isAvailable = false;
+                console.log(`📋 Reserved: ${listing.id} (${roomType}) - Calendar shows not available (likely reserved)`);
+              } else {
+                // Calendar shows available
+                isAvailable = true;
+                console.log(`✅ Available: ${listing.id} (${roomType}) - Calendar shows available`);
+              }
+            } else {
+              // No calendar entry for today, default to available
+              isAvailable = true;
+              console.log(`✅ Available: ${listing.id} (${roomType}) - No calendar entry`);
+            }
+          } else {
+            // No calendar data, default to available
+            isAvailable = true;
+            console.log(`✅ Available: ${listing.id} (${roomType}) - No calendar data`);
+          }
+          
+          // Create apartment detail object
+          const apartmentDetail = {
+            id: listing.id,
+            name: listingName,
+            internalName: listing.internalListingName || listingName,
+            externalName: listing.externalListingName || listing.name || listingName,
+            status: isReserved ? 'reserved' : (isBlocked ? 'blocked' : 'available'),
+            isPremium: isPremium,
+            bedrooms: listing.bedroomsNumber || listing.bedrooms,
+            price: listing.basePrice
+          };
+          
+          // Update counters and add apartment details
+          if (isReserved) {
+            roomTypes[roomType].reserved++;
+            roomTypes[roomType].apartments.reserved.push(apartmentDetail);
+            console.log(`📊 Counter: ${listing.id} (${roomType}) → RESERVED - ${listingName}`);
+          } else if (isBlocked) {
+            roomTypes[roomType].blocked++;
+            roomTypes[roomType].apartments.blocked.push(apartmentDetail);
+            console.log(`📊 Counter: ${listing.id} (${roomType}) → BLOCKED - ${listingName}`);
+          } else if (isAvailable) {
+            roomTypes[roomType].available++;
+            roomTypes[roomType].apartments.available.push(apartmentDetail);
+            console.log(`📊 Counter: ${listing.id} (${roomType}) → AVAILABLE - ${listingName}`);
+          }
+          
+        } else {
+          // Default to available if calendar fetch fails
+          const apartmentDetail = {
+            id: listing.id,
+            name: listingName,
+            internalName: listing.internalListingName || listingName,
+            externalName: listing.externalListingName || listing.name || listingName,
+            status: 'available',
+            isPremium: isPremium,
+            bedrooms: listing.bedroomsNumber || listing.bedrooms,
+            price: listing.basePrice
+          };
+          roomTypes[roomType].available++;
+          roomTypes[roomType].apartments.available.push(apartmentDetail);
+        }
+        
+      } catch (listingError) {
+        // Default to available if processing fails
+        const defaultType = 'Studio';
+        const apartmentDetail = {
+          id: listing.id || 'unknown',
+          name: listingName || 'Unknown Apartment',
+          internalName: internalName || 'Unknown',
+          externalName: externalName || 'Unknown Apartment',
+          status: 'available',
+          isPremium: false,
+          bedrooms: 0,
+          price: 0
+        };
+        
+        roomTypes[defaultType].available++;
+        roomTypes[defaultType].total++;
+        roomTypes[defaultType].apartments.available.push(apartmentDetail);
+      }
+    }
+    
+    // Format response - include all room types even if total is 0
+    const availabilityData = Object.entries(roomTypes)
+      .map(([type, data]) => ({
+        roomType: type,
+        available: data.available,
+        reserved: data.reserved,
+        blocked: data.blocked,
+        total: data.total,
+        occupancyRate: data.total > 0 ? Math.round((data.reserved / data.total) * 100) : 0,
+        apartments: data.apartments // Include detailed apartment information
+      }));
+    
+    res.json({
+      success: true,
+      message: 'Room availability fetched successfully',
+      data: {
+        roomTypes: availabilityData,
+        summary: {
+          totalRooms: listings.length,
+          totalAvailable: availabilityData.reduce((sum, room) => sum + room.available, 0),
+          totalReserved: availabilityData.reduce((sum, room) => sum + room.reserved, 0),
+          totalBlocked: availabilityData.reduce((sum, room) => sum + room.blocked, 0),
+          overallOccupancyRate: listings.length > 0 ? 
+            Math.round((availabilityData.reduce((sum, room) => sum + room.reserved, 0) / listings.length) * 100) : 0
+        },
+        lastUpdated: new Date().toISOString(),
+        dateRange: {
+          checkDate: todayStr,
+          rangeStart: todayStr,
+          rangeEnd: todayStr
+        }
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch room availability',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/rooms/test-availability-logic
+ * Test the availability logic changes
+ */
+router.get('/test-availability-logic', async (req, res) => {
+  try {
+    console.log('🧪 Testing availability logic changes...');
+    
+    // Test fetchHostawayListings with includeActualCheckIns = false
+    const result = await fetchHostawayListings(null, false);
+    
+    res.json({
+      success: true,
+      message: 'Availability logic test completed',
+      timestamp: new Date().toISOString(),
+      testResults: {
+        includeActualCheckIns: false,
+        listingsCount: result.data?.length || 0,
+        hasActualCheckInData: result.data?.[0]?.actuallyOccupied !== undefined
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Test failed',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/rooms/simple-test
+ * Simple test without complex logic
+ */
+router.get('/simple-test', async (req, res) => {
+  try {
+    console.log('🧪 Simple test endpoint called');
+    console.log('🔑 Token exists:', !!process.env.HOSTAWAY_AUTH_TOKEN);
+    
+    if (!process.env.HOSTAWAY_AUTH_TOKEN) {
+      return res.json({
+        success: false,
+        message: 'No token configured',
+        token_configured: false
+      });
+    }
+
+    console.log('🌐 Making simple Hostaway API call...');
+    const response = await fetch('https://api.hostaway.com/v1/listings?limit=1', {
+      method: 'GET',
+      headers: {
+        'Authorization': `${process.env.HOSTAWAY_AUTH_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('📊 Response status:', response.status);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Success! Got data');
+      
+      return res.json({
+        success: true,
+        message: 'Hostaway API working',
+        status: response.status,
+        has_data: !!data.result,
+        count: data.result?.length || 0
+      });
+    } else {
+      const errorText = await response.text();
+      console.error('❌ API Error:', response.status, errorText);
+      
+      return res.json({
+        success: false,
+        message: 'Hostaway API failed',
+        status: response.status,
+        error: errorText
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Exception:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Exception occurred',
+      error: error.message
+    });
+  }
+});
+
 
 module.exports = router;

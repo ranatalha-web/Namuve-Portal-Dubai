@@ -125,9 +125,21 @@ const navbarIconButton = ({ typography: { size }, breakpoints }) => ({
 const navbarMobileMenu = ({ breakpoints }) => ({
   display: "inline-block",
   lineHeight: 0,
+  position: "fixed",
+  top: "16px",
+  left: "16px",
+  zIndex: 9999,
+  backgroundColor: "rgba(255, 255, 255, 0.9)",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+  backdropFilter: "blur(10px)",
 
   [breakpoints.up("xl")]: {
     display: "none",
+  },
+
+  [breakpoints.down("xl")]: {
+    display: "inline-block !important",
   },
 });
 

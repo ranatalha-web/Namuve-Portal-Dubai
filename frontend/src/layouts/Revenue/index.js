@@ -860,27 +860,35 @@ function MobilePaymentCard({ reservation, index }) {
       {/* Header with ID and Status */}
       <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <MDBox>
-          <MDTypography variant="h6" fontWeight="bold" color="primary">
+          <MDTypography 
+            variant="h6" 
+            fontWeight="bold" 
+            color="primary"
+            component="a"
+            href={`https://dashboard.hostaway.com/reservations/${reservation.reservationId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              textDecoration: 'none',
+              cursor: 'pointer',
+              '&:hover': {
+                textDecoration: 'underline',
+                color: '#1565c0'
+              }
+            }}
+          >
             #{reservation.reservationId}
           </MDTypography>
           <MDTypography variant="caption" color="text.secondary">
             Reservation ID
           </MDTypography>
         </MDBox>
-        <MDBox display="flex" flexDirection="column" alignItems="flex-end" gap={0.5}>
-          <Chip 
-            label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
-            color={getStatusColor(reservation.paymentStatus)}
-            size="small"
-            sx={{ fontWeight: 600, fontSize: '0.7rem' }}
-          />
-          <Chip 
-            label={reservation.status || 'Unknown'}
-            color={getReservationStatusColor(reservation.status)}
-            size="small"
-            sx={{ fontWeight: 600, fontSize: '0.7rem', textTransform: 'capitalize' }}
-          />
-        </MDBox>
+        <Chip 
+          label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
+          color={getStatusColor(reservation.paymentStatus)}
+          size="small"
+          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+        />
       </MDBox>
 
       {/* Guest and Listing Info */}
@@ -913,31 +921,23 @@ function MobilePaymentCard({ reservation, index }) {
       >
         <MDBox>
           <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Check In
+            Check In Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
-            {reservation.checkInDate}
+            {new Date(reservation.checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </MDTypography>
         </MDBox>
         <MDBox>
           <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Check Out
+            Check Out Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
-            {reservation.checkOutDate}
+            {new Date(reservation.checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </MDTypography>
         </MDBox>
         <MDBox>
           <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Amount
-          </MDTypography>
-          <MDTypography variant="body2" fontWeight="bold" color="success.main">
-            {reservation.currency} {reservation.baseRate?.toLocaleString() || '0'}
-          </MDTypography>
-        </MDBox>
-        <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Check In Time
+            Actual Check-in Time
           </MDTypography>
           <MDTypography 
             variant="body2" 
@@ -948,6 +948,51 @@ function MobilePaymentCard({ reservation, index }) {
             }}
           >
             {reservation.actualCheckInTime}
+          </MDTypography>
+        </MDBox>
+        <MDBox>
+          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+            Actual Check-out Time
+          </MDTypography>
+          <MDTypography 
+            variant="body2" 
+            fontWeight="medium"
+            sx={{
+              color: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? '#9ca3af' : '#374151',
+              fontStyle: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? 'italic' : 'normal'
+            }}
+          >
+            {reservation.actualCheckOutTime || 'N/A'}
+          </MDTypography>
+        </MDBox>
+        <MDBox>
+          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+            Total Amount
+          </MDTypography>
+          <MDTypography variant="body2" fontWeight="bold" color="success.main">
+            {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
+          </MDTypography>
+        </MDBox>
+        <MDBox>
+          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+            Paid Amount
+          </MDTypography>
+          <MDTypography variant="body2" fontWeight="bold" sx={{ color: '#10b981' }}>
+            {reservation.currency} {reservation.paidAmount?.toLocaleString() || '0'}
+          </MDTypography>
+        </MDBox>
+        <MDBox>
+          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+            Remaining Amount
+          </MDTypography>
+          <MDTypography 
+            variant="body2" 
+            fontWeight="bold" 
+            sx={{ 
+              color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280' 
+            }}
+          >
+            {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
           </MDTypography>
         </MDBox>
       </MDBox>
@@ -1356,20 +1401,25 @@ function Revenue() {
     fetchData();
   }, []);
 
-  // Fetch today's reservations
+  // Fetch today's reservations - FAST with Teable cache
   const fetchTodayReservations = async () => {
     try {
       setReservationLoading(true);
       setReservationError(null);
       
-      // console.log('🔄 Fetching today\'s reservations...');
+      console.log('⚡ Fetching payment data from Teable cache...');
+      const startTime = Date.now();
       
-      const response = await fetch(API_ENDPOINTS.PAYMENT_TODAY_RESERVATIONS);
+      // Use fast endpoint that returns cached data immediately
+      const response = await fetch(API_ENDPOINTS.PAYMENT_TEABLE_FAST);
       const data = await response.json();
+      
+      const loadTime = Date.now() - startTime;
       
       if (data.success) {
         setReservations(data.data);
-        // console.log(`✅ Loaded ${data.data.length} reservations for today`);
+        console.log(`⚡ Loaded ${data.data.length} reservations in ${loadTime}ms from ${data.source}`);
+        console.log(`📝 ${data.message || 'Data loaded successfully'}`);
       } else {
         setReservationError(data.message || 'Failed to fetch reservations');
         console.error('❌ Failed to fetch reservations:', data.error);
@@ -1932,28 +1982,37 @@ function Revenue() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                           <thead>
                             <tr style={{ backgroundColor: 'white', borderBottom: '2px solid #e2e8f0' }}>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Reservation ID
                               </th>
-                              <th style={{ width: '180px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '140px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Guest Name
                               </th>
-                              <th style={{ width: '150px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '120px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Listing Name
                               </th>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Arrival Date
                               </th>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Departure Date
                               </th>
-                              <th style={{ width: '120px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Check In Time
+                              <th style={{ width: '110px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Actual Check-in Time
                               </th>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Amount
+                              <th style={{ width: '110px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Actual Check-out Time
                               </th>
-                              <th style={{ width: '120px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: '#1e293b', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Total Amount
+                              </th>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Paid Amount
+                              </th>
+                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Remaining Amount
+                              </th>
+                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Payment Status
                               </th>
                             </tr>
@@ -1970,49 +2029,84 @@ function Revenue() {
                                 onMouseEnter={(e) => e.target.style.backgroundColor = '#e0f2fe'}
                                 onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? '#f8fafc' : 'white'}
                               >
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ color: '#1976d2', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <a 
+                                    href={`https://dashboard.hostaway.com/reservations/${reservation.reservationId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ 
+                                      color: '#1976d2', 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 'bold',
+                                      textDecoration: 'none',
+                                      cursor: 'pointer'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                                  >
                                     {reservation.reservationId}
-                                  </span>
+                                  </a>
                                 </td>
                                 
-                                <td style={{ width: '180px', textAlign: 'left', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem' }}>
+                                <td style={{ width: '140px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.75rem' }}>
                                     {reservation.guestName}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '150px', textAlign: 'left', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                <td style={{ width: '120px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                                     {reservation.listingName}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                                    {reservation.checkInDate}
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                    {new Date(reservation.checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                                    {reservation.checkOutDate}
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                    {new Date(reservation.checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '120px', textAlign: 'center', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#374151' }}>
+                                <td style={{ width: '110px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#374151' }}>
                                     {reservation.actualCheckInTime}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 8px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 'bold' }}>
-                                    {reservation.currency} {reservation.baseRate?.toLocaleString() || '0'}
+                                <td style={{ width: '110px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', color: reservation.actualCheckOutTime === 'N/A' ? '#9ca3af' : '#374151' }}>
+                                    {reservation.actualCheckOutTime || 'N/A'}
                                   </span>
                                 </td>
                                 
-                                <td style={{ width: '120px', textAlign: 'center', padding: '12px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 'bold' }}>
+                                    {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 'bold' }}>
+                                    {reservation.currency} {reservation.paidAmount?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                
+                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ 
+                                    fontSize: '0.7rem', 
+                                    color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280', 
+                                    fontWeight: 'bold' 
+                                  }}>
+                                    {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
+                                  </span>
+                                </td>
+                                
+                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   <Chip 
                                     label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
                                     color={
@@ -2023,7 +2117,7 @@ function Revenue() {
                                       'default'
                                     }
                                     size="small"
-                                    sx={{ fontWeight: 600, fontSize: '0.7rem', minWidth: '60px' }}
+                                    sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '50px' }}
                                   />
                                 </td>
                               </tr>
@@ -2217,7 +2311,7 @@ function Revenue() {
                             Due Reservations
                           </MDTypography>
                           <MDTypography variant="h3" fontWeight="bold" color="secondary" mt={1}>
-                            {reservations.filter(r => r.paymentStatus === 'Unknown').length}
+                            {reservations.filter(r => r.paymentStatus === 'Due').length}
                           </MDTypography>
                         </MDBox>
                         <MDBox 

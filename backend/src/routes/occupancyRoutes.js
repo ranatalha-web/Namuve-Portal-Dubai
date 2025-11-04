@@ -94,4 +94,37 @@ router.get('/report', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/occupancy/today-checkins
+ * Get detailed information about today's check-ins
+ */
+router.get('/today-checkins', async (req, res) => {
+  try {
+    console.log('📋 API: Fetching today\'s check-ins details...');
+    
+    const result = await occupancyService.getTodayCheckinsDetails();
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data,
+        message: 'Today\'s check-ins retrieved successfully'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: 'Failed to fetch today\'s check-ins'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Today\'s Check-ins API Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;

@@ -69,9 +69,11 @@ export const API_ENDPOINTS = {
   MONTHLY_TARGET: `${API_BASE_URL}/api/monthly-target`,
 
   // Occupancy endpoints
+  OCCUPANCY: `${API_BASE_URL}/api/occupancy`,
   OCCUPANCY_CURRENT: `${API_BASE_URL}/api/occupancy/current`,
   OCCUPANCY_HEALTH: `${API_BASE_URL}/api/occupancy/health`,
   OCCUPANCY_REPORT: `${API_BASE_URL}/api/occupancy/report`,
+  OCCUPANCY_TODAY_CHECKINS: `${API_BASE_URL}/api/occupancy/today-checkins`,
 
   // Rooms endpoints
   ROOMS_LISTINGS: `${API_BASE_URL}/api/rooms/listings`,
@@ -79,6 +81,7 @@ export const API_ENDPOINTS = {
   ROOMS_CLEANING_STATUS: `${API_BASE_URL}/api/rooms/cleaning-status`,
   ROOMS_UPDATE_CLEANING_STATUS_OLD: `${API_BASE_URL}/api/rooms/cleaning-status`, // + /:id (PUT)
   ROOMS_UPDATE_CLEANING_STATUS: `${API_BASE_URL}/api/rooms/update-cleaning-status`,
+  ROOMS_AVAILABILITY: `${API_BASE_URL}/api/rooms/availability`,
   ROOMS_HEALTH: `${API_BASE_URL}/api/rooms/health`,
   ROOMS_TEST_CORS: `${API_BASE_URL}/api/rooms/test-cors`,
   ROOMS_TEST_TEABLE: `${API_BASE_URL}/api/rooms/test-teable`,
@@ -87,6 +90,11 @@ export const API_ENDPOINTS = {
   PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/payment/today-reservations`,
   PAYMENT_RESERVATION_BY_ID: `${API_BASE_URL}/api/payment/reservation`, // + /:id
   PAYMENT_HEALTH: `${API_BASE_URL}/api/payment/health`,
+  
+  // Payment Teable endpoints (fast loading with cache)
+  PAYMENT_TEABLE_FAST: `${API_BASE_URL}/api/payment-teable/fast`,
+  PAYMENT_TEABLE_SYNC: `${API_BASE_URL}/api/payment-teable/sync`,
+  PAYMENT_TEABLE_RECORDS: `${API_BASE_URL}/api/payment-teable/records`,
   
   // Payment helper functions
   PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/payment/reservation/${id}`,

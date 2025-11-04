@@ -183,6 +183,7 @@ const authRoutes = require("./routes/authRoutes");
 const occupancyRoutes = require("./routes/occupancyRoutes");
 const roomRoutes = require("../api/Room");
 const paymentRoutes = require("../api/payment");
+const paymentTeableRoutes = require("../api/payment-teable");
 const monthlyTargetHandler = require("../api/monthly-target");
 
 // Import RevenueTable integration
@@ -230,6 +231,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/occupancy", occupancyRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/payment-teable", paymentTeableRoutes);
 
 // RevenueTable API routes
 app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());

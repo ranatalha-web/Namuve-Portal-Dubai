@@ -1308,7 +1308,7 @@ function AdminPanel() {
                         </MDBox>
 
                         {/* Rooms Permissions */}
-                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#f3e8ff', borderRadius: '12px', border: '1px solid #8b5cf6' }}>
+                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#7c3aed">
                             🏠 Rooms Access
                           </MDTypography>
@@ -2145,8 +2145,8 @@ function AdminPanel() {
 
                     {/* Rooms Permissions */}
                     <Grid item xs={12} md={6}>
-                      <MDBox p={3} sx={{ backgroundColor: "#faf5ff", borderRadius: "12px", border: "1px solid #d8b4fe" }}>
-                        <MDTypography variant="h6" fontWeight="600" sx={{ color: "#8b5cf6", mb: 2 }}>
+                      <MDBox p={3} sx={{ backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                        <MDTypography variant="h6" fontWeight="600" sx={{ color: "#374151", mb: 2 }}>
                           🏠 Rooms
                         </MDTypography>
                         <MDBox display="flex" flexDirection="column">
@@ -2155,7 +2155,7 @@ function AdminPanel() {
                               <Checkbox
                                 checked={editPermissions.rooms?.view || false}
                                 onChange={() => handleEditPermissionChange('rooms', 'view')}
-                                sx={{ color: "#8b5cf6" }}
+                                sx={{ color: "#3b82f6" }}
                               />
                             }
                             label="View Access"
@@ -2165,7 +2165,7 @@ function AdminPanel() {
                               <Checkbox
                                 checked={editPermissions.rooms?.complete || false}
                                 onChange={() => handleEditPermissionChange('rooms', 'complete')}
-                                sx={{ color: "#8b5cf6" }}
+                                sx={{ color: "#3b82f6" }}
                               />
                             }
                             label="Complete Access"

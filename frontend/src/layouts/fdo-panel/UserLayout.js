@@ -526,22 +526,28 @@ function UserLayout({ children }) {
       case 0:
         return (
           <Box sx={{ p: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
-              🏠 Home
-            </Typography>
             {loading ? (
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  height: "60vh", // adjust height as needed
+                  height: "80vh",
+                  flexDirection: "column",
+                  gap: 2,
                 }}
               >
-                <Typography>Loading home data...</Typography>
+                <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                  Loading home data...
+                </Typography>
               </Box>
             ) : (
-              children
+              <>
+                <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
+                  🏠 Home
+                </Typography>
+                {children}
+              </>
             )}
           </Box>
         );// Home screen (current content)
@@ -587,9 +593,12 @@ function UserLayout({ children }) {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  height: "60vh", // adjust height as needed
+                  height: "60vh",
                 }}
-              ><Typography>Loading apartment data...</Typography>
+              >
+                <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                  Loading apartment data...
+                </Typography>
               </Box>
             )}
             {error && <Typography color="error">{error}</Typography>}
@@ -726,10 +735,12 @@ function UserLayout({ children }) {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  height: "60vh", // adjust height as needed
+                  height: "60vh",
                 }}
               >
-                <Typography>Loading data...</Typography>
+                <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                  Loading data...
+                </Typography>
               </Box>
             )}
             {errorCheck && <Typography color="error">{errorCheck}</Typography>}

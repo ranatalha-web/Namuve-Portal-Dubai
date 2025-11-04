@@ -13,7 +13,7 @@ class OccupancyService {
    */
   async fetchActualCheckedInReservations() {
     try {
-      console.log('🏨 Fetching reservations with actual check-in times from Hostaway...');
+      console.log('🏨 Fetching TODAY\'S check-ins with actual check-in times from Hostaway...');
       
       if (!this.hostawayAuthToken) {
         throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
@@ -41,7 +41,7 @@ class OccupancyService {
       const checkedInListings = [];
 
       if (allReservations && allReservations.length > 0) {
-        // Filter reservations to include only those with status "new" or "modified" and where today is within the stay period
+        // Filter reservations to include those checking in TODAY OR currently staying (within stay period)
         const reservations = allReservations.filter(res => {
           if (!res.arrivalDate || !res.departureDate) return false;
           if (!['new', 'modified'].includes(res.status)) return false;
@@ -49,10 +49,12 @@ class OccupancyService {
           const arrival = new Date(res.arrivalDate);
           const departure = new Date(res.departureDate);
           const todayDate = new Date(formattedToday);
-          const isInStayPeriod = (todayDate >= arrival && todayDate < departure);
           
-          if (!isInStayPeriod) return false;
+          // Include reservations where today is within the stay period (arrival <= today < departure)
+          const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
           
+          if (!isWithinStayPeriod) return false;
+            
           // Check for test guests
           const guestName = res.guestName || res.firstName || res.lastName || 
                            res.guest?.firstName || res.guest?.lastName || 
@@ -92,6 +94,7 @@ class OccupancyService {
           const departure = new Date(updatedRes.departureDate);
           const todayDate = new Date(formattedToday);
           
+          // Process reservations where today is within the stay period (including staying guests)
           if (todayDate >= arrival && todayDate < departure) {
             // Get custom fields from the correct property: customFieldValues
             let customFields = [];
@@ -100,29 +103,40 @@ class OccupancyService {
               customFields = updatedRes.customFieldValues;
             }
             
-            // Check for "Actual Check-in Time" field (ID: 76281)
-            const hasCheckedIn = customFields && 
-              customFields.some(fieldValue => {
+            // Check for "Actual Check-in Time" field (ID: 76281) and extract its value
+            const checkInTimeField = customFields && 
+              customFields.find(fieldValue => {
                 return fieldValue.customFieldId === 76281 && 
                   fieldValue.customField?.name === "Actual Check-in Time" && 
                   fieldValue.value && 
                   fieldValue.value.trim() !== "";
               });
+            
+            const hasCheckedIn = !!checkInTimeField;
+            const actualCheckInTime = checkInTimeField ? checkInTimeField.value : null;
               
             if (hasCheckedIn) {
               actualCheckedInCount++;
+              
+              // Determine if this is today's check-in or staying guest
+              const isCheckInToday = arrival.toDateString() === todayDate.toDateString();
+              const guestType = isCheckInToday ? 'Today\'s Check-in' : 'Staying Guest';
+              
               checkedInListings.push({
                 listingId: updatedRes.listingMapId,
                 guestName: updatedRes.guestName || updatedRes.firstName || updatedRes.lastName || 'Unknown Guest',
-                reservationId: updatedRes.id
+                reservationId: updatedRes.id,
+                guestType: guestType,
+                originalCheckInDate: updatedRes.arrivalDate,
+                actualCheckInTime: actualCheckInTime // Add the actual check-in time
               });
             }
           }
         }
       }
 
-      console.log(`✅ Found ${actualCheckedInCount} reservations with actual check-in times`);
-      console.log(`📋 Checked-in listings:`, checkedInListings);
+      console.log(`✅ Found ${actualCheckedInCount} reservations (check-ins + staying guests) with actual check-in times`);
+      console.log(`📋 Current occupancy listings:`, checkedInListings);
       
       return {
         actualCheckedInCount,
@@ -143,7 +157,7 @@ class OccupancyService {
    */
   async fetchOccupancyData() {
     try {
-      console.log('🏨 Fetching occupancy data using actual check-in times...');
+      console.log('🏨 Fetching occupancy data using TODAY\'S actual check-in times...');
       
       // Get actual checked-in reservations from Hostaway
       const checkedInData = await this.fetchActualCheckedInReservations();
@@ -163,12 +177,10 @@ class OccupancyService {
       
       if (response.data && response.data.records) {
         const processedData = this.processOccupancyData(response.data.records, checkedInData);
-        console.log('✅ Processed occupancy data:', processedData);
         return processedData;
       } else if (response.data && Array.isArray(response.data)) {
         // Handle case where response.data is directly an array of records
         const processedData = this.processOccupancyData(response.data, checkedInData);
-        console.log('✅ Processed occupancy data:', processedData);
         return processedData;
       } else {
         console.log('📊 Full response structure:', JSON.stringify(response.data, null, 2));
@@ -195,7 +207,7 @@ class OccupancyService {
         timeZone: 'Asia/Karachi' 
       });
 
-      // Initialize room types
+      // Initialize room types`
       const roomTypes = {
         'Studio': { available: 0, reserved: 0, total: 0 },
         '1BR': { available: 0, reserved: 0, total: 0 },
@@ -329,6 +341,30 @@ class OccupancyService {
       // Calculate occupancy rate
       const occupancyRate = totalRooms > 0 ? ((totalReserved / totalRooms) * 100).toFixed(2) : 0;
 
+      // Build detailed reserved rooms list with actual check-in times
+      const reservedRoomsDetails = [];
+      records.forEach(record => {
+        const fields = record.fields || record;
+        const listingName = fields['Listing Name'] || fields.listingName || fields.name;
+        const listingId = fields['Listing IDs'] || fields.listingId || fields.id;
+        
+        const checkedInGuest = checkedInData.checkedInListings.find(checkedIn => 
+          String(checkedIn.listingId) === String(listingId)
+        );
+        
+        if (checkedInGuest) {
+          reservedRoomsDetails.push({
+            guestName: checkedInGuest.guestName,
+            listingName: listingName,
+            listingId: listingId,
+            reservationId: checkedInGuest.reservationId,
+            actualCheckInTime: checkedInGuest.actualCheckInTime,
+            guestType: checkedInGuest.guestType,
+            checkInDate: checkedInGuest.originalCheckInDate
+          });
+        }
+      });
+
       return {
         reportDate: currentDate,
         reportTime: currentTime,
@@ -342,6 +378,7 @@ class OccupancyService {
             acc[type] = data;
             return acc;
           }, {}),
+        reservedRooms: reservedRoomsDetails, // Add detailed reserved rooms list
         lastUpdated: new Date().toISOString()
       };
     } catch (error) {
@@ -384,6 +421,170 @@ class OccupancyService {
         success: false,
         error: error.message,
         data: null
+      };
+    }
+  }
+
+  /**
+   * Get today's check-ins with detailed information
+   */
+  async getTodayCheckinsDetails() {
+    try {
+      console.log('🏨 Fetching detailed today\'s check-ins...');
+      
+      if (!this.hostawayAuthToken) {
+        throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
+      }
+
+      // Get current date in Pakistan timezone (UTC+5)
+      const now = new Date();
+      const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
+      const formattedToday = pakistanTime.getFullYear() + '-' + 
+        String(pakistanTime.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(pakistanTime.getDate()).padStart(2, '0');
+
+      const baseReservationsUrl = 'https://api.hostaway.com/v1/reservations?includeResources=1';
+      
+      const response = await axios.get(baseReservationsUrl, {
+        headers: {
+          Authorization: this.hostawayAuthToken,
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000
+      });
+
+      const allReservations = response.data.result || [];
+      const todayCheckinsDetails = [];
+
+      if (allReservations && allReservations.length > 0) {
+        // Filter reservations to include only those with check-in date TODAY
+        const reservations = allReservations.filter(res => {
+          if (!res.arrivalDate || !res.departureDate) return false;
+          if (!['new', 'modified'].includes(res.status)) return false;
+          
+          const arrival = new Date(res.arrivalDate);
+          const todayDate = new Date(formattedToday);
+          
+          // Only include reservations where check-in date is TODAY
+          const isCheckInToday = arrival.toDateString() === todayDate.toDateString();
+          
+          if (!isCheckInToday) return false;
+            
+          // Check for test guests
+          const guestName = res.guestName || res.firstName || res.lastName || 
+                           res.guest?.firstName || res.guest?.lastName || 
+                           res.guestFirstName || res.guestLastName || '';
+          const isTestGuest = !guestName ||
+            /test|testing|guests|new guest|test guest|new/i.test(guestName) ||
+            (res.comment && /test|testing|new guest/i.test(res.comment)) ||
+            (res.guestNote && /test|testing|new guest/i.test(res.guestNote));
+            
+          return !isTestGuest;
+        });
+
+        // Get room inventory from Teable for apartment names
+        const teableResponse = await axios.get(this.teableApiUrl, {
+          headers: {
+            'Authorization': `Bearer ${this.bearerToken}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            viewId: 'viwW3FRhLdnavc9Qlas'
+          }
+        });
+
+        const teableRecords = teableResponse.data.records || teableResponse.data || [];
+        const listingIdToApartmentMap = {};
+        
+        // Create mapping of listing ID to apartment name
+        teableRecords.forEach(record => {
+          const fields = record.fields || record;
+          const listingName = fields['Listing Name'] || fields.listingName || fields.name;
+          const listingId = fields['Listing IDs'] || fields.listingId || fields.id;
+          if (listingId && listingName) {
+            listingIdToApartmentMap[String(listingId)] = listingName;
+          }
+        });
+
+        // Process each reservation to get detailed check-in information
+        for (const res of reservations) {
+          let updatedRes = res;
+          
+          // Fetch updated details if the reservation is new or modified
+          if (res.status === 'modified' || res.status === 'new') {
+            try {
+              const updatedResResponse = await axios.get(`https://api.hostaway.com/v1/reservations/${res.id}?includeResources=1`, {
+                headers: {
+                  Authorization: this.hostawayAuthToken,
+                  'Content-Type': 'application/json'
+                },
+                timeout: 30000
+              });
+              const updatedResData = updatedResResponse.data;
+              if (updatedResData && updatedResData.result) {
+                updatedRes = updatedResData.result;
+              }
+            } catch (updateError) {
+              // Silent error handling
+            }
+          }
+
+          const arrival = new Date(updatedRes.arrivalDate);
+          const departure = new Date(updatedRes.departureDate);
+          const todayDate = new Date(formattedToday);
+          
+          // Process reservations where today is within the stay period (including staying guests)
+          if (todayDate >= arrival && todayDate < departure) {
+            // Get custom fields from the correct property: customFieldValues
+            let customFields = [];
+            
+            if (updatedRes.customFieldValues && Array.isArray(updatedRes.customFieldValues)) {
+              customFields = updatedRes.customFieldValues;
+            }
+            
+            // Check for "Actual Check-in Time" field (ID: 76281)
+            const actualCheckInField = customFields.find(fieldValue => {
+              return fieldValue.customFieldId === 76281 && 
+                fieldValue.customField?.name === "Actual Check-in Time" && 
+                fieldValue.value && 
+                fieldValue.value.trim() !== "";
+            });
+              
+            if (actualCheckInField) {
+              const apartmentName = listingIdToApartmentMap[String(updatedRes.listingMapId)] || `Unit ${updatedRes.listingMapId}`;
+              
+              // Determine if this is today's check-in or staying guest
+              const isCheckInToday = arrival.toDateString() === todayDate.toDateString();
+              const guestType = isCheckInToday ? 'Today\'s Check-in' : 'Staying Guest';
+              
+              todayCheckinsDetails.push({
+                guestName: updatedRes.guestName || updatedRes.firstName || updatedRes.lastName || 'Unknown Guest',
+                checkInDate: updatedRes.arrivalDate,
+                apartmentNo: apartmentName,
+                actualCheckInTime: actualCheckInField.value,
+                guestType: guestType,
+                reservationId: updatedRes.id,
+                listingId: updatedRes.listingMapId
+              });
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Found ${todayCheckinsDetails.length} detailed reservations (check-ins + staying guests) for today`);
+      console.log(`📋 Current occupancy details:`, todayCheckinsDetails);
+      
+      return {
+        success: true,
+        data: todayCheckinsDetails
+      };
+
+    } catch (error) {
+      console.error('❌ Error fetching today\'s check-ins details:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        data: []
       };
     }
   }

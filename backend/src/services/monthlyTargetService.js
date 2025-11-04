@@ -139,9 +139,9 @@ class MonthlyTargetService {
 
       console.log(`🗓️ Calculating for month: ${currentMonth + 1}/${currentYear}`);
       console.log(`📅 Today's date: ${today}/${currentMonth + 1}/${currentYear}`);
-      console.log(`🔍 Looking for records from 1st to ${today}th of current month`);
+      console.log(`🔍 Looking for records from 2nd to ${today}th of current month (excluding 1st)`);
 
-      // Filter records for current month up to today only
+      // Filter records for current month up to today only (EXCLUDING day 1)
       const currentMonthRecords = response.data.records.filter(record => {
         if (!record.fields || !record.fields['Date and Time ']) return false;
         
@@ -155,19 +155,23 @@ class MonthlyTargetService {
         console.log(`📅 Record date: ${dateTimeStr} → day=${recordDay}, month=${recordMonth}, year=${recordYear}`);
         
         // Only include records from current month, current year, and up to today's date
+        // EXCLUDE day 1 because it was posted at end of previous month (Oct 31 at 11:59 PM)
         const isCurrentMonth = recordMonth === currentMonth && recordYear === currentYear;
         const isUpToToday = recordDay <= today;
+        const isNotFirstDay = recordDay > 1; // EXCLUDE day 1
         
-        if (isCurrentMonth && isUpToToday) {
-          console.log(`✅ Including record from day ${recordDay} (within range 1-${today})`);
+        if (isCurrentMonth && isUpToToday && isNotFirstDay) {
+          console.log(`✅ Including record from day ${recordDay} (within range 2-${today})`);
+        } else if (isCurrentMonth && recordDay === 1) {
+          console.log(`❌ Excluding record from day 1 (posted at end of previous month)`);
         } else if (isCurrentMonth && !isUpToToday) {
           console.log(`❌ Excluding record from day ${recordDay} (future date, beyond today ${today})`);
         }
         
-        return isCurrentMonth && isUpToToday;
+        return isCurrentMonth && isUpToToday && isNotFirstDay;
       });
 
-      console.log(`📋 Found ${currentMonthRecords.length} records from 1st to ${today}th of current month`);
+      console.log(`📋 Found ${currentMonthRecords.length} records from 2nd to ${today}th of current month (excluding 1st)`);
 
       // Sum all achieved values from month start to today
       let monthlyTotal = 0;
@@ -181,7 +185,7 @@ class MonthlyTargetService {
         console.log(`➕ Adding day ${recordDay} revenue: ${achievedValue} (${numValue})`);
       });
 
-      console.log(`✅ Monthly achieved total (1st to ${today}th): ${this.formatRevenueValue(monthlyTotal)}`);
+      console.log(`✅ Monthly achieved total (2nd to ${today}th, excluding 1st): ${this.formatRevenueValue(monthlyTotal)}`);
       return monthlyTotal;
 
     } catch (error) {
