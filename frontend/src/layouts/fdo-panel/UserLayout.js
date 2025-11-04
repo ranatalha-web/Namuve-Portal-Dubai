@@ -410,7 +410,7 @@ function UserLayout({ children }) {
     "2BR Premium": [305055, 309909, 323227, 288688],
     "3BR": [288686, 305327, 288676, 389366],
     "1BR": [307143, 306032, 288691, 305069, 288681, 288726, 288679, 288723, 288678, 323258, 400763, 387833, 387834],
-    Studio: [288682, 288690, 323229, 323261, 336255, 383744, 410263, 413218, 392230],
+    Studio: [288682, 288690, 323229, 323261, 336255, 383744, 410263, 413218, 392230, 449099],
     "2BR": [288677, 288684, 288687, 288977, 288685, 288683, 306543, 288724, 378076, 378078, 400779, 400769, 395345, 414090, 421015, 422302],
   };
 
@@ -893,8 +893,9 @@ function UserLayout({ children }) {
                   },
                 },
                 "& .Mui-selected": {
-                  color: "#fff !important",
-                  backgroundColor: "#249b2aff !important", // brand green active
+                  color: "#000 !important",
+                  backgroundColor: "transparent !important",
+                  border: "1.5px solid #000", // black border for active
                   boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                 },
               }}

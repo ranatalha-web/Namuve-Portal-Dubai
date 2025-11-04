@@ -639,7 +639,7 @@ ul li {
       const currencyLabel = reservation.currency || "";
 
       // ✅ Fetch Finance Fields from API (includes deposit and damage logic)
-      const { lateCheckOutCharges, allTotalCharges, financeFields, CheckOutDamageDeposit } =
+      const { lateCheckOutCharges, allTotalCharges, financeFields } =
         await getFinanceFields(guest.reservationId);
 
       const channelName = reservation.channelName || "N/A";
@@ -664,6 +664,17 @@ ul li {
         );
         if (securityField) {
           CheckOutSecurityDeposit = securityField.total ?? securityField.value ?? "0";
+        }
+      }
+
+      // ✅ Get Damage Fee directly from reservation.financeField
+      let CheckOutDamageDeposit = 0;
+      if (Array.isArray(reservation.financeField)) {
+        const damageField = reservation.financeField.find(
+          (field) => field.alias === "Damage Fee" && field.isDeleted === 0
+        );
+        if (damageField) {
+          CheckOutDamageDeposit = damageField.total ?? damageField.value ?? 0;
         }
       }
 
@@ -3247,7 +3258,7 @@ function KanbanView() {
 
   // Main content for both user and admin
   const mainContent = (
-    <MDBox mt={user?.role === "user" ? 1 : 4} mb={0}>
+    <MDBox mt={user?.role === "user" ? 1 : 1} mb={0}>
       <Grid container spacing={3} justifyContent="center">
         <Grid item xs={12}>
           <Card>
