@@ -395,13 +395,13 @@ ul li {
               />
             </div>
             <div class="heading-text" style="margin: 20px 0px 0px 40px !important">
-              <h3 style="margin: 0; font-size: 20px; font-weight: bold; "> ${guestName}'s Check-in Form <span style="font-size: 12px; color: #666;">(${guest.reservationId
+              <h3 style="margin: 0; font-size: 20px; font-weight: bold; font-family: sans-serif; "> ${guestName}'s Check-in Form <span style="font-size: 12px; color: #666;">(${guest.reservationId
         })</span></h3>
               <p style="margin: 4px 0 0 0; font-size: 14px; color: #555; font-family: Arial;">Actual Check-in Date / Time: ${actualCheckInTime}</p>
             </div>
             <!-- 
             <div style="position: absolute; margin-left: 400px; margin-top: -16px; font-family: Arial; color: #b6bfb6;">
-    Printed By: ${user?.username}
+    Printed By: ${user?.name}
   </div>
   -->
             </div>
@@ -473,7 +473,7 @@ ul li {
                 <div class="row-field" style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
                   <div class="inner-col" style="text-align: left">
                     <div style="border-bottom: 1px solid black; width:140px; margin-bottom: 5px;"></div>
-                    <h3>Management Team <br><span style="color:#b6bfb6; font-size:9px;">(${user?.username})</span></h3>
+                    <h3>Management Team <br><span style="color:#b6bfb6; font-size:9px;">(${user?.name})</span></h3>
                   </div>
                   <div class="inner-col" style="text-align: right">
                     <div style="border-bottom: 1px solid black; width: 140px; margin-bottom: 5px; margin-left: auto;"></div>
@@ -592,7 +592,7 @@ ul li {
         records: [
           {
             fields: {
-              User: user?.username,
+              User: user?.name,
               "Button Clicked": "Print Check In",
               "Date & Time": formattedDateTime,
             },
@@ -650,7 +650,7 @@ ul li {
       const currencyLabel = reservation.currency || "";
 
       // ✅ Fetch Finance Fields from API (includes deposit and damage logic)
-      const { lateCheckOutCharges, allTotalCharges, financeFields, CheckOutDamageDeposit } =
+      const { lateCheckOutCharges, allTotalCharges, financeFields } =
         await getFinanceFields(guest.reservationId);
 
       const channelName = reservation.channelName || "N/A";
@@ -675,6 +675,17 @@ ul li {
         );
         if (securityField) {
           CheckOutSecurityDeposit = securityField.total ?? securityField.value ?? "0";
+        }
+      }
+
+      // ✅ Get Damage Fee directly from reservation.financeField
+      let CheckOutDamageDeposit = 0;
+      if (Array.isArray(reservation.financeField)) {
+        const damageField = reservation.financeField.find(
+          (field) => field.alias === "Damage Fee" && field.isDeleted === 0
+        );
+        if (damageField) {
+          CheckOutDamageDeposit = damageField.total ?? damageField.value ?? 0;
         }
       }
 
@@ -892,7 +903,7 @@ ul li {
    </div>
    <!--
    <div style="position: absolute; margin-left: 400px; margin-top: -9px; font-family: monospace; color: #b6bfb6;">
-    Printed By: ${user?.username}
+    Printed By: ${user?.name}
   </div>
   -->
 </div>
@@ -1007,7 +1018,7 @@ ul li {
     <div class="signature-section">
       <div class="signature-block">
         <div class="signature-line"></div>
-        <p>Management Team <span style="color:#b6bfb6;">(${user?.username})</span></p>
+        <p>Management Team <span style="color:#b6bfb6;">(${user?.name})</span></p>
       </div>
       <div class="signature-block">
         <div class="signature-line"></div>
@@ -1222,7 +1233,7 @@ ${CheckOutSecurityDeposit !== "0"
         records: [
           {
             fields: {
-              User: user?.username,
+              User: user?.name,
               "Button Clicked": "Print Check Out",
               "Date & Time": formattedDateTime,
             },
@@ -1389,7 +1400,7 @@ ${CheckOutSecurityDeposit !== "0"
       // ✅ Send message to Google Chat
       const chatMessage = [
         `📥 Check-In Alert for ${guest.guestName}!`,
-        `👤 ${guest.guestName || "Guest"} has checked in to 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime} by ${user?.username || "Unknown User"}.`,
+        `👤 ${guest.guestName || "Guest"} has checked in to 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime} by ${user?.name || "Unknown User"}.`,
         "",
         `🔗 https://dashboard.hostaway.com/reservations/${guest.reservationId}`
       ].join("\n");
@@ -1419,7 +1430,7 @@ ${CheckOutSecurityDeposit !== "0"
         records: [
           {
             fields: {
-              User: user?.username,
+              User: user?.name,
               "Button Clicked": "Mark Check In",
               "Date & Time": formattedDateTime,
             },
@@ -1581,7 +1592,7 @@ ${CheckOutSecurityDeposit !== "0"
       // ✅ Send message to Google Chat
       const chatMessage = [
         `📤 Check-Out Alert for ${guest.guestName}!`,
-        `👤 ${guest.guestName || "Guest"} has checked out from 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime} by ${user?.username || "Unknown User"}.`,
+        `👤 ${guest.guestName || "Guest"} has checked out from 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime} by ${user?.name || "Unknown User"}.`,
         "",
         `🔗 https://dashboard.hostaway.com/reservations/${guest.reservationId}`
       ].join("\n");
@@ -1610,7 +1621,7 @@ ${CheckOutSecurityDeposit !== "0"
         records: [
           {
             fields: {
-              User: user?.username,
+              User: user?.name,
               "Button Clicked": "Mark Check Out",
               "Date & Time": formattedDateTime,
             },
@@ -2569,11 +2580,21 @@ ${CheckOutSecurityDeposit !== "0"
                           <strong>Remaining / Paid </strong>
                         </td>
                         <td>
-                          {reservationDetails
-                            ? `${reservationDetails.remainingBalance ?? "N/A"} ${reservationDetails.currency || ""
-                            } / ${reservationDetails.totalPaid ?? "N/A"} ${reservationDetails.currency || ""
-                            }`
-                            : "N/A"}
+                          {reservationDetails ? (
+                            `${reservationDetails.remainingBalance !== undefined && reservationDetails.remainingBalance !== null
+                              ? reservationDetails.currency === "USD"
+                                ? Number(reservationDetails.remainingBalance).toFixed(2)
+                                : reservationDetails.remainingBalance
+                              : "N/A"
+                            } ${reservationDetails.currency || ""} / ${reservationDetails.totalPaid !== undefined && reservationDetails.totalPaid !== null
+                              ? reservationDetails.currency === "USD"
+                                ? Number(reservationDetails.totalPaid).toFixed(2)
+                                : reservationDetails.totalPaid
+                              : "N/A"
+                            } ${reservationDetails.currency || ""}`
+                          ) : (
+                            "N/A"
+                          )}
                         </td>
                       </tr>
                       <tr>
@@ -3743,6 +3764,7 @@ function KanbanView() {
 
   // Main content for both user and admin
   const mainContent = (
+<<<<<<< HEAD
     <MDBox mt={user?.role === "user" ? 1 : 0} mb={0}>
       {/* ✅ Complete Navigation Bar for Admin Users (same as UserLayout) */}
       {user?.role !== "user" && (
@@ -4119,6 +4141,12 @@ function KanbanView() {
         <Grid container spacing={3} justifyContent="center">
           <Grid item xs={12}>
             <Card>
+=======
+    <MDBox mt={user?.role === "user" ? 1 : 1} mb={0}>
+      <Grid container spacing={3} justifyContent="center">
+        <Grid item xs={12}>
+          <Card>
+>>>>>>> 4deaf1f83cef8d57dfc4756bba454433c3767194
             <MDBox
               p={1}
               display="flex"
