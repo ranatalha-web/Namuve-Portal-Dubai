@@ -3764,7 +3764,6 @@ function KanbanView() {
 
   // Main content for both user and admin
   const mainContent = (
-<<<<<<< HEAD
     <MDBox mt={user?.role === "user" ? 1 : 0} mb={0}>
       {/* ✅ Complete Navigation Bar for Admin Users (same as UserLayout) */}
       {user?.role !== "user" && (
@@ -4141,12 +4140,6 @@ function KanbanView() {
         <Grid container spacing={3} justifyContent="center">
           <Grid item xs={12}>
             <Card>
-=======
-    <MDBox mt={user?.role === "user" ? 1 : 1} mb={0}>
-      <Grid container spacing={3} justifyContent="center">
-        <Grid item xs={12}>
-          <Card>
->>>>>>> 4deaf1f83cef8d57dfc4756bba454433c3767194
             <MDBox
               p={1}
               display="flex"
