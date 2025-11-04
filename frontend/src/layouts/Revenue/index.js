@@ -845,11 +845,14 @@ function MobilePaymentCard({ reservation, index }) {
     <Card
       sx={{
         mb: 2,
-        p: 2,
+        p: { xs: 1.5, sm: 2 },
         borderRadius: 3,
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
         border: '1px solid #e2e8f0',
         background: index % 2 === 0 ? '#f8fafc' : 'white',
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden',
         '&:hover': {
           boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
           transform: 'translateY(-2px)',
@@ -858,8 +861,24 @@ function MobilePaymentCard({ reservation, index }) {
       }}
     >
       {/* Header with ID and Status */}
-      <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <MDBox>
+      <MDBox 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems="center" 
+        mb={2}
+        gap={1}
+        sx={{ flexWrap: 'wrap' }}
+      >
+        <MDBox 
+          display="flex" 
+          alignItems="baseline" 
+          gap={1.5}
+          sx={{ 
+            minWidth: 0, 
+            flex: '1 1 auto',
+            maxWidth: '100%'
+          }}
+        >
           <MDTypography 
             variant="h6" 
             fontWeight="bold" 
@@ -871,6 +890,8 @@ function MobilePaymentCard({ reservation, index }) {
             sx={{
               textDecoration: 'none',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               '&:hover': {
                 textDecoration: 'underline',
                 color: '#1565c0'
@@ -879,7 +900,11 @@ function MobilePaymentCard({ reservation, index }) {
           >
             #{reservation.reservationId}
           </MDTypography>
-          <MDTypography variant="caption" color="text.secondary">
+          <MDTypography 
+            variant="caption" 
+            color="text.secondary"
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
             Reservation ID
           </MDTypography>
         </MDBox>
@@ -887,21 +912,41 @@ function MobilePaymentCard({ reservation, index }) {
           label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
           color={getStatusColor(reservation.paymentStatus)}
           size="small"
-          sx={{ fontWeight: 600, fontSize: '0.7rem' }}
+          sx={{ 
+            fontWeight: 600, 
+            fontSize: '0.7rem',
+            flexShrink: 0
+          }}
         />
       </MDBox>
 
       {/* Guest and Listing Info */}
       <MDBox mb={2}>
         <MDBox display="flex" alignItems="center" gap={1} mb={1}>
-          <Icon sx={{ color: '#64748b', fontSize: '1.2rem' }}>person</Icon>
-          <MDTypography variant="body2" fontWeight="medium">
+          <Icon sx={{ color: '#64748b', fontSize: '1.2rem', flexShrink: 0 }}>person</Icon>
+          <MDTypography 
+            variant="body2" 
+            fontWeight="medium"
+            sx={{ 
+              wordBreak: 'break-word',
+              overflow: 'hidden',
+              flex: 1
+            }}
+          >
             {reservation.guestName}
           </MDTypography>
         </MDBox>
         <MDBox display="flex" alignItems="center" gap={1}>
-          <Icon sx={{ color: '#64748b', fontSize: '1.2rem' }}>home</Icon>
-          <MDTypography variant="body2" color="text.secondary">
+          <Icon sx={{ color: '#64748b', fontSize: '1.2rem', flexShrink: 0 }}>home</Icon>
+          <MDTypography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ 
+              wordBreak: 'break-word',
+              overflow: 'hidden',
+              flex: 1
+            }}
+          >
             {reservation.listingName}
           </MDTypography>
         </MDBox>
@@ -909,10 +954,10 @@ function MobilePaymentCard({ reservation, index }) {
 
       {/* Dates and Amount */}
       <MDBox 
-        display="grid" 
-        gridTemplateColumns="1fr 1fr" 
-        gap={2} 
         sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+          gap: 2,
           p: 1.5,
           backgroundColor: 'rgba(25, 118, 210, 0.05)',
           borderRadius: 2,
@@ -1849,7 +1894,11 @@ function Revenue() {
       >
         {/* Today's Reservations Section */}
         <MDBox mb={4}>
-          <Card sx={{ p: 3, boxShadow: 3 }}>
+          <Card sx={{ 
+            p: { xs: 1.5, sm: 2, md: 3 }, 
+            boxShadow: 3,
+            overflow: 'hidden'
+          }}>
             <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={2} 
               sx={{ 
                 flexDirection: { xs: 'column', sm: 'row' }, 
@@ -1916,7 +1965,13 @@ function Revenue() {
             ) : reservations.length > 0 ? (
               <>
                 {/* Mobile Card View - Always show on mobile */}
-                <MDBox sx={{ display: { xs: 'block', md: 'none' } }}>
+                <MDBox sx={{ 
+                  display: { xs: 'block', md: 'none' },
+                  px: { xs: 0, sm: 1 },
+                  width: '100%',
+                  maxWidth: '100%',
+                  overflow: 'hidden'
+                }}>
                   <MDTypography 
                     variant="h5" 
                     fontWeight="bold" 
@@ -1925,7 +1980,8 @@ function Revenue() {
                       color: '#1e293b',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 2
+                      gap: 2,
+                      px: { xs: 0.5, sm: 0 }
                     }}
                   >
                     📱 Today's Reservations ({reservations.length})
