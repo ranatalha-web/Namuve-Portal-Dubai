@@ -2856,7 +2856,7 @@ function KanbanView() {
   const [syncing, setSyncing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // ✅ Tab functionality for admin users
   const [activeTab, setActiveTab] = useState(0);
   const [listingSections, setListingSections] = useState({});
@@ -2870,7 +2870,7 @@ function KanbanView() {
   const API_ENDPOINT = "https://teable.namuve.com/api/table/tbliOdo8ldmMO8rrYyN/record";
   const API_TOKEN = "teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=";
   const HOSTAWAY_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzNhNzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE";
-  
+
   const LISTINGS_DATA = {
     "2BR Premium": [305055, 309909, 323227, 288688],
     "3BR": [288686, 305327, 288676, 389366],
@@ -3189,16 +3189,16 @@ function KanbanView() {
               "Content-Type": "application/json",
             },
           });
-          
+
           if (!res.ok) {
             throw new Error(`Failed to fetch listings: ${res.status} ${res.statusText}`);
           }
-          
+
           const data = await res.json();
           let listings = data.result || [];
-          
+
           console.log(`✅ Fetched ${listings.length} listings for Check-In/Out`);
-          
+
           if (listings.length === 0) {
             console.warn("⚠️ No listings found");
             setTodayCheckIn([]);
@@ -3690,7 +3690,7 @@ function KanbanView() {
       setError(null);
 
       console.log("🏢 Fetching apartment status...");
-      
+
       const res = await fetch("https://api.hostaway.com/v1/listings?country=Pakistan", {
         headers: {
           Authorization: `Bearer ${HOSTAWAY_TOKEN}`,
@@ -3702,7 +3702,7 @@ function KanbanView() {
         console.error("❌ Failed to fetch listings:", res.status, res.statusText);
         throw new Error(`Failed to fetch listings: ${res.status}`);
       }
-      
+
       const data = await res.json();
       const listings = data.result || [];
       console.log(`✅ Fetched ${listings.length} listings`);
@@ -3820,8 +3820,9 @@ function KanbanView() {
                     },
                   },
                   "& .Mui-selected": {
-                    color: "#fff !important",
-                    backgroundColor: "#249b2aff !important",
+                    color: "#000 !important",
+                    backgroundColor: "transparent !important",
+                    border: "1.5px solid #000",
                     boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                   },
                 }}
@@ -3910,52 +3911,52 @@ function KanbanView() {
 
           {!loading && !error && Object.keys(listingSections).length > 0 && (
             <Row>
-                {Object.entries(listingSections).map(([category, entries], idx) => {
-                  const filteredEntries = entries.filter((row) =>
-                    row.name.toLowerCase().includes(searchQuery)
-                  );
+              {Object.entries(listingSections).map(([category, entries], idx) => {
+                const filteredEntries = entries.filter((row) =>
+                  row.name.toLowerCase().includes(searchQuery)
+                );
 
-                  if (filteredEntries.length === 0) return null;
+                if (filteredEntries.length === 0) return null;
 
-                  const total = entries.length;
-                  const available = entries.filter((e) => e.status === "available").length;
-                  const reserved = entries.filter((e) => e.status === "reserved").length;
-                  const blocked = entries.filter((e) => e.status === "blocked").length;
-                  const occupancy = total > 0 ? ((reserved / total) * 100).toFixed(1) : 0;
+                const total = entries.length;
+                const available = entries.filter((e) => e.status === "available").length;
+                const reserved = entries.filter((e) => e.status === "reserved").length;
+                const blocked = entries.filter((e) => e.status === "blocked").length;
+                const occupancy = total > 0 ? ((reserved / total) * 100).toFixed(1) : 0;
 
-                  return (
-                    <Col key={idx} md={6} className="mb-4">
+                return (
+                  <Col key={idx} md={6} className="mb-4">
+                    <Box
+                      sx={{
+                        backgroundColor: "#fff",
+                        borderRadius: "12px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                        overflow: "hidden",
+                      }}
+                    >
                       <Box
                         sx={{
-                          backgroundColor: "#fff",
-                          borderRadius: "12px",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                          overflow: "hidden",
+                          backgroundColor: "#f9fafb",
+                          px: 3,
+                          py: 2,
+                          borderBottom: "1px solid #e5e7eb",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                         }}
                       >
-                        <Box
-                          sx={{
-                            backgroundColor: "#f9fafb",
-                            px: 3,
-                            py: 2,
-                            borderBottom: "1px solid #e5e7eb",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
-                            {category}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500 }}>
-                            Total: {total} |{" "}
-                            <span style={{ color: "#10B981", fontWeight: 600 }}>Available: {available}</span>{" "}
-                            |{" "}
-                            <span style={{ color: "#EF4444", fontWeight: 600 }}>Reserved: {reserved}</span>{" "}
-                            |{" "}
-                            <span style={{ color: "#6B7280", fontWeight: 600 }}>Blocked: {blocked}</span>
-                          </Typography>
-                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
+                          {category}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                          Total: {total} |{" "}
+                          <span style={{ color: "#10B981", fontWeight: 600 }}>Available: {available}</span>{" "}
+                          |{" "}
+                          <span style={{ color: "#EF4444", fontWeight: 600 }}>Reserved: {reserved}</span>{" "}
+                          |{" "}
+                          <span style={{ color: "#6B7280", fontWeight: 600 }}>Blocked: {blocked}</span>
+                        </Typography>
+                      </Box>
 
                       <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
                         <thead>
@@ -4140,197 +4141,197 @@ function KanbanView() {
         <Grid container spacing={3} justifyContent="center">
           <Grid item xs={12}>
             <Card>
-            <MDBox
-              p={1}
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              {/* Left side title */}
-              <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
+              <MDBox
+                p={1}
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                {/* Left side title */}
+                <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
 
-              {/* Right side (Search + Button) */}
-              <MDBox display="flex" alignItems="center" gap={2}>
-                {/* Search Bar */}
-                <MDBox
-                  sx={{
-                    position: "relative",
-                    width: 260,
-                  }}
-                >
-                  {/* Search icon inside input */}
-                  <SearchIcon
-                    sx={{
-                      position: "absolute",
-                      left: 12,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      fontSize: 20,
-                      color: "#666",
-                      zIndex: 1,
-                      pointerEvents: "none",
-                    }}
-                  />
-
-                  {/* Input field */}
-                  <InputBase
-                    placeholder="Search reservations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    sx={{
-                      pl: 5.5,
-                      pr: 1.5,
-                      py: 0.7,
-                      width: "100%",
-                      borderRadius: "10px",
-                      border: "1px solid #ccc",
-                      backgroundColor: "#fff",
-                      fontSize: "0.9rem",
-                      transition: "border 0.2s ease, box-shadow 0.2s ease",
-                      "&:hover": {
-                        border: "1.5px solid #555",
-                      },
-                      "&:focus-within": {
-                        border: "2px solid #333",
-                      },
-                    }}
-                  />
-                </MDBox>
-
-                {/* Sync Button */}
-                <MDButton
-                  variant="outlined"
-                  onClick={handleSync}
-                  disabled={syncing || cooldown > 0 || isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    textTransform: "none",
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    borderRadius: "10px",
-                    px: 2,
-                    py: 0.6,
-                    border: "2px solid",
-                    borderColor: "primary.main",
-                    color: "primary.main",
-                    backgroundColor: "transparent",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: "primary.dark",
-                      color: "primary.dark",
-                    },
-                    "&:disabled": {
-                      opacity: 1, // keep text readable
-                      color: "text.secondary", // visible text when disabled
-                      borderColor: "text.secondary",
-                    },
-                  }}
-                >
-                  <SyncIcon
-                    sx={{
-                      fontSize: 20,
-                      animation: syncing ? "spin 1s linear infinite" : "none",
-                      "@keyframes spin": {
-                        "0%": { transform: "rotate(0deg)" },
-                        "100%": { transform: "rotate(360deg)" },
-                      },
-                    }}
-                  />
-
-                  {syncing
-                    ? "Syncing..."
-                    : cooldown > 0
-                      ? `${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
-                      : "Sync"}
-                </MDButton>
-              </MDBox>
-            </MDBox>
-
-            <MDBox
-              display="flex"
-              overflow="auto"
-              px={2}
-              pb={2}
-              sx={{
-                "& > *:last-child": { mr: 0 },
-                // Desktop view (xl and up): Keep original layout
-                "@media (min-width: 1536px)": {
-                  flexDirection: "row",
-                  flexWrap: "nowrap",
-                },
-                // Laptop/Tablet view (lg and down): Single row layout
-                "@media (max-width: 1535px)": {
-                  flexDirection: "row",
-                  flexWrap: "nowrap",
-                  gap: 1,
-                  "& > div": {
-                    minWidth: "280px !important",
-                    maxWidth: "280px",
-                    flex: "0 0 280px",
-                  },
-                },
-              }}
-            >
-              {stacks.map((stack) => {
-                // Get all guests in this stack
-                const stackGuests = reservations.filter((guest) => guest.stack === stack);
-
-                // Skip completely empty stacks
-                if (stackGuests.length === 0) return null;
-
-                // Filter guests by search term
-                const filteredGuests = stackGuests.filter((guest) => matchesSearch(guest, searchTerm));
-
-                // Skip stack if no guests match the search
-                if (filteredGuests.length === 0) return null;
-
-                return (
+                {/* Right side (Search + Button) */}
+                <MDBox display="flex" alignItems="center" gap={2}>
+                  {/* Search Bar */}
                   <MDBox
-                    key={stack}
-                    minWidth={360}
-                    mr={2}
                     sx={{
-                      "@media (min-width: 1536px)": { minWidth: 335, marginRight: 2 },
-                      "@media (max-width: 1535px)": { minWidth: "280px !important", maxWidth: "280px", marginRight: 1, flex: "0 0 280px" }
+                      position: "relative",
+                      width: 260,
                     }}
                   >
-                    <Card sx={{ ...(stackStyles[stack] || {}) }}>
-                      <MDBox p={2}>
-                        <MDBox display="flex" justifyContent="space-between" alignItems="center">
-                          <MDTypography variant="h6">{stack}</MDTypography>
-                          <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: "#28282B" }} />
-                        </MDBox>
-                      </MDBox>
+                    {/* Search icon inside input */}
+                    <SearchIcon
+                      sx={{
+                        position: "absolute",
+                        left: 12,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: 20,
+                        color: "#666",
+                        zIndex: 1,
+                        pointerEvents: "none",
+                      }}
+                    />
 
-                      <MDBox px={2} pb={2} sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: "calc(98vh - 280px)" }}>
-                        {filteredGuests.map((guest) => (
-                          <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
-                        ))}
-                      </MDBox>
-                    </Card>
+                    {/* Input field */}
+                    <InputBase
+                      placeholder="Search reservations..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      sx={{
+                        pl: 5.5,
+                        pr: 1.5,
+                        py: 0.7,
+                        width: "100%",
+                        borderRadius: "10px",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                        fontSize: "0.9rem",
+                        transition: "border 0.2s ease, box-shadow 0.2s ease",
+                        "&:hover": {
+                          border: "1.5px solid #555",
+                        },
+                        "&:focus-within": {
+                          border: "2px solid #333",
+                        },
+                      }}
+                    />
                   </MDBox>
-                );
-              })}
-              {/* ✅ Show message if no stacks have any match */}
-              {stacks.every(stack => {
-                const stackGuests = reservations.filter(guest => guest.stack === stack);
-                const filteredGuests = stackGuests.filter(guest => matchesSearch(guest, searchTerm));
-                return filteredGuests.length === 0;
-              }) && (
-                  <MDTypography
-                    variant="body2"
-                    align="center"
-                    sx={{ color: "#dark", mt: 3, width: "100%" }}
+
+                  {/* Sync Button */}
+                  <MDButton
+                    variant="outlined"
+                    onClick={handleSync}
+                    disabled={syncing || cooldown > 0 || isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      textTransform: "none",
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      borderRadius: "10px",
+                      px: 2,
+                      py: 0.6,
+                      border: "2px solid",
+                      borderColor: "primary.main",
+                      color: "primary.main",
+                      backgroundColor: "transparent",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        borderColor: "primary.dark",
+                        color: "primary.dark",
+                      },
+                      "&:disabled": {
+                        opacity: 1, // keep text readable
+                        color: "text.secondary", // visible text when disabled
+                        borderColor: "text.secondary",
+                      },
+                    }}
                   >
-                    No matches found
-                  </MDTypography>
-                )}
-            </MDBox>
-          </Card>
+                    <SyncIcon
+                      sx={{
+                        fontSize: 20,
+                        animation: syncing ? "spin 1s linear infinite" : "none",
+                        "@keyframes spin": {
+                          "0%": { transform: "rotate(0deg)" },
+                          "100%": { transform: "rotate(360deg)" },
+                        },
+                      }}
+                    />
+
+                    {syncing
+                      ? "Syncing..."
+                      : cooldown > 0
+                        ? `${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
+                        : "Sync"}
+                  </MDButton>
+                </MDBox>
+              </MDBox>
+
+              <MDBox
+                display="flex"
+                overflow="auto"
+                px={2}
+                pb={2}
+                sx={{
+                  "& > *:last-child": { mr: 0 },
+                  // Desktop view (xl and up): Keep original layout
+                  "@media (min-width: 1536px)": {
+                    flexDirection: "row",
+                    flexWrap: "nowrap",
+                  },
+                  // Laptop/Tablet view (lg and down): Single row layout
+                  "@media (max-width: 1535px)": {
+                    flexDirection: "row",
+                    flexWrap: "nowrap",
+                    gap: 1,
+                    "& > div": {
+                      minWidth: "280px !important",
+                      maxWidth: "280px",
+                      flex: "0 0 280px",
+                    },
+                  },
+                }}
+              >
+                {stacks.map((stack) => {
+                  // Get all guests in this stack
+                  const stackGuests = reservations.filter((guest) => guest.stack === stack);
+
+                  // Skip completely empty stacks
+                  if (stackGuests.length === 0) return null;
+
+                  // Filter guests by search term
+                  const filteredGuests = stackGuests.filter((guest) => matchesSearch(guest, searchTerm));
+
+                  // Skip stack if no guests match the search
+                  if (filteredGuests.length === 0) return null;
+
+                  return (
+                    <MDBox
+                      key={stack}
+                      minWidth={360}
+                      mr={2}
+                      sx={{
+                        "@media (min-width: 1536px)": { minWidth: 335, marginRight: 2 },
+                        "@media (max-width: 1535px)": { minWidth: "280px !important", maxWidth: "280px", marginRight: 1, flex: "0 0 280px" }
+                      }}
+                    >
+                      <Card sx={{ ...(stackStyles[stack] || {}) }}>
+                        <MDBox p={2}>
+                          <MDBox display="flex" justifyContent="space-between" alignItems="center">
+                            <MDTypography variant="h6">{stack}</MDTypography>
+                            <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: "#28282B" }} />
+                          </MDBox>
+                        </MDBox>
+
+                        <MDBox px={2} pb={2} sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: "calc(98vh - 280px)" }}>
+                          {filteredGuests.map((guest) => (
+                            <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
+                          ))}
+                        </MDBox>
+                      </Card>
+                    </MDBox>
+                  );
+                })}
+                {/* ✅ Show message if no stacks have any match */}
+                {stacks.every(stack => {
+                  const stackGuests = reservations.filter(guest => guest.stack === stack);
+                  const filteredGuests = stackGuests.filter(guest => matchesSearch(guest, searchTerm));
+                  return filteredGuests.length === 0;
+                }) && (
+                    <MDTypography
+                      variant="body2"
+                      align="center"
+                      sx={{ color: "#dark", mt: 3, width: "100%" }}
+                    >
+                      No matches found
+                    </MDTypography>
+                  )}
+              </MDBox>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
       )}
     </MDBox>
   );

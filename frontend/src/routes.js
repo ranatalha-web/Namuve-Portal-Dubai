@@ -8,6 +8,7 @@ import Profile from "layouts/Rooms";
 import SignIn from "layouts/authentication/sign-in";
 import ForgotPassword from "layouts/forgot-password";
 import AdminPanel from "layouts/admin-panel";
+import Payments from "layouts/payments";
 
 // @mui icons
 import Icon from "@mui/material/Icon";
@@ -42,15 +43,15 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
   // If custom role, show routes based on permissions
   if (userRole === "custom") {
     let allowedRoutes = [];
-    
+
     // Add routes based on permissions
     let permissions = null;
-    
+
     // Try to get permissions from parameter
     if (userPermissions) {
       try {
-        permissions = typeof userPermissions === 'string' 
-          ? JSON.parse(userPermissions) 
+        permissions = typeof userPermissions === 'string'
+          ? JSON.parse(userPermissions)
           : userPermissions;
       } catch (error) {
         // If permissions is just "123" or invalid, provide default permissions for testing
@@ -64,7 +65,7 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
         }
       }
     }
-    
+
     // Fallback to localStorage if no permissions and username provided
     if (!permissions && username) {
       try {
@@ -76,12 +77,12 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
         // Silent error handling
       }
     }
-    
+
     if (permissions) {
       try {
         // Filter routes in the correct order to maintain sidebar pattern
         const orderedKeys = ["fdo-panel", "revenue", "rooms", "admin-panel", "forgot-password", "logout"];
-        
+
         for (const key of orderedKeys) {
           switch (key) {
             case "fdo-panel":
@@ -100,9 +101,9 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
               }
               break;
             case "admin-panel":
-              if (permissions?.userManagement?.complete || 
-                  permissions?.passwordHistory?.complete || 
-                  permissions?.monthlyTarget?.view || permissions?.monthlyTarget?.complete) {
+              if (permissions?.userManagement?.complete ||
+                permissions?.passwordHistory?.complete ||
+                permissions?.monthlyTarget?.view || permissions?.monthlyTarget?.complete) {
                 allowedRoutes.push(...routes.filter(route => route.key === "admin-panel"));
               }
               break;
@@ -121,9 +122,9 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
         // Silent error handling
       }
     }
-    
+
     // Remove any duplicates that might have been added
-    const uniqueRoutes = allowedRoutes.filter((route, index, self) => 
+    const uniqueRoutes = allowedRoutes.filter((route, index, self) =>
       index === self.findIndex(r => r.key === route.key)
     );
     return uniqueRoutes;
@@ -153,6 +154,15 @@ const routes = [
     icon: <Icon fontSize="small">receipt_long</Icon>,
     route: "/revenue",
     component: <Revenue />,
+  },
+  // 3. Payments (after Revenue)
+  {
+    type: "collapse",
+    name: "Payments",
+    key: "payments",
+    icon: <Icon fontSize="small">payment</Icon>,
+    route: "/payments",
+    component: <Payments />,
   },
   // 3. Rooms (Third in sidebar)
   {
