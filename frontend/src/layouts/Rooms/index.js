@@ -331,9 +331,11 @@ function Overview() {
             setOccupancyData(result.data);
           } else {
             console.error('Failed to fetch occupancy data:', result.error);
+            setOccupancyData(null);
           }
         } else {
-          setOccupancyData(data);
+          console.error('Failed to fetch occupancy data: Response not OK');
+          setOccupancyData(null);
         }
       } catch (err) {
         console.error('Error fetching occupancy data:', err);
