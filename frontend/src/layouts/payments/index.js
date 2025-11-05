@@ -107,8 +107,9 @@ function Payments() {
                 Currency: rec.fields["Currency"] || "-",
                 Amount: rec.fields["Amount"] || "-",
                 Status: rec.fields["Status"] || "-",
-                ChargeDate: rec.fields["Charge Date"]
-                    ? new Date(rec.fields["Created time 2"]).toISOString().split("T")[0]
+                QBStatus: rec.fields["QB Status"] || "Null",
+                HWChargeDate: rec.fields["Charge Date"]
+                    ? new Date(rec.fields["Charge Date"]).toISOString().split("T")[0]
                     : "-",
                 RefundId: rec.fields["Refund Id"] || "-",
                 QB_TXN_id: rec.fields["QB_TXN_id"] || "-",
@@ -117,7 +118,7 @@ function Payments() {
                 CreatedTime: rec.fields["Created time"]
                     ? new Date(rec.fields["Created time"]).toISOString().split("T")[0]
                     : "-",
-                CreatedTime2: rec.fields["Created time 2"]
+                EntryRecordedTS: rec.fields["Created time 2"]
                     ? (() => {
                         const date = new Date(rec.fields["Created time 2"]);
                         const year = date.getFullYear();
@@ -144,6 +145,7 @@ function Payments() {
         overflow: "hidden",
         fontSize: "1rem",
         textOverflow: "ellipsis",
+        backgroundColor: "inherit",
     };
 
     const headerStyle = {
@@ -271,7 +273,7 @@ function Payments() {
                                         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> Loading
                                     </>
                                 ) : (
-                                    "Fetch"
+                                    "Start"
                                 )}
                             </button>
                         </Form>
@@ -301,7 +303,6 @@ function Payments() {
                         }}
                     >
                         <Table
-                            striped
                             bordered
                             hover
                             className="align-middle mb-0"
@@ -341,105 +342,178 @@ function Payments() {
                                     <th style={headerStyle}>Currency</th>
                                     <th style={headerStyle}>Amount</th>
                                     <th style={headerStyle}>Status</th>
-                                    <th style={headerStyle}>Charge Date</th>
-                                    <th style={headerStyle}>Refund Id</th>
-                                    <th style={headerStyle}>QB_TXN_id</th>
-                                    <th style={headerStyle}>Expense_id</th>
-                                    <th style={headerStyle}>Trsnfr_id</th>
-                                    <th style={headerStyle}>Created time</th>
-                                    <th style={headerStyle}>Created time 2</th>
+                                    <th style={headerStyle}>QB Status</th>
+                                    <th style={headerStyle}>HW Charge Date</th>
+                                    <th style={headerStyle}>Entry Recorded TS</th>
                                     <th style={headerStyle}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredData.length === 0 ? (
                                     <tr>
-                                        <td colSpan="16" className="text-center py-3">
+                                        <td colSpan="12" className="text-center py-3">
                                             {loading
-                                                ? "Fetching records..."
+                                                ? "Loading records..."
                                                 : data.length === 0
-                                                    ? "Select a date range and click Fetch"
+                                                    ? "Select a date range and click Start"
                                                     : "No results match your search"}
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredData.map((row) => (
-                                        <tr key={row.id}>
-                                            <td style={cellStyle}>{row.id}</td>
-                                            <td style={cellStyle}>{row.reservationId}</td>
+                                        <tr
+                                            key={row.id}
+                                            style={{
+                                                backgroundColor:
+                                                    row.Type === "Charge" ? "#d4edda" :
+                                                        row.Type === "Refund" ? "#e2e3e5" :
+                                                            "inherit"
+                                            }}
+                                        >
+                                            {(() => {
+                                                const hasChargeLink = row.Type === "Charge" &&
+                                                    row.QB_TXN_id &&
+                                                    row.QB_TXN_id !== "-" &&
+                                                    row.QB_TXN_id !== "null" &&
+                                                    row.QB_TXN_id.trim() !== "";
 
-                                            {/* TYPE – plain text, no min-width */}
-                                            <td style={cellStyle}>{row.Type}</td>
+                                                const hasRefundLink = row.Type === "Refund" &&
+                                                    row.Expense_id &&
+                                                    row.Expense_id !== "-" &&
+                                                    row.Expense_id !== "null" &&
+                                                    row.Expense_id.trim() !== "";
 
-                                            {/* TITLE */}
-                                            <td style={cellStyle}>
-                                                {editingId === row.recordId ? (
-                                                    <Form.Control
-                                                        size="sm"
-                                                        value={editForm.Title}
-                                                        onChange={(e) => setEditForm({ ...editForm, Title: e.target.value })}
-                                                        style={{ fontSize: "0.8rem" }}
-                                                    />
-                                                ) : (
-                                                    row.Title
-                                                )}
-                                            </td>
+                                                const rowTextColor = hasChargeLink
+                                                    ? "#155724"      // Dark green
+                                                    : hasRefundLink
+                                                        ? "#6c757d"    // Gray
+                                                        : "#721c24";   // Dark red
 
-                                            {/* DESCRIPTION */}
-                                            <td style={cellStyle}>
-                                                {editingId === row.recordId ? (
-                                                    <Form.Control
-                                                        size="sm"
-                                                        value={editForm.Description}
-                                                        onChange={(e) => setEditForm({ ...editForm, Description: e.target.value })}
-                                                        style={{ fontSize: "0.8rem" }}
-                                                    />
-                                                ) : (
-                                                    row.Description
-                                                )}
-                                            </td>
+                                                // Apply to all cells
+                                                const dynamicCellStyle = {
+                                                    ...cellStyle,
+                                                    color: rowTextColor,
+                                                    backgroundColor: "inherit"
+                                                };
 
-                                            <td style={cellStyle}>{row.Currency}</td>
-                                            <td style={cellStyle}>{row.Amount}</td>
-                                            <td style={cellStyle}>{row.Status}</td>
-                                            <td style={cellStyle}>{row.ChargeDate}</td>
-                                            <td style={cellStyle}>{row.RefundId}</td>
-                                            <td style={cellStyle}>{row.QB_TXN_id}</td>
-                                            <td style={cellStyle}>{row.Expense_id}</td>
-                                            <td style={cellStyle}>{row.Trsnfr_id}</td>
-                                            <td style={cellStyle}>{row.CreatedTime}</td>
-                                            <td style={cellStyle}>{row.CreatedTime2}</td>
-                                            <td style={{ ...cellStyle, textAlign: "center", width: "90px" }}>
-                                                {editingId === row.recordId ? (
-                                                    <div className="d-flex gap-1 justify-content-center">
-                                                        <button
-                                                            className="btn btn-success btn-sm"
-                                                            style={{ padding: "1px 5px", fontSize: "0.7rem" }}
-                                                            onClick={() => handleSave(row)}
-                                                        >
-                                                            Save
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-secondary btn-sm"
-                                                            style={{ padding: "1px 5px", fontSize: "0.7rem" }}
-                                                            onClick={() => setEditingId(null)}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        className="btn btn-primary btn-sm"
-                                                        style={{ padding: "2px 6px", fontSize: "0.7rem" }}
-                                                        onClick={() => {
-                                                            setEditingId(row.recordId);  // Track edit by recordId
-                                                            setEditForm({ Title: row.Title, Description: row.Description });
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                )}
-                                            </td>
+                                                return (
+                                                    <>
+                                                        <td style={dynamicCellStyle}>{row.id}</td>
+                                                        <td style={dynamicCellStyle}>{row.reservationId}</td>
+                                                        <td style={dynamicCellStyle}>
+                                                            <span style={{ fontWeight: "500" }}>
+                                                                {row.Type}
+                                                            </span>
+                                                        </td>
+                                                        {/* TITLE */}
+                                                        <td style={dynamicCellStyle}>
+                                                            {editingId === row.recordId ? (
+                                                                <Form.Control
+                                                                    size="sm"
+                                                                    value={editForm.Title}
+                                                                    onChange={(e) => setEditForm({ ...editForm, Title: e.target.value })}
+                                                                    style={{ fontSize: "0.8rem", color: "#000" }}
+                                                                />
+                                                            ) : (
+                                                                row.Title
+                                                            )}
+                                                        </td>
+                                                        {/* DESCRIPTION */}
+                                                        <td style={dynamicCellStyle}>
+                                                            {editingId === row.recordId ? (
+                                                                <Form.Control
+                                                                    size="sm"
+                                                                    value={editForm.Description}
+                                                                    onChange={(e) => setEditForm({ ...editForm, Description: e.target.value })}
+                                                                    style={{ fontSize: "0.8rem", color: "#000" }}
+                                                                />
+                                                            ) : (
+                                                                row.Description
+                                                            )}
+                                                        </td>
+                                                        <td style={dynamicCellStyle}>{row.Currency}</td>
+                                                        <td style={dynamicCellStyle}>{row.Amount}</td>
+                                                        <td style={dynamicCellStyle}>{row.Status}</td>
+                                                        {/* QB STATUS — reuse same color */}
+                                                        <td style={dynamicCellStyle}>
+                                                            <span style={{ fontWeight: "500" }}>
+                                                                {hasChargeLink ? (
+                                                                    <a
+                                                                        href={`https://qbo.intuit.com/app/recvpayment?txnId=${row.QB_TXN_id}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="d-flex align-items-center text-decoration-none"
+                                                                        style={{ color: "inherit", gap: "4px" }}
+                                                                        title="Open in QuickBooks"
+                                                                    >
+                                                                        Link
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                                            <path fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 0-1" />
+                                                                            <path fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z" />
+                                                                        </svg>
+                                                                    </a>
+                                                                ) : hasRefundLink ? (
+                                                                    <a
+                                                                        href={`https://qbo.intuit.com/app/expense?txnId=${row.Expense_id}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="d-flex align-items-center text-decoration-none"
+                                                                        style={{ color: "inherit", gap: "4px" }}
+                                                                        title="Open in QuickBooks"
+                                                                    >
+                                                                        Link
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                                                            <path fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 0-1" />
+                                                                            <path fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z" />
+                                                                        </svg>
+                                                                    </a>
+                                                                ) : (
+                                                                    row.QBStatus
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td style={dynamicCellStyle}>{row.HWChargeDate}</td>
+                                                        <td style={dynamicCellStyle}>{row.EntryRecordedTS}</td>
+
+                                                        {/* ACTIONS */}
+                                                        <td style={{ ...dynamicCellStyle, textAlign: "center", width: "90px" }}>
+                                                            {editingId === row.recordId ? (
+                                                                <div className="d-flex gap-1 justify-content-center">
+                                                                    <button
+                                                                        className="btn btn-success btn-sm"
+                                                                        style={{ padding: "1px 5px", fontSize: "0.7rem" }}
+                                                                        onClick={() => handleSave(row)}
+                                                                    >
+                                                                        Save
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn btn-secondary btn-sm"
+                                                                        style={{ padding: "1px 5px", fontSize: "0.7rem" }}
+                                                                        onClick={() => setEditingId(null)}
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                            ) : row.Title === "Payment on Airbnb Pro" ? (
+                                                                <span style={{ color: "#6c757d", fontWeight: "bold" }}>
+                                                                    Locked
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    className="btn btn-primary btn-sm"
+                                                                    style={{ padding: "2px 6px", fontSize: "0.7rem" }}
+                                                                    onClick={() => {
+                                                                        setEditingId(row.recordId);
+                                                                        setEditForm({ Title: row.Title, Description: row.Description });
+                                                                    }}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </>
+                                                );
+                                            })()}
                                         </tr>
                                     ))
                                 )}
