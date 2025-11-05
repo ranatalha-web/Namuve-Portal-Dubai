@@ -3069,71 +3069,6 @@ function KanbanView() {
 
   }, []);
 
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <MDBox
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
-        <MDTypography variant="h6" ml={2}>
-          Loading...
-        </MDTypography>
-      </MDBox>
-    );
-  }
-
-  // Redirect to sign-in if not authenticated
-  if (!isAuthenticated || !user) {
-    window.location.href = "/authentication/sign-in";
-    return null;
-  }
-
-  function mapRecordToReservation(row) {
-    const fields = row.fields || {};
-
-    let tags = [];
-    try {
-      const rawTags = fields["Tags"];
-      if (Array.isArray(rawTags)) tags = rawTags;
-      else if (typeof rawTags === "string" && rawTags) tags = JSON.parse(rawTags);
-    } catch (e) {
-      console.warn("Tag parse failed:", e);
-    }
-
-    const stacks = [
-      "Upcoming Stay",
-      "Checked In",
-      "Staying Guest",
-      "Upcoming Checkout",
-      "Checked Out",
-      "Same Day Check Out",
-      "No Show",
-      "Unknown",
-    ];
-
-    const stack = fields["Status"] || "Unknown";
-
-    return {
-      id: row.id,
-      guestName: fields["Guest Name"] || "N/A",
-      reservationId: fields["Reservation ID"] || "N/A",
-      listingName: fields["Listing Name"] || "N/A",
-      arrivalDate: fields["Arrival Date"] || "N/A",
-      departureDate: fields["Departure Date"] || "N/A",
-      aptStatus: fields["Apt Status"] || "N/A",
-      stayDuration: fields["Stay Duration"] || "N/A",
-      actualCheckin: fields["Actual Checkin"] || "N/A",
-      actualCheckout: fields["Actual Checkout"] || "N/A",
-      tags,
-      stack: stacks.includes(stack) ? stack : "Unknown",
-      listingName: fields["Listing Name"] || "N/A",
-    };
-  }
-
   // ✅ Fetch when Apartment Status tab opens (for admin users) - MUST BE BEFORE CONDITIONAL RETURNS
   useEffect(() => {
     if (user?.role === "user") return; // Skip for regular users
@@ -3306,6 +3241,71 @@ function KanbanView() {
       window.__checkInOutCooldown = null;
     };
   }, [activeTab, user?.role]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <MDBox
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+        <MDTypography variant="h6" ml={2}>
+          Loading...
+        </MDTypography>
+      </MDBox>
+    );
+  }
+
+  // Redirect to sign-in if not authenticated
+  if (!isAuthenticated || !user) {
+    window.location.href = "/authentication/sign-in";
+    return null;
+  }
+
+  function mapRecordToReservation(row) {
+    const fields = row.fields || {};
+
+    let tags = [];
+    try {
+      const rawTags = fields["Tags"];
+      if (Array.isArray(rawTags)) tags = rawTags;
+      else if (typeof rawTags === "string" && rawTags) tags = JSON.parse(rawTags);
+    } catch (e) {
+      console.warn("Tag parse failed:", e);
+    }
+
+    const stacks = [
+      "Upcoming Stay",
+      "Checked In",
+      "Staying Guest",
+      "Upcoming Checkout",
+      "Checked Out",
+      "Same Day Check Out",
+      "No Show",
+      "Unknown",
+    ];
+
+    const stack = fields["Status"] || "Unknown";
+
+    return {
+      id: row.id,
+      guestName: fields["Guest Name"] || "N/A",
+      reservationId: fields["Reservation ID"] || "N/A",
+      listingName: fields["Listing Name"] || "N/A",
+      arrivalDate: fields["Arrival Date"] || "N/A",
+      departureDate: fields["Departure Date"] || "N/A",
+      aptStatus: fields["Apt Status"] || "N/A",
+      stayDuration: fields["Stay Duration"] || "N/A",
+      actualCheckin: fields["Actual Checkin"] || "N/A",
+      actualCheckout: fields["Actual Checkout"] || "N/A",
+      tags,
+      stack: stacks.includes(stack) ? stack : "Unknown",
+      listingName: fields["Listing Name"] || "N/A",
+    };
+  }
 
   // Loading state - only show for initial home tab data load
   if (loading && activeTab === 0) {
@@ -3801,9 +3801,8 @@ function KanbanView() {
           }}
         >
           <Toolbar sx={{ justifyContent: "space-between", px: 4, py: 1 }}>
-            {/* Left: Logo & Title */}
+            {/* Left: Title */}
             <Box display="flex" alignItems="center" gap={2}>
-              <Logo width="80px" height="80px" />
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
                   FDO Panel
