@@ -3779,9 +3779,8 @@ function KanbanView() {
           }}
         >
           <Toolbar sx={{ justifyContent: "space-between", px: 4, py: 1 }}>
-            {/* Left: Logo & Title */}
+            {/* Left: Title */}
             <Box display="flex" alignItems="center" gap={2}>
-              <Logo width="80px" height="80px" />
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
                   FDO Panel
