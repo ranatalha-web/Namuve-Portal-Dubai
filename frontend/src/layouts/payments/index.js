@@ -17,6 +17,17 @@ function Payments() {
 
     const token = "teable_acc1FyXtES4PnJuTYZT_ny9XIBMmTJdQf3Y/x0gqz2ZKxNSWq/nsxY5fRhutZaE="; // 🔐 Replace this with your actual Teable API token
 
+    const isValidDateRange = () => {
+        if (!startDate || !endDate) return false;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        // Add 1 to include both start and end
+        const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+        return diffDays >= 1 && diffDays <= 7;
+    };
+
     // Fetch payments data
     const fetchPayments = async () => {
         if (!startDate || !endDate) return;
@@ -161,51 +172,51 @@ function Payments() {
     });
 
     const handleSave = async (row) => {
-    const { recordId, id, reservationId } = row;
-    const newTitle = editForm.Title;
-    const newDescription = editForm.Description;
+        const { recordId, id, reservationId } = row;
+        const newTitle = editForm.Title;
+        const newDescription = editForm.Description;
 
-    try {
-        // PATCH Teable — WRAP IN "record"
-        await axios.patch(
-            `https://teable.namuve.com/api/table/tblfspyuMPh3VDE9QXy/record/${recordId}`,
-            {
-                record: {
-                    fields: {
-                        Title: newTitle,
-                        Description: newDescription,
+        try {
+            // PATCH Teable — WRAP IN "record"
+            await axios.patch(
+                `https://teable.namuve.com/api/table/tblfspyuMPh3VDE9QXy/record/${recordId}`,
+                {
+                    record: {
+                        fields: {
+                            Title: newTitle,
+                            Description: newDescription,
+                        },
                     },
                 },
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-        // Send to n8n
-        await axios.post(
-            "https://n8n.namuve.com/webhook/b3a164c4-21b0-4a0c-bcc2-364702bea5ba",
-            { id, reservationId }
-        );
+            // Send to n8n
+            await axios.post(
+                "https://n8n.namuve.com/webhook/b3a164c4-21b0-4a0c-bcc2-364702bea5ba",
+                { id, reservationId }
+            );
 
-        // Update local UI
-        setData(prev =>
-            prev.map(item =>
-                item.recordId === recordId
-                    ? { ...item, Title: newTitle, Description: newDescription }
-                    : item
-            )
-        );
+            // Update local UI
+            setData(prev =>
+                prev.map(item =>
+                    item.recordId === recordId
+                        ? { ...item, Title: newTitle, Description: newDescription }
+                        : item
+                )
+            );
 
-        setEditingId(null);
-    } catch (error) {
-        console.error("Save failed:", error.response?.data || error);
-        alert("Save failed: " + (error.response?.data?.message || "Check console"));
-    }
-};
+            setEditingId(null);
+        } catch (error) {
+            console.error("Save failed:", error.response?.data || error);
+            alert("Save failed: " + (error.response?.data?.message || "Check console"));
+        }
+    };
 
     return (
         <DashboardLayout>
@@ -253,18 +264,11 @@ function Payments() {
                                 type="button"
                                 className="btn btn-success btn-sm"
                                 onClick={fetchPayments}
-                                disabled={!startDate || !endDate || loading}
+                                disabled={!isValidDateRange() || loading}
                             >
                                 {loading ? (
                                     <>
-                                        <Spinner
-                                            as="span"
-                                            animation="border"
-                                            size="sm"
-                                            role="status"
-                                            aria-hidden="true"
-                                        />{" "}
-                                        Loading
+                                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> Loading
                                     </>
                                 ) : (
                                     "Fetch"

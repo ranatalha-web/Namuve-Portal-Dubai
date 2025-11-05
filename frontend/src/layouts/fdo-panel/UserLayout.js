@@ -73,10 +73,10 @@ function UserLayout({ children }) {
     const cellHeight = 8;
     let y = 10;
 
-    // === COLUMN WIDTHS (Left: 7 cols, Right: 6 cols => total 13) ===
+    // === COLUMN WIDTHS (includes Vehicle#) ===
     const colWidths = [
-      10, 18, 40, 28, 30, 20, 20,   // Left table (7)
-      10, 18, 40, 28, 30, 20        // Right table (6)
+      10, 18, 35, 28, 25, 28, 20, 20, // Left table (8)
+      10, 18, 35, 28, 25, 20, 20      // Right table (7)
     ];
     const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
     const availableWidth = pageWidth - 2 * margin;
@@ -95,18 +95,18 @@ function UserLayout({ children }) {
       return size;
     };
 
-    // === Helper: New Page Header ===
+    // === Helper: New Page Header (for pagination) ===
     const drawHeader = () => {
       const dateStr = new Date().toLocaleDateString("en-GB");
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       doc.text(dateStr, margin + 2, y + 5.5);
 
-      // ✅ Center the title across the full page width
-      const titleX = pageWidth / 2;
+      const titleStartX = margin + scaledWidths[0];
+      const titleWidth = scaledWidths.slice(1).reduce((a, b) => a + b, 0) + gap;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
-      doc.text("Upcoming Reservation", titleX, y + 5.5, { align: "center" });
+      doc.text("Upcoming Reservation", titleStartX + titleWidth / 2, y + 5.5, { align: "center" });
 
       y += cellHeight + 2;
 
@@ -116,9 +116,9 @@ function UserLayout({ children }) {
       doc.setTextColor(0);
 
       const leftStartX = margin;
-      const leftWidth = scaledWidths.slice(0, 7).reduce((a, b) => a + b, 0);
+      const leftWidth = scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0);
       const rightStartX = leftStartX + leftWidth + gap;
-      const rightWidth = scaledWidths.slice(7).reduce((a, b) => a + b, 0);
+      const rightWidth = scaledWidths.slice(8).reduce((a, b) => a + b, 0);
 
       // LEFT
       doc.setFillColor(220, 220, 220);
@@ -130,16 +130,16 @@ function UserLayout({ children }) {
       doc.rect(rightStartX, y, rightWidth, cellHeight, "F");
       doc.text("Today Upcoming Departures", rightStartX + rightWidth / 2, y + 5.5, { align: "center" });
 
-      // Divider line between the two sections
+      // Divider lines
       doc.setDrawColor(200, 200, 200);
       doc.line(rightStartX, y, rightStartX, y + cellHeight);
 
       y += cellHeight + 1;
 
-      // === HEADERS (7 left + 6 right = 13) ===
+      // === HEADERS ===
       const headers = [
-        "Sr#", "Apt#", "Name", "Phone#", "Reservation Status", "Remarks", "Payment", // left 7
-        "Sr#", "Apt#", "Name", "Phone#", "Remarks", "Payment"                        // right 6
+        "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Reservation Status", "Remarks", "Payment",
+        "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Remarks", "Payment"
       ];
 
       doc.setFont("helvetica", "bold");
@@ -147,7 +147,7 @@ function UserLayout({ children }) {
 
       let x = margin;
       headers.forEach((header, i) => {
-        if (i === 7) x += gap; // add small gap before right table
+        if (i === 8) x += gap;
         const width = scaledWidths[i];
         doc.setFillColor(23, 98, 27);
         doc.rect(x, y, width, cellHeight, "F");
@@ -162,16 +162,13 @@ function UserLayout({ children }) {
 
       y += cellHeight;
 
-      // ✅ Reset text color & font for data rows
-      doc.setTextColor(0);
+      // ✅ Reset text color and font for data rows
+      doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "normal");
-
-      // Return computed start X for right table to use elsewhere
-      return { leftStartX, leftWidth, rightStartX, rightWidth };
     };
 
-    // Draw header for first page and get rightStartX
-    const { rightStartX } = drawHeader();
+    // === Draw header for the first page ===
+    drawHeader();
 
     // === DATA ROWS ===
     const checkInData = todayCheckIn;
@@ -184,15 +181,19 @@ function UserLayout({ children }) {
     doc.setFont("helvetica", "normal");
 
     for (let i = 0; i < maxLength; i++) {
-      // Handle page break
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+
+      // Page break if needed
       if (y + rowHeight > pageHeight - 10) {
         doc.addPage();
         y = 10;
-        // reset colors and font before drawing header
-        doc.setTextColor(0);
+
+        // 🔧 Reset colors to prevent white text on new pages
+        doc.setTextColor(0, 0, 0);
         doc.setFillColor(255, 255, 255);
         doc.setDrawColor(200, 200, 200);
-        // draw header on the new page (also re-computes rightStartX internally but we reuse the same layout)
+
         drawHeader();
       }
 
@@ -201,15 +202,16 @@ function UserLayout({ children }) {
       const checkIn = checkInData[i] || {};
       const checkOut = checkOutData[i] || {};
 
-      // LEFT (7 cols)
+      // LEFT
       let x = margin;
       const leftData = [
         checkInData[i] ? (i + 1).toString() : "",
         checkIn.apartment || "",
         checkIn.guest || "",
         checkIn.phone || "",
-        checkIn.reservationStatus || "",
-        "", // remarks intentionally empty
+        checkIn.vehicle || "",
+        "",
+        "",
         checkInData[i]
           ? (checkIn.paymentStatus &&
             checkIn.paymentStatus.toLowerCase() !== "unknown"
@@ -225,21 +227,22 @@ function UserLayout({ children }) {
         doc.rect(x, y, width, rowHeight, "S");
         if (cell) {
           const maxWidth = width - 4;
-          const fittedSize = fitText(String(cell), maxWidth, 8.2);
+          const fittedSize = fitText(cell, maxWidth, 8.2);
           doc.setFontSize(fittedSize);
-          doc.text(String(cell), x + width / 2, y + 4.5, { align: "center" });
+          doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
         }
         x += width;
       });
 
-      // RIGHT (6 cols) — start X = margin + sum(left 7 widths) + gap
-      let rightX = margin + scaledWidths.slice(0, 7).reduce((a, b) => a + b, 0) + gap;
+      // RIGHT
+      x = margin + scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0) + gap;
       const rightData = [
         checkOutData[i] ? (i + 1).toString() : "",
         checkOut.apartment || "",
         checkOut.guest || "",
         checkOut.phone || "",
-        "", // remarks intentionally empty
+        checkOut.vehicle || "",
+        "",
         checkOutData[i]
           ? (checkOut.paymentStatus &&
             checkOut.paymentStatus.toLowerCase() !== "unknown"
@@ -249,17 +252,17 @@ function UserLayout({ children }) {
       ];
 
       rightData.forEach((cell, j) => {
-        const width = scaledWidths[j + 7];
+        const width = scaledWidths[j + 8];
         doc.setFillColor(...bg);
-        doc.rect(rightX, y, width, rowHeight, "F");
-        doc.rect(rightX, y, width, rowHeight, "S");
+        doc.rect(x, y, width, rowHeight, "F");
+        doc.rect(x, y, width, rowHeight, "S");
         if (cell) {
           const maxWidth = width - 4;
-          const fittedSize = fitText(String(cell), maxWidth, 8.2);
+          const fittedSize = fitText(cell, maxWidth, 8.2);
           doc.setFontSize(fittedSize);
-          doc.text(String(cell), rightX + width / 2, y + 4.5, { align: "center" });
+          doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
         }
-        rightX += width;
+        x += width;
       });
 
       y += rowHeight;

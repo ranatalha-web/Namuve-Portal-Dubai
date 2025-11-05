@@ -3489,199 +3489,221 @@ function KanbanView() {
   };
 
   // ✅ Download PDF for Today's Check-In/Out
-  const downloadPDF = () => {
-    if (loadingCheck) {
-      alert("Please wait... Data is still loading.");
-      return;
-    }
-    if (todayCheckIn.length === 0 && todayCheckOut.length === 0) {
-      alert("No data available to download.");
-      return;
-    }
-
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 10;
-    const cellHeight = 8;
-    let y = 10;
-
-    const colWidths = [
-      10, 18, 40, 28, 30, 20, 20,   // Left table (7)
-      10, 18, 40, 28, 30, 20        // Right table (6)
-    ];
-    const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
-    const availableWidth = pageWidth - 2 * margin;
-    const gap = 2;
-    const scale = (availableWidth - gap) / totalColWidth;
-    const scaledWidths = colWidths.map(w => w * scale);
-
-    const fitText = (text, maxWidth, baseSize = 8.5) => {
-      let size = baseSize;
-      doc.setFontSize(size);
-      while (doc.getTextWidth(text) > maxWidth && size > 5) {
-        size -= 0.3;
+  function downloadPDF() {
+      if (loadingCheck) {
+        alert("Please wait... Data is still loading.");
+        return;
+      }
+      if (todayCheckIn.length === 0 && todayCheckOut.length === 0) {
+        alert("No data available to download.");
+        return;
+      }
+  
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+      const cellHeight = 8;
+      let y = 10;
+  
+      // === COLUMN WIDTHS (includes Vehicle#) ===
+      const colWidths = [
+        10, 18, 35, 28, 25, 28, 20, 20, // Left table (8)
+        10, 18, 35, 28, 25, 20, 20      // Right table (7)
+      ];
+      const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+      const availableWidth = pageWidth - 2 * margin;
+      const gap = 2;
+      const scale = (availableWidth - gap) / totalColWidth;
+      const scaledWidths = colWidths.map(w => w * scale);
+  
+      // === Helper: Auto-fit text ===
+      const fitText = (text, maxWidth, baseSize = 8.5) => {
+        let size = baseSize;
         doc.setFontSize(size);
-      }
-      return size;
-    };
-
-    const drawHeader = () => {
-      const dateStr = new Date().toLocaleDateString("en-GB");
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text(dateStr, margin + 2, y + 5.5);
-
-      const titleX = pageWidth / 2;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(15);
-      doc.text("Upcoming Reservation", titleX, y + 5.5, { align: "center" });
-
-      y += cellHeight + 2;
-
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0);
-
-      const leftStartX = margin;
-      const leftWidth = scaledWidths.slice(0, 7).reduce((a, b) => a + b, 0);
-      const rightStartX = leftStartX + leftWidth + gap;
-      const rightWidth = scaledWidths.slice(7).reduce((a, b) => a + b, 0);
-
-      doc.setFillColor(220, 220, 220);
-      doc.rect(leftStartX, y, leftWidth, cellHeight, "F");
-      doc.text("Today Upcoming Arrivals", leftStartX + leftWidth / 2, y + 5.5, { align: "center" });
-
-      doc.setFillColor(220, 220, 220);
-      doc.rect(rightStartX, y, rightWidth, cellHeight, "F");
-      doc.text("Today Upcoming Departures", rightStartX + rightWidth / 2, y + 5.5, { align: "center" });
-
-      doc.setDrawColor(200, 200, 200);
-      doc.line(rightStartX, y, rightStartX, y + cellHeight);
-
-      y += cellHeight + 1;
-
-      const headers = [
-        "Sr#", "Apt#", "Name", "Phone#", "Reservation Status", "Remarks", "Payment",
-        "Sr#", "Apt#", "Name", "Phone#", "Remarks", "Payment"
-      ];
-
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255);
-
-      let x = margin;
-      headers.forEach((header, i) => {
-        if (i === 7) x += gap;
-        const width = scaledWidths[i];
-        doc.setFillColor(23, 98, 27);
-        doc.rect(x, y, width, cellHeight, "F");
-
-        const maxWidth = width - 3;
-        const fittedSize = fitText(header, maxWidth, 8.5);
-        doc.setFontSize(fittedSize);
-        doc.text(header, x + width / 2, y + 5.3, { align: "center" });
-
-        x += width;
-      });
-
-      y += cellHeight;
-      doc.setTextColor(0);
-      doc.setFont("helvetica", "normal");
-
-      return { leftStartX, leftWidth, rightStartX, rightWidth };
-    };
-
-    const { rightStartX } = drawHeader();
-
-    const checkInData = todayCheckIn;
-    const checkOutData = todayCheckOut;
-    const rowHeight = 7;
-    const maxLength = Math.max(checkInData.length, checkOutData.length);
-
-    doc.setTextColor(0);
-    doc.setDrawColor(200, 200, 200);
-    doc.setFont("helvetica", "normal");
-
-    for (let i = 0; i < maxLength; i++) {
-      if (y + rowHeight > pageHeight - 10) {
-        doc.addPage();
-        y = 10;
+        while (doc.getTextWidth(text) > maxWidth && size > 5) {
+          size -= 0.3;
+          doc.setFontSize(size);
+        }
+        return size;
+      };
+  
+      // === Helper: New Page Header (for pagination) ===
+      const drawHeader = () => {
+        const dateStr = new Date().toLocaleDateString("en-GB");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.text(dateStr, margin + 2, y + 5.5);
+  
+        const titleStartX = margin + scaledWidths[0];
+        const titleWidth = scaledWidths.slice(1).reduce((a, b) => a + b, 0) + gap;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.text("Upcoming Reservation", titleStartX + titleWidth / 2, y + 5.5, { align: "center" });
+  
+        y += cellHeight + 2;
+  
+        // === SECTION TITLES ===
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
         doc.setTextColor(0);
-        doc.setFillColor(255, 255, 255);
+  
+        const leftStartX = margin;
+        const leftWidth = scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0);
+        const rightStartX = leftStartX + leftWidth + gap;
+        const rightWidth = scaledWidths.slice(8).reduce((a, b) => a + b, 0);
+  
+        // LEFT
+        doc.setFillColor(220, 220, 220);
+        doc.rect(leftStartX, y, leftWidth, cellHeight, "F");
+        doc.text("Today Upcoming Arrivals", leftStartX + leftWidth / 2, y + 5.5, { align: "center" });
+  
+        // RIGHT
+        doc.setFillColor(220, 220, 220);
+        doc.rect(rightStartX, y, rightWidth, cellHeight, "F");
+        doc.text("Today Upcoming Departures", rightStartX + rightWidth / 2, y + 5.5, { align: "center" });
+  
+        // Divider lines
         doc.setDrawColor(200, 200, 200);
-        drawHeader();
+        doc.line(rightStartX, y, rightStartX, y + cellHeight);
+  
+        y += cellHeight + 1;
+  
+        // === HEADERS ===
+        const headers = [
+          "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Reservation Status", "Remarks", "Payment",
+          "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Remarks", "Payment"
+        ];
+  
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255);
+  
+        let x = margin;
+        headers.forEach((header, i) => {
+          if (i === 8) x += gap;
+          const width = scaledWidths[i];
+          doc.setFillColor(23, 98, 27);
+          doc.rect(x, y, width, cellHeight, "F");
+  
+          const maxWidth = width - 3;
+          const fittedSize = fitText(header, maxWidth, 8.5);
+          doc.setFontSize(fittedSize);
+          doc.text(header, x + width / 2, y + 5.3, { align: "center" });
+  
+          x += width;
+        });
+  
+        y += cellHeight;
+  
+        // ✅ Reset text color and font for data rows
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
+      };
+  
+      // === Draw header for the first page ===
+      drawHeader();
+  
+      // === DATA ROWS ===
+      const checkInData = todayCheckIn;
+      const checkOutData = todayCheckOut;
+      const rowHeight = 7;
+      const maxLength = Math.max(checkInData.length, checkOutData.length);
+  
+      doc.setTextColor(0);
+      doc.setDrawColor(200, 200, 200);
+      doc.setFont("helvetica", "normal");
+  
+      for (let i = 0; i < maxLength; i++) {
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
+  
+        // Page break if needed
+        if (y + rowHeight > pageHeight - 10) {
+          doc.addPage();
+          y = 10;
+  
+          // 🔧 Reset colors to prevent white text on new pages
+          doc.setTextColor(0, 0, 0);
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(200, 200, 200);
+  
+          drawHeader();
+        }
+  
+        const isEven = i % 2 === 0;
+        const bg = isEven ? [245, 247, 245] : [255, 255, 255];
+        const checkIn = checkInData[i] || {};
+        const checkOut = checkOutData[i] || {};
+  
+        // LEFT
+        let x = margin;
+        const leftData = [
+          checkInData[i] ? (i + 1).toString() : "",
+          checkIn.apartment || "",
+          checkIn.guest || "",
+          checkIn.phone || "",
+          checkIn.vehicle || "",
+          "",
+          "",
+          checkInData[i]
+            ? (checkIn.paymentStatus &&
+              checkIn.paymentStatus.toLowerCase() !== "unknown"
+              ? checkIn.paymentStatus
+              : "Due")
+            : ""
+        ];
+  
+        leftData.forEach((cell, j) => {
+          const width = scaledWidths[j];
+          doc.setFillColor(...bg);
+          doc.rect(x, y, width, rowHeight, "F");
+          doc.rect(x, y, width, rowHeight, "S");
+          if (cell) {
+            const maxWidth = width - 4;
+            const fittedSize = fitText(cell, maxWidth, 8.2);
+            doc.setFontSize(fittedSize);
+            doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
+          }
+          x += width;
+        });
+  
+        // RIGHT
+        x = margin + scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0) + gap;
+        const rightData = [
+          checkOutData[i] ? (i + 1).toString() : "",
+          checkOut.apartment || "",
+          checkOut.guest || "",
+          checkOut.phone || "",
+          checkOut.vehicle || "",
+          "",
+          checkOutData[i]
+            ? (checkOut.paymentStatus &&
+              checkOut.paymentStatus.toLowerCase() !== "unknown"
+              ? checkOut.paymentStatus
+              : "Due")
+            : ""
+        ];
+  
+        rightData.forEach((cell, j) => {
+          const width = scaledWidths[j + 8];
+          doc.setFillColor(...bg);
+          doc.rect(x, y, width, rowHeight, "F");
+          doc.rect(x, y, width, rowHeight, "S");
+          if (cell) {
+            const maxWidth = width - 4;
+            const fittedSize = fitText(cell, maxWidth, 8.2);
+            doc.setFontSize(fittedSize);
+            doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
+          }
+          x += width;
+        });
+  
+        y += rowHeight;
       }
-
-      const isEven = i % 2 === 0;
-      const bg = isEven ? [245, 247, 245] : [255, 255, 255];
-      const checkIn = checkInData[i] || {};
-      const checkOut = checkOutData[i] || {};
-
-      let x = margin;
-      const leftData = [
-        checkInData[i] ? (i + 1).toString() : "",
-        checkIn.apartment || "",
-        checkIn.guest || "",
-        checkIn.phone || "",
-        checkIn.reservationStatus || "",
-        "",
-        checkInData[i]
-          ? (checkIn.paymentStatus &&
-            checkIn.paymentStatus.toLowerCase() !== "unknown"
-            ? checkIn.paymentStatus
-            : "Due")
-          : ""
-      ];
-
-      leftData.forEach((cell, j) => {
-        const width = scaledWidths[j];
-        doc.setFillColor(...bg);
-        doc.rect(x, y, width, rowHeight, "F");
-        doc.rect(x, y, width, rowHeight, "S");
-        if (cell) {
-          const maxWidth = width - 4;
-          const fittedSize = fitText(String(cell), maxWidth, 8.2);
-          doc.setFontSize(fittedSize);
-          doc.text(String(cell), x + width / 2, y + 4.5, { align: "center" });
-        }
-        x += width;
-      });
-
-      let rightX = margin + scaledWidths.slice(0, 7).reduce((a, b) => a + b, 0) + gap;
-      const rightData = [
-        checkOutData[i] ? (i + 1).toString() : "",
-        checkOut.apartment || "",
-        checkOut.guest || "",
-        checkOut.phone || "",
-        "",
-        checkOutData[i]
-          ? (checkOut.paymentStatus &&
-            checkOut.paymentStatus.toLowerCase() !== "unknown"
-            ? checkOut.paymentStatus
-            : "Due")
-          : ""
-      ];
-
-      rightData.forEach((cell, j) => {
-        const width = scaledWidths[j + 7];
-        doc.setFillColor(...bg);
-        doc.rect(rightX, y, width, rowHeight, "F");
-        doc.rect(rightX, y, width, rowHeight, "S");
-        if (cell) {
-          const maxWidth = width - 4;
-          const fittedSize = fitText(String(cell), maxWidth, 8.2);
-          doc.setFontSize(fittedSize);
-          doc.text(String(cell), rightX + width / 2, y + 4.5, { align: "center" });
-        }
-        rightX += width;
-      });
-
-      y += rowHeight;
+  
+      const dateStr = new Date().toLocaleDateString("en-GB");
+      doc.save(`Upcoming_Reservation_${dateStr.replace(/\//g, "-")}.pdf`);
     }
-
-    const dateStr = new Date().toLocaleDateString("en-GB");
-    doc.save(`Upcoming_Reservation_${dateStr.replace(/\//g, "-")}.pdf`);
-  };
 
   // ✅ Fetch Apartment Status data for admin users
   const fetchListings = async () => {
