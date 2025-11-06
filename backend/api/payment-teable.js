@@ -270,11 +270,17 @@ const syncPaymentDataToTeable = async (hostawayReservations) => {
       }
     }
 
-    // Delete records that no longer exist in Hostaway (optional - commented out for safety)
-    // for (const [reservationId, record] of existingMap) {
-    //   await deletePaymentRecord(record.id);
-    //   console.log(`🗑️ Deleted old record for reservation ${reservationId}`);
-    // }
+    // Delete records that no longer exist in Hostaway
+    let deleted = 0;
+    for (const [reservationId, record] of existingMap) {
+      try {
+        await deletePaymentRecord(record.id);
+        console.log(`🗑️ Deleted old record for reservation ${reservationId}`);
+        deleted++;
+      } catch (error) {
+        console.error(`❌ Error deleting record ${reservationId}:`, error.message);
+      }
+    }
 
     const syncTime = Date.now() - startTime;
     console.log(`✅ Background sync completed in ${syncTime}ms`);
@@ -282,14 +288,15 @@ const syncPaymentDataToTeable = async (hostawayReservations) => {
     console.log(`   - Created: ${created}`);
     console.log(`   - Updated: ${updated}`);
     console.log(`   - Unchanged: ${unchanged}`);
+    console.log(`   - Deleted: ${deleted}`);
     console.log(`   - Errors: ${errors}`);
-    console.log(`   - Remaining old records: ${existingMap.size}`);
 
     return {
       success: true,
       created,
       updated,
       unchanged,
+      deleted,
       errors,
       syncTime
     };

@@ -26,17 +26,36 @@ class OccupancyService {
         String(pakistanTime.getMonth() + 1).padStart(2, '0') + '-' + 
         String(pakistanTime.getDate()).padStart(2, '0');
 
-      const baseReservationsUrl = 'https://api.hostaway.com/v1/reservations?includeResources=1';
-      
-      const response = await axios.get(baseReservationsUrl, {
-        headers: {
-          Authorization: this.hostawayAuthToken,
-          'Content-Type': 'application/json'
-        },
-        timeout: 60000
-      });
+      // Fetch all reservations with pagination (up to 1000 per request)
+      let allReservations = [];
+      let offset = 0;
+      const limit = 1000; // Hostaway limit per request
+      let hasMore = true;
 
-      const allReservations = response.data.result || [];
+      while (hasMore) {
+        const baseReservationsUrl = `https://api.hostaway.com/v1/reservations?includeResources=1&limit=${limit}&offset=${offset}`;
+        
+        const response = await axios.get(baseReservationsUrl, {
+          headers: {
+            Authorization: this.hostawayAuthToken,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000
+        });
+
+        const reservations = response.data.result || [];
+        allReservations = allReservations.concat(reservations);
+
+        // If we got fewer than limit, we've reached the end
+        if (reservations.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+
+      console.log(`📊 Fetched ${allReservations.length} total reservations from Hostaway`);
+      
       let actualCheckedInCount = 0;
       const checkedInListings = [];
 

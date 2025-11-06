@@ -25,6 +25,13 @@ module.exports = function(proxy, allowedHost) {
         createProxyMiddleware({
           target: 'http://localhost:5000',
           changeOrigin: true,
+          timeout: 30000, // 30 second timeout
+          proxyTimeout: 30000,
+          onError: (err, req, res) => {
+            console.log('Proxy Error:', err.message);
+            // Don't crash on proxy errors
+          },
+          logLevel: 'silent' // Reduce proxy error logs
         })
       );
 

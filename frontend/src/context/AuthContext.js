@@ -77,6 +77,7 @@ export const AuthProvider = ({ children }) => {
   const login = (token, userData) => {
     localStorage.setItem("authToken", token);
     localStorage.setItem("userData", JSON.stringify(userData));
+    localStorage.setItem("userRole", userData.role || "user"); // Save role separately for easy access
     setUser(userData);
     setIsAuthenticated(true);
     

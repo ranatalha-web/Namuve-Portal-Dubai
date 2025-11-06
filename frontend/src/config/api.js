@@ -13,6 +13,9 @@ export const API_BASE_URL = getApiBaseUrl();
 
 // API endpoints
 export const API_ENDPOINTS = {
+  // Base URL for dynamic endpoints
+  BASE_URL: API_BASE_URL,
+  
   // Auth endpoints
   LOGIN: `${API_BASE_URL}/api/auth/login`,
   REGISTER: `${API_BASE_URL}/api/auth/register`,
@@ -85,6 +88,21 @@ export const API_ENDPOINTS = {
   ROOMS_HEALTH: `${API_BASE_URL}/api/rooms/health`,
   ROOMS_TEST_CORS: `${API_BASE_URL}/api/rooms/test-cors`,
   ROOMS_TEST_TEABLE: `${API_BASE_URL}/api/rooms/test-teable`,
+  
+  // Rooms Teable endpoints
+  ROOMS_TEABLE_SYNC: `${API_BASE_URL}/api/rooms-teable/sync`,
+  ROOMS_TEABLE_DATA: `${API_BASE_URL}/api/rooms-teable/data`,
+  ROOMS_TEABLE_TEST: `${API_BASE_URL}/api/rooms-teable/test`,
+  
+  // Room Availability Teable endpoints
+  ROOM_AVAILABILITY_TEABLE_SYNC: `${API_BASE_URL}/api/room-availability-teable/sync`,
+  ROOM_AVAILABILITY_TEABLE_DATA: `${API_BASE_URL}/api/room-availability-teable/data`,
+  ROOM_AVAILABILITY_TEABLE_TEST: `${API_BASE_URL}/api/room-availability-teable/test`,
+  
+  // Room Details Teable endpoints
+  ROOM_DETAILS_TEABLE_SYNC: `${API_BASE_URL}/api/room-details-teable/sync`,
+  ROOM_DETAILS_TEABLE_DATA: `${API_BASE_URL}/api/room-details-teable/data`,
+  ROOM_DETAILS_TEABLE_TEST: `${API_BASE_URL}/api/room-details-teable/test`,
 
   // Payment endpoints
   PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/payment/today-reservations`,

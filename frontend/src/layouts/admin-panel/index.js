@@ -1373,6 +1373,39 @@ function AdminPanel() {
                           </MDBox>
                         </MDBox>
 
+                        {/* Payment Permissions */}
+                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#fef3f2', borderRadius: '12px', border: '1px solid #ef4444' }}>
+                          <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#dc2626">
+                            💳 Payment Access
+                          </MDTypography>
+                          <MDBox display="flex" gap={2}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={customPermissions.payment?.view || false}
+                                onChange={(e) => setCustomPermissions(prev => ({
+                                  ...prev,
+                                  payment: { ...prev.payment, view: e.target.checked }
+                                }))}
+                                style={{ marginRight: '8px' }}
+                              />
+                              <MDTypography variant="body2">View Access</MDTypography>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={customPermissions.payment?.complete || false}
+                                onChange={(e) => setCustomPermissions(prev => ({
+                                  ...prev,
+                                  payment: { ...prev.payment, complete: e.target.checked }
+                                }))}
+                                style={{ marginRight: '8px' }}
+                              />
+                              <MDTypography variant="body2">Complete Access</MDTypography>
+                            </label>
+                          </MDBox>
+                        </MDBox>
+
                         {/* User Management Permissions */}
                         <MDBox mb={2} p={2} sx={{ backgroundColor: '#fef3c7', borderRadius: '12px', border: '1px solid #f59e0b' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#d97706">

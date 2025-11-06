@@ -1060,7 +1060,7 @@ function PaymentKanbanView({ reservations }) {
     'Paid': reservations.filter(r => r.paymentStatus === 'Paid'),
     'Partially paid': reservations.filter(r => r.paymentStatus === 'Partially paid'),
     'Unpaid': reservations.filter(r => r.paymentStatus === 'Unpaid'),
-    'Due': reservations.filter(r => r.paymentStatus === 'Unknown'),
+    'Due': reservations.filter(r => r.paymentStatus === 'Due' || r.paymentStatus === 'Unknown'),
   };
 
   const columnConfig = {
@@ -1181,36 +1181,22 @@ function PaymentKanbanView({ reservations }) {
                         Reservation ID
                       </MDTypography>
                     </MDBox>
-                    <MDBox display="flex" flexDirection="column" gap={0.5}>
-                      <Chip 
-                        label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
-                        sx={{
-                          backgroundColor: 
-                            reservation.paymentStatus === 'Paid' ? '#4caf50' :
-                            reservation.paymentStatus === 'Partially paid' ? '#ff9800' :
-                            reservation.paymentStatus === 'Unpaid' ? '#9e9e9e' :
-                            reservation.paymentStatus === 'Unknown' ? '#9c27b0' :
-                            '#9e9e9e',
-                          color: 'white',
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: '24px'
-                        }}
-                        size="small"
-                      />
-                      <Chip 
-                        label={reservation.status || 'Unknown'}
-                        sx={{
-                          backgroundColor: '#9e9e9e',
-                          color: 'white',
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: '24px',
-                          textTransform: 'capitalize'
-                        }}
-                        size="small"
-                      />
-                    </MDBox>
+                    <Chip 
+                      label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
+                      sx={{
+                        backgroundColor: 
+                          reservation.paymentStatus === 'Paid' ? '#4caf50' :
+                          reservation.paymentStatus === 'Partially paid' ? '#ff9800' :
+                          reservation.paymentStatus === 'Unpaid' ? '#9e9e9e' :
+                          (reservation.paymentStatus === 'Unknown' || reservation.paymentStatus === 'Due') ? '#9c27b0' :
+                          '#9e9e9e',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        height: '24px'
+                      }}
+                      size="small"
+                    />
                   </MDBox>
 
                   {/* Guest Name with Icon */}
@@ -1238,55 +1224,266 @@ function PaymentKanbanView({ reservations }) {
                       border: '1px solid #e2e8f0'
                     }}
                   >
+                    {/* Dates */}
                     <MDBox 
                       display="grid" 
                       gridTemplateColumns="1fr 1fr" 
                       gap={2}
-                      mb={1.5}
+                      mb={2}
                     >
-                      <MDBox>
-                        <MDTypography variant="caption" color="text.secondary" fontWeight="600">
-                          Check In
+                      <MDBox 
+                        sx={{
+                          backgroundColor: '#e0f2fe',
+                          borderRadius: '8px',
+                          p: 1.5,
+                          border: '1px solid #bae6fd'
+                        }}
+                      >
+                        <MDTypography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: '#0369a1',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            mb: 0.5
+                          }}
+                        >
+                          📅 Arrival Date
                         </MDTypography>
-                        <MDTypography variant="body2" fontWeight="bold" color="#374151">
+                        <MDTypography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'block',
+                            fontWeight: 700,
+                            color: '#1e293b',
+                            fontSize: '0.85rem'
+                          }}
+                        >
                           {reservation.checkInDate}
                         </MDTypography>
                       </MDBox>
-                      <MDBox>
-                        <MDTypography variant="caption" color="text.secondary" fontWeight="600">
-                          Check Out
+                      <MDBox 
+                        sx={{
+                          backgroundColor: '#fee2e2',
+                          borderRadius: '8px',
+                          p: 1.5,
+                          border: '1px solid #fecaca'
+                        }}
+                      >
+                        <MDTypography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: '#991b1b',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            mb: 0.5
+                          }}
+                        >
+                          📅 Departure Date
                         </MDTypography>
-                        <MDTypography variant="body2" fontWeight="bold" color="#374151">
+                        <MDTypography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'block',
+                            fontWeight: 700,
+                            color: '#1e293b',
+                            fontSize: '0.85rem'
+                          }}
+                        >
                           {reservation.checkOutDate}
                         </MDTypography>
                       </MDBox>
                     </MDBox>
                     
+                    {/* Check-in/out Times */}
                     <MDBox 
                       display="grid" 
                       gridTemplateColumns="1fr 1fr" 
                       gap={2}
+                      mb={2}
                     >
-                      <MDBox>
-                        <MDTypography variant="caption" color="text.secondary" fontWeight="600">
-                          Amount
-                        </MDTypography>
-                        <MDTypography variant="body2" fontWeight="bold" color="#374151">
-                          {reservation.currency} {reservation.baseRate?.toLocaleString() || '0'}
-                        </MDTypography>
-                      </MDBox>
-                      <MDBox>
-                        <MDTypography variant="caption" color="text.secondary" fontWeight="600">
-                          Check In Time
+                      <MDBox 
+                        sx={{
+                          backgroundColor: '#dcfce7',
+                          borderRadius: '8px',
+                          p: 1.5,
+                          border: '1px solid #bbf7d0'
+                        }}
+                      >
+                        <MDTypography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: '#166534',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            mb: 0.5
+                          }}
+                        >
+                          ⏰ Check-in Time
                         </MDTypography>
                         <MDTypography 
                           variant="body2" 
-                          fontWeight="bold" 
                           sx={{
-                            color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#374151'
+                            display: 'block',
+                            fontWeight: 600,
+                            color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#1e293b',
+                            fontSize: '0.7rem',
+                            fontStyle: reservation.actualCheckInTime === 'N/A' ? 'italic' : 'normal'
                           }}
                         >
-                          {reservation.actualCheckInTime}
+                          {reservation.actualCheckInTime || 'N/A'}
+                        </MDTypography>
+                      </MDBox>
+                      <MDBox 
+                        sx={{
+                          backgroundColor: '#fef3c7',
+                          borderRadius: '8px',
+                          p: 1.5,
+                          border: '1px solid #fde68a'
+                        }}
+                      >
+                        <MDTypography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: '#92400e',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            mb: 0.5
+                          }}
+                        >
+                          ⏰ Check-out Time
+                        </MDTypography>
+                        <MDTypography 
+                          variant="body2" 
+                          sx={{
+                            display: 'block',
+                            fontWeight: 600,
+                            color: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? '#9ca3af' : '#1e293b',
+                            fontSize: '0.7rem',
+                            fontStyle: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? 'italic' : 'normal'
+                          }}
+                        >
+                          {reservation.actualCheckOutTime || 'N/A'}
+                        </MDTypography>
+                      </MDBox>
+                    </MDBox>
+
+                    {/* Payment Information */}
+                    <MDBox 
+                      sx={{
+                        backgroundColor: '#f0fdf4',
+                        borderRadius: '8px',
+                        p: 2,
+                        border: '2px solid #86efac'
+                      }}
+                    >
+                      <MDBox 
+                        display="grid" 
+                        gridTemplateColumns="1fr 1fr" 
+                        gap={2}
+                        mb={1.5}
+                      >
+                        <MDBox>
+                          <MDTypography 
+                            variant="caption" 
+                            sx={{ 
+                              display: 'block',
+                              color: '#166534',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              mb: 0.5
+                            }}
+                          >
+                            💰 Total Amount
+                          </MDTypography>
+                          <MDTypography 
+                            variant="body2" 
+                            sx={{ 
+                              display: 'block',
+                              fontWeight: 700,
+                              color: '#1e293b',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
+                          </MDTypography>
+                        </MDBox>
+                        <MDBox>
+                          <MDTypography 
+                            variant="caption" 
+                            sx={{ 
+                              display: 'block',
+                              color: '#166534',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              mb: 0.5
+                            }}
+                          >
+                            ✅ Paid Amount
+                          </MDTypography>
+                          <MDTypography 
+                            variant="body2" 
+                            sx={{ 
+                              display: 'block',
+                              fontWeight: 700,
+                              color: '#10b981',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            {reservation.currency} {reservation.paidAmount?.toLocaleString() || '0'}
+                          </MDTypography>
+                        </MDBox>
+                      </MDBox>
+
+                      {/* Remaining Amount */}
+                      <MDBox 
+                        sx={{
+                          backgroundColor: reservation.remainingAmount > 0 ? '#fef2f2' : '#f9fafb',
+                          borderRadius: '6px',
+                          p: 1.5,
+                          border: reservation.remainingAmount > 0 ? '1px solid #fecaca' : '1px solid #e5e7eb'
+                        }}
+                      >
+                        <MDTypography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block',
+                            color: reservation.remainingAmount > 0 ? '#991b1b' : '#6b7280',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            mb: 0.5
+                          }}
+                        >
+                          ⚠️ Remaining Amount
+                        </MDTypography>
+                        <MDTypography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'block',
+                            fontWeight: 700,
+                            color: reservation.remainingAmount > 0 ? '#ef4444' : '#10b981',
+                            fontSize: '0.9rem'
+                          }}
+                        >
+                          {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
                         </MDTypography>
                       </MDBox>
                     </MDBox>

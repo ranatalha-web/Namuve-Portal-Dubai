@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Card, Grid, Box, Chip, useTheme, useMediaQuery, TextField, InputAdornment, CircularProgress, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from "@mui/material";
+import { Card, Grid, Box, Chip, useTheme, useMediaQuery, TextField, InputAdornment, CircularProgress, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -56,6 +56,7 @@ function Overview() {
   const [todayCheckinsData, setTodayCheckinsData] = useState([]);
   const [showAvailableModal, setShowAvailableModal] = useState(false);
   const [availableRoomsData, setAvailableRoomsData] = useState([]);
+  const [reservedViewMode, setReservedViewMode] = useState('table'); // 'table' or 'kanban'
   
   // Mobile detection
   const theme = useTheme();
@@ -158,7 +159,9 @@ function Overview() {
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`${API_ENDPOINTS.ROOMS_UPDATE_CLEANING_STATUS}/${selectedListing.id}`, {
+      // Use Teable record ID for updates
+      const recordId = selectedListing.teableRecordId || selectedListing.id;
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/api/room-details-teable/update-status/${recordId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -205,59 +208,87 @@ function Overview() {
     setSelectedStatusType(null);
   };
 
-  // Handle room type click to show details - FIXED BACKEND LOGIC
+  // Handle room type click to show details - FETCH FROM TEABLE DATABASE
   const handleRoomTypeClick = async (roomType) => {
     setSelectedRoomType(roomType);
     
     try {
-      console.log(`🔍 Fetching ${roomType} details with FIXED backend logic...`);
+      console.log(`💾 Fetching ${roomType} details from Room Details Teable database...`);
       
-      // Get expected counts from availability data
-      const expectedData = availabilityData?.roomTypes?.find(rt => rt.roomType === roomType);
-      if (!expectedData) {
-        console.log(`No availability data found for ${roomType}`);
+      // Fetch apartment details from Teable database
+      const response = await fetch(API_ENDPOINTS.ROOM_DETAILS_TEABLE_DATA, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch room details from Teable');
+      }
+      
+      const teableResult = await response.json();
+      
+      if (!teableResult.success || !teableResult.data || teableResult.data.length === 0) {
+        console.log(`No apartment data in Teable database`);
         setRoomTypeDetails([]);
         return;
       }
       
-      console.log(`Expected counts for ${roomType}:`, expectedData);
+      console.log(`✅ Loaded ${teableResult.data.length} apartments from Teable database`);
       
-      // Use apartment details from availability data (which includes all statuses)
-      if (expectedData.apartments) {
-        console.log(`✅ Using apartment details from availability data for ${roomType}`);
-        
-        // Combine all apartments (available, reserved, blocked) from availability data
-        const allApartments = [
-          ...(expectedData.apartments.available || []),
-          ...(expectedData.apartments.reserved || []),
-          ...(expectedData.apartments.blocked || [])
-        ];
-        
-        console.log(`Found ${allApartments.length} ${roomType} apartments from availability data:`);
-        allApartments.forEach(apt => {
-          console.log(`  - ${apt.internalName || apt.name}: ${apt.status}`);
-        });
-        
-        // Convert to frontend format
-        const roomListings = allApartments.map(apt => ({
-          name: apt.internalName || apt.name,
-          internalName: apt.internalName || apt.name,
-          externalName: apt.externalName || `${roomType} Apartment | ${apt.internalName || apt.name}`,
-          status: apt.status,
-          id: apt.id,
-          isPremium: apt.isPremium,
-          bedrooms: apt.bedrooms,
-          price: apt.price
-        }));
-        
-        setRoomTypeDetails(roomListings);
-      } else {
-        console.log(`❌ No apartment details found in availability data for ${roomType}`);
-        setRoomTypeDetails([]);
-      }
+      // Filter apartments by room type and convert to frontend format
+      const roomListings = teableResult.data
+        .map(record => {
+          const fields = record.fields;
+          const apartmentName = fields["Apartment Name "] || '';
+          
+          // Determine room type from apartment name
+          let aptRoomType = '';
+          if (apartmentName.includes('(S)')) {
+            aptRoomType = 'Studio';
+          } else if (apartmentName.includes('(1B)')) {
+            aptRoomType = '1BR';
+          } else if (apartmentName.includes('(2B)')) {
+            // Check if this is a premium 2BR
+            // Premium apartments: 1F-12, 4F-42, 7F-68, GF-04, GF-06
+            const isPremium = apartmentName.includes('1F-12') || 
+                              apartmentName.includes('4F-42') || 
+                              apartmentName.includes('7F-68') || 
+                              apartmentName.includes('GF-04') ||
+                              apartmentName.includes('GF-06');
+            aptRoomType = isPremium ? '2BR Premium' : '2BR';
+          } else if (apartmentName.includes('(3B)')) {
+            aptRoomType = '3BR';
+          }
+          
+          // Determine status
+          let status = 'available';
+          if (parseInt(fields["Reserved"] || 0) > 0) status = 'reserved';
+          else if (parseInt(fields["Blocked "] || 0) > 0) status = 'blocked';
+          
+          return {
+            name: apartmentName,
+            internalName: apartmentName,
+            externalName: `${aptRoomType} Apartment | ${apartmentName}`,
+            status: status,
+            roomType: aptRoomType,
+            available: parseInt(fields["Available "] || 0),
+            reserved: parseInt(fields["Reserved"] || 0),
+            blocked: parseInt(fields["Blocked "] || 0)
+          };
+        })
+        .filter(apt => apt.roomType === roomType); // Filter by selected room type
+      
+      console.log(`Found ${roomListings.length} ${roomType} apartments in Teable:`);
+      roomListings.forEach(apt => {
+        console.log(`  - ${apt.name}: ${apt.status}`);
+      });
+      
+      setRoomTypeDetails(roomListings);
+      console.log('ℹ️ Data loaded from Teable database (auto-updated every 10 minutes by backend)');
       
     } catch (error) {
-      console.error('Error fetching room details:', error);
+      console.error('❌ Error fetching room details from Teable:', error);
       setRoomTypeDetails([]);
     }
   };
@@ -268,121 +299,353 @@ function Overview() {
     setRoomTypeDetails([]);
   };
 
-  // Fetch listings data
+  // Fetch apartment listings from Room Details Teable database
   useEffect(() => {
-    const fetchListings = async () => {
+    const fetchApartmentListings = async () => {
+      if (!isAuthenticated) return;
+      
       try {
         setLoading(true);
-        console.log('Fetching listings from:', API_ENDPOINTS.ROOMS_LISTINGS);
+        console.log('💾 Loading apartment listings from Cleaning Status table...');
         
-        const response = await fetch(API_ENDPOINTS.ROOMS_LISTINGS, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Listings response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch listings: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Listings data received:', data);
-        
-        // Handle different response formats
-        if (data.success && data.data) {
-          setListings(data.data);
-        } else if (data.listings) {
-          setListings(data.listings);
-        } else if (Array.isArray(data)) {
-          setListings(data);
-        } else {
-          setListings([]);
-        }
-      } catch (err) {
-        console.error('Error fetching listings:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isAuthenticated) {
-      fetchListings();
-    }
-  }, [isAuthenticated]);
-
-  // Fetch occupancy data
-  useEffect(() => {
-    const fetchOccupancyData = async () => {
-      try {
-        setOccupancyLoading(true);
-        const response = await fetch(`${API_ENDPOINTS.OCCUPANCY}/current`, {
+        // Use ROOMS_CLEANING_STATUS - this fetches from the main cleaning status table
+        // with Listing Name, Activity, HW - Status, HK - Status, Guest info, etc.
+        const response = await fetch(API_ENDPOINTS.ROOMS_CLEANING_STATUS, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            setOccupancyData(result.data);
-          } else {
-            console.error('Failed to fetch occupancy data:', result.error);
-            setOccupancyData(null);
-          }
+        if (!response.ok) {
+          throw new Error('Failed to fetch apartments from Teable');
+        }
+        
+        const teableResult = await response.json();
+        
+        console.log('📦 Raw API response:', teableResult);
+        console.log('📊 Response success:', teableResult.success);
+        
+        if (teableResult.success && teableResult.data) {
+          // The cleaning status endpoint returns a map: { listingId: {...data} }
+          const cleaningStatusMap = teableResult.data;
+          console.log('📋 Cleaning status map keys:', Object.keys(cleaningStatusMap));
+          console.log('📋 Sample data:', Object.values(cleaningStatusMap)[0]);
+          
+          // Convert the map to an array of listings
+          const apartmentListings = Object.entries(cleaningStatusMap)
+            .map(([listingId, statusData]) => {
+              const apartmentName = statusData.listingName || '';
+              
+              // Skip records with empty apartment names
+              if (!apartmentName || apartmentName.trim() === '') {
+                console.log('⚠️ Skipping record with empty apartment name:', listingId);
+                return null;
+              }
+              
+              // Get activity status
+              let activity = statusData.activity || 'Vacant';
+              
+              // Get HW and HK status (already processed by backend)
+              const hwStatus = statusData.hwStatus || 'Not Clean';
+              const hkStatus = statusData.hkStatus || 'Not Clean';
+              
+              // Get today's guest information
+              const guestName = statusData.tGuestName || statusData.guestName || 'N/A';
+              const reservationId = statusData.tReservationId || statusData.reservationId || 'N/A';
+              const checkInDate = statusData.tCheckInDate || statusData.checkInDate || 'N/A';
+              const checkOutDate = statusData.tCheckOutDate || statusData.checkOutDate || 'N/A';
+              const reservationStatus = statusData.tReservationStatus || statusData.reservationStatus || 'N/A';
+              
+              // Get yesterday's guest information
+              const yGuestName = statusData.yGuestName || 'N/A';
+              const yReservationId = statusData.yReservationId || 'N/A';
+              const yCheckInDate = statusData.yCheckInDate || 'N/A';
+              const yCheckOutDate = statusData.yCheckOutDate || 'N/A';
+              const yReservationStatus = statusData.yReservationStatus || 'N/A';
+              const yActualCheckIn = statusData.yActualCheckIn || 'N/A';
+              const yActualCheckOut = statusData.yActualCheckOut || 'N/A';
+              
+              // Get additional fields
+              const todaysRes = statusData.todaysRes || 'N/A';
+              const yesterdaysRes = statusData.yesterdaysRes || 'N/A';
+              const todaysResStay = statusData.todaysResStay || 'N/A';
+              const yesterdaysResStay = statusData.yesterdaysResStay || 'N/A';
+              
+              // Determine room type
+              let roomType = '';
+              if (apartmentName.includes('(S)')) roomType = 'Studio';
+              else if (apartmentName.includes('(1B)')) roomType = '1BR';
+              else if (apartmentName.includes('(2B)')) roomType = '2BR';
+              else if (apartmentName.includes('(3B)')) roomType = '3BR';
+              
+              return {
+                id: listingId, // Use listing ID as the ID
+                teableRecordId: listingId, // Store for updates
+                listingId: listingId, // Store the actual listing ID
+                name: apartmentName,
+                internalListingName: apartmentName,
+                activity: activity,
+                country: 'Pakistan', // All apartments are in Pakistan
+                hwStatus: hwStatus,
+                hkStatus: hkStatus,
+                roomType: roomType,
+                // Today's information
+                guestName: guestName,
+                reservationId: reservationId,
+                checkInDate: checkInDate,
+                checkOutDate: checkOutDate,
+                reservationStatus: reservationStatus,
+                // Yesterday's information
+                yGuestName: yGuestName,
+                yReservationId: yReservationId,
+                yCheckInDate: yCheckInDate,
+                yCheckOutDate: yCheckOutDate,
+                yReservationStatus: yReservationStatus,
+                yActualCheckIn: yActualCheckIn,
+                yActualCheckOut: yActualCheckOut,
+                // Summary fields
+                todaysRes: todaysRes,
+                yesterdaysRes: yesterdaysRes,
+                todaysResStay: todaysResStay,
+                yesterdaysResStay: yesterdaysResStay
+              };
+            })
+            .filter(listing => listing !== null); // Remove null entries
+          
+          setListings(apartmentListings);
+          console.log(`✅ Loaded ${apartmentListings.length} apartments from Teable database (filtered out empty names)`);
+          console.log('📊 Sample apartment data:', apartmentListings.slice(0, 3));
         } else {
-          console.error('Failed to fetch occupancy data: Response not OK');
-          setOccupancyData(null);
+          setListings([]);
         }
       } catch (err) {
-        console.error('Error fetching occupancy data:', err);
+        console.error('❌ Error fetching apartments from Teable:', err);
+        setError(err.message);
+        setListings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApartmentListings();
+  }, [isAuthenticated]);
+
+  // Fetch occupancy data - ONLY FROM TEABLE DATABASE
+  useEffect(() => {
+    const fetchOccupancyData = async () => {
+      try {
+        setOccupancyLoading(true);
+        
+        // Fetch ONLY from Teable database (backend updates it every 10 minutes)
+        console.log('💾 Loading occupancy data from Teable database...');
+        const teableResponse = await fetch(API_ENDPOINTS.ROOMS_TEABLE_DATA, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (!teableResponse.ok) {
+          throw new Error('Failed to fetch from Teable database');
+        }
+        
+        const teableResult = await teableResponse.json();
+        
+        if (teableResult.success && teableResult.data && teableResult.data.length > 0) {
+          // Calculate room type breakdown from listings
+          const roomTypeCounts = {
+            'Studio': { available: 0, reserved: 0, total: 0 },
+            '1BR': { available: 0, reserved: 0, total: 0 },
+            '2BR': { available: 0, reserved: 0, total: 0 },
+            '2BR Premium': { available: 0, reserved: 0, total: 0 },
+            '3BR': { available: 0, reserved: 0, total: 0 }
+          };
+
+          console.log('📋 Listings array length:', listings.length);
+          
+          // Count from listings array
+          listings.forEach(listing => {
+            const roomType = listing.roomType;
+            if (roomTypeCounts[roomType]) {
+              roomTypeCounts[roomType].total++;
+              if (listing.activity === 'Vacant' || listing.activity === 'Available') {
+                roomTypeCounts[roomType].available++;
+              } else if (listing.activity === 'Occupied' || listing.activity === 'Checkin') {
+                roomTypeCounts[roomType].reserved++;
+              }
+            }
+          });
+
+          // Convert Teable data to occupancy format
+          const teableData = {
+            totalRooms: teableResult.data.length,
+            totalAvailable: parseInt(teableResult.data[0].fields["Available"] || 0),
+            totalReserved: parseInt(teableResult.data[0].fields["Reserved"] || 0),
+            occupancyRate: parseFloat(teableResult.data[0].fields["Occupancy Rate"] || 0),
+            roomTypes: roomTypeCounts, // Add room type breakdown for graphs
+            reservedRooms: teableResult.data.map(record => ({
+              guestName: record.fields["Guest Name "] || 'N/A',
+              listingName: record.fields["Listing Name"] || 'N/A',
+              reservationId: record.fields["Reservation ID "] || 'N/A',
+              actualCheckInTime: record.fields["Check in Time"] || 'N/A'
+            }))
+          };
+          
+          setOccupancyData(teableData);
+          console.log('✅ Loaded occupancy data from Teable database (2-3 seconds)');
+          console.log('📊 Room type breakdown:', roomTypeCounts);
+          console.log('📊 Data is auto-updated by backend every 10 minutes');
+        } else {
+          throw new Error('No data in Teable database');
+        }
+      } catch (err) {
+        console.error('❌ Error fetching from Teable database:', err);
         setError(err.message);
       } finally {
         setOccupancyLoading(false);
       }
     };
 
-    if (isAuthenticated) {
+    // Wait for listings to be loaded before fetching occupancy data
+    if (isAuthenticated && listings.length > 0) {
       fetchOccupancyData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, listings]);
 
-  // Fetch room availability data from backend API
+  // Fetch room availability data - FROM TEABLE DATABASES
   useEffect(() => {
     const fetchAvailabilityData = async () => {
       try {
         setAvailabilityLoading(true);
-        console.log('Fetching room availability data from:', API_ENDPOINTS.ROOMS_AVAILABILITY);
         
-        const response = await fetch(API_ENDPOINTS.ROOMS_AVAILABILITY, {
+        // Fetch from Room Availability Teable (totals)
+        console.log('💾 Loading availability from Teable databases...');
+        const availResponse = await fetch(API_ENDPOINTS.ROOM_AVAILABILITY_TEABLE_DATA, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         
-        console.log('Room availability response status:', response.status);
+        // Fetch from Room Details Teable (apartment-level data)
+        const detailsResponse = await fetch(API_ENDPOINTS.ROOM_DETAILS_TEABLE_DATA, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch room availability data: ${response.status} ${response.statusText}`);
+        if (!availResponse.ok || !detailsResponse.ok) {
+          throw new Error('Failed to fetch from Teable');
         }
         
-        const data = await response.json();
-        console.log('Room availability data received:', data);
+        const availResult = await availResponse.json();
+        const detailsResult = await detailsResponse.json();
         
-        // Handle the response format from the API
-        if (data.success && data.data) {
-          setAvailabilityData(data.data);
+        if (availResult.success && availResult.data && availResult.data.length > 0) {
+          const record = availResult.data[0].fields;
+          
+          // Premium listing IDs for 2BR Premium
+          const premiumListingIds = [305055, 309909, 323227, 288688];
+          
+          // Calculate available/reserved/blocked per room type from Room Details
+          const roomTypeCounts = {
+            'Studio': { available: 0, reserved: 0, blocked: 0, total: 0 },
+            '1BR': { available: 0, reserved: 0, blocked: 0, total: 0 },
+            '2BR': { available: 0, reserved: 0, blocked: 0, total: 0 },
+            '2BR Premium': { available: 0, reserved: 0, blocked: 0, total: 0 },
+            '3BR': { available: 0, reserved: 0, blocked: 0, total: 0 }
+          };
+          
+          // Process room details to calculate counts
+          if (detailsResult.success && detailsResult.data) {
+            detailsResult.data.forEach(apt => {
+              const fields = apt.fields;
+              const apartmentName = fields["Apartment Name "] || '';
+              
+              // Extract listing ID from apartment name if available
+              // Format examples: "1F-12 (2B)" or apartment might have ID in record
+              
+              // Determine room type from apartment name
+              let roomType = '';
+              if (apartmentName.includes('(S)')) {
+                roomType = 'Studio';
+              } else if (apartmentName.includes('(1B)')) {
+                roomType = '1BR';
+              } else if (apartmentName.includes('(2B)')) {
+                // Check if this is a premium 2BR by checking apartment name against known premium apartments
+                // Premium apartments: 1F-12, 4F-42, 7F-68, GF-04, GF-06
+                const isPremium = apartmentName.includes('1F-12') || 
+                                  apartmentName.includes('4F-42') || 
+                                  apartmentName.includes('7F-68') || 
+                                  apartmentName.includes('GF-04') ||
+                                  apartmentName.includes('GF-06');
+                roomType = isPremium ? '2BR Premium' : '2BR';
+              } else if (apartmentName.includes('(3B)')) {
+                roomType = '3BR';
+              }
+              
+              if (roomType && roomTypeCounts[roomType]) {
+                roomTypeCounts[roomType].available += parseInt(fields["Available "] || 0);
+                roomTypeCounts[roomType].reserved += parseInt(fields["Reserved"] || 0);
+                roomTypeCounts[roomType].blocked += parseInt(fields["Blocked "] || 0);
+                roomTypeCounts[roomType].total++;
+              }
+            });
+          }
+          
+          // Build availability data with calculated counts
+          const availabilityData = {
+            roomTypes: [
+              { 
+                roomType: 'Studio', 
+                total: parseInt(record["Studio "] || 0),
+                available: roomTypeCounts['Studio'].available,
+                reserved: roomTypeCounts['Studio'].reserved,
+                blocked: roomTypeCounts['Studio'].blocked
+              },
+              { 
+                roomType: '1BR', 
+                total: parseInt(record["1BR "] || 0),
+                available: roomTypeCounts['1BR'].available,
+                reserved: roomTypeCounts['1BR'].reserved,
+                blocked: roomTypeCounts['1BR'].blocked
+              },
+              { 
+                roomType: '2BR', 
+                total: parseInt(record["2BR "] || 0),
+                available: roomTypeCounts['2BR'].available,
+                reserved: roomTypeCounts['2BR'].reserved,
+                blocked: roomTypeCounts['2BR'].blocked
+              },
+              { 
+                roomType: '2BR Premium', 
+                total: parseInt(record["2BR Premium "] || 0),
+                available: roomTypeCounts['2BR Premium'].available,
+                reserved: roomTypeCounts['2BR Premium'].reserved,
+                blocked: roomTypeCounts['2BR Premium'].blocked
+              },
+              { 
+                roomType: '3BR', 
+                total: parseInt(record["3BR"] || 0),
+                available: roomTypeCounts['3BR'].available,
+                reserved: roomTypeCounts['3BR'].reserved,
+                blocked: roomTypeCounts['3BR'].blocked
+              }
+            ],
+            summary: {
+              totalAvailable: parseInt(record["Available "] || 0),
+              totalReserved: parseInt(record["Reserved "] || 0),
+              totalBlocked: parseInt(record["Blocked "] || 0),
+              overallOccupancyRate: Math.round((parseInt(record["Reserved "] || 0) / (parseInt(record["Studio "] || 0) + parseInt(record["1BR "] || 0) + parseInt(record["2BR "] || 0) + parseInt(record["2BR Premium "] || 0) + parseInt(record["3BR"] || 0))) * 100) || 0
+            }
+          };
+          
+          setAvailabilityData(availabilityData);
+          console.log('✅ Loaded from Teable databases (2-3 seconds)');
+          console.log('📊 Backend auto-updates this data every 10 minutes');
         } else {
-          setAvailabilityData(data);
+          throw new Error('No data in Teable');
         }
       } catch (err) {
-        console.error('Error fetching room availability data:', err);
-        // Don't set error here as it's not critical for the main page functionality
-        console.warn('Room availability data not available, continuing without it');
+        console.error('❌ Error fetching from Teable:', err);
       } finally {
         setAvailabilityLoading(false);
       }
@@ -564,14 +827,22 @@ function Overview() {
 
   // Enhanced search function
   const filteredListings = listings.filter(listing => {
-    // First filter for Pakistan
-    const isPakistan = listing.country === 'Pakistan' || 
-     listing.country === 'PK' ||
-     (listing.address && listing.address.toLowerCase().includes('pakistan')) ||
-     (listing.location && listing.location.toLowerCase().includes('pakistan')) ||
-     (listing.city && ['karachi', 'lahore', 'islamabad', 'rawalpindi', 'faisalabad', 'multan', 'peshawar', 'quetta', 'sialkot', 'gujranwala'].includes(listing.city.toLowerCase()));
+    // TEMPORARY: Skip Pakistan filter for debugging
+    // First filter for Pakistan - simplified check
+    const isPakistan = true; // Temporarily disabled
+    /*
+    const isPakistan = !listing.country || 
+                       listing.country === 'Pakistan' || 
+                       listing.country === 'PK' ||
+                       (listing.address && listing.address.toLowerCase().includes('pakistan')) ||
+                       (listing.location && listing.location.toLowerCase().includes('pakistan')) ||
+                       (listing.city && ['karachi', 'lahore', 'islamabad', 'rawalpindi', 'faisalabad', 'multan', 'peshawar', 'quetta', 'sialkot', 'gujranwala'].includes(listing.city.toLowerCase()));
+    */
     
-    if (!isPakistan) return false;
+    if (!isPakistan) {
+      console.log('❌ Filtered out non-Pakistan listing:', listing.name, 'Country:', listing.country);
+      return false;
+    }
     
     // If no search term, return all Pakistan listings
     if (searchTerm === '') return true;
@@ -611,6 +882,13 @@ function Overview() {
       listing.street?.toLowerCase().includes(searchLower)
     );
   });
+
+  // Debug: Log filtered results
+  console.log(`🔍 Total listings: ${listings.length}, Filtered listings: ${filteredListings.length}`);
+  if (filteredListings.length === 0 && listings.length > 0) {
+    console.log('⚠️ WARNING: All listings were filtered out! Check filter logic.');
+    console.log('Sample listing:', listings[0]);
+  }
 
   // Get room type statistics
   const getRoomTypeStats = (roomType) => {
@@ -845,27 +1123,7 @@ function Overview() {
                           minHeight: { sm: '200px' }
                         }}>
                           
-                          {/* Guest Row */}
-                          <MDBox sx={{ 
-                            backgroundColor: '#fafbfc', 
-                            color: '#374151',
-                            p: { xs: 1, sm: 0.8 },
-                            borderRadius: { xs: '8px', sm: '6px' },
-                            mb: { xs: 1, sm: 0 },
-                            border: '1px solid #f3f4f6',
-                            minHeight: '32px',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            <MDTypography variant="body2" sx={{ 
-                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
-                              fontWeight: 600,
-                              lineHeight: 1.3
-                            }}>
-                              👤 Guest: {listing.guestName && listing.guestName !== 'N/A' ? listing.guestName : 'No Guest'}
-                            </MDTypography>
-                          </MDBox>
-                          
+                          {/* Guest Row - Yesterday FIRST, Today SECOND */}
                           <MDBox sx={{ 
                             backgroundColor: '#fafbfc', 
                             color: '#374151',
@@ -886,14 +1144,13 @@ function Overview() {
                             </MDTypography>
                           </MDBox>
                           
-                          {/* ID Row */}
                           <MDBox sx={{ 
-                            backgroundColor: '#faf5ff', 
-                            color: '#7c3aed',
+                            backgroundColor: '#fafbfc', 
+                            color: '#374151',
                             p: { xs: 1, sm: 0.8 },
                             borderRadius: { xs: '8px', sm: '6px' },
                             mb: { xs: 1, sm: 0 },
-                            border: '1px solid #e9d5ff',
+                            border: '1px solid #f3f4f6',
                             minHeight: '32px',
                             display: 'flex',
                             alignItems: 'center'
@@ -903,10 +1160,11 @@ function Overview() {
                               fontWeight: 600,
                               lineHeight: 1.3
                             }}>
-                              🆔 ID: {listing.reservationId && listing.reservationId !== 'N/A' ? listing.reservationId : 'No ID'}
+                              👤 Guest: {listing.guestName && listing.guestName !== 'N/A' ? listing.guestName : 'No Guest'}
                             </MDTypography>
                           </MDBox>
                           
+                          {/* ID Row - Yesterday FIRST, Today SECOND */}
                           <MDBox sx={{ 
                             backgroundColor: '#faf5ff', 
                             color: '#7c3aed',
@@ -927,14 +1185,13 @@ function Overview() {
                             </MDTypography>
                           </MDBox>
                           
-                          {/* Stay Row */}
                           <MDBox sx={{ 
-                            backgroundColor: '#f0fdf4', 
-                            color: '#15803d',
+                            backgroundColor: '#faf5ff', 
+                            color: '#7c3aed',
                             p: { xs: 1, sm: 0.8 },
                             borderRadius: { xs: '8px', sm: '6px' },
                             mb: { xs: 1, sm: 0 },
-                            border: '1px solid #dcfce7',
+                            border: '1px solid #e9d5ff',
                             minHeight: '32px',
                             display: 'flex',
                             alignItems: 'center'
@@ -944,10 +1201,11 @@ function Overview() {
                               fontWeight: 600,
                               lineHeight: 1.3
                             }}>
-                              📅 Stay: {listing.checkInDate && listing.checkInDate !== 'N/A' ? `${listing.checkInDate} - ${listing.checkOutDate}` : 'No Dates'}
+                              🆔 ID: {listing.reservationId && listing.reservationId !== 'N/A' ? listing.reservationId : 'No ID'}
                             </MDTypography>
                           </MDBox>
                           
+                          {/* Stay Row - Yesterday FIRST, Today SECOND */}
                           <MDBox sx={{ 
                             backgroundColor: '#f0fdf4', 
                             color: '#15803d',
@@ -968,14 +1226,13 @@ function Overview() {
                             </MDTypography>
                           </MDBox>
                           
-                          {/* Status Row */}
                           <MDBox sx={{ 
-                            backgroundColor: '#fef2f2', 
-                            color: '#dc2626',
+                            backgroundColor: '#f0fdf4', 
+                            color: '#15803d',
                             p: { xs: 1, sm: 0.8 },
                             borderRadius: { xs: '8px', sm: '6px' },
                             mb: { xs: 1, sm: 0 },
-                            border: '1px solid #fee2e2',
+                            border: '1px solid #dcfce7',
                             minHeight: '32px',
                             display: 'flex',
                             alignItems: 'center'
@@ -985,10 +1242,11 @@ function Overview() {
                               fontWeight: 600,
                               lineHeight: 1.3
                             }}>
-                              📋 Status: {listing.activity || 'No Status'}
+                              📅 Stay: {listing.checkInDate && listing.checkInDate !== 'N/A' ? `${listing.checkInDate} - ${listing.checkOutDate}` : 'No Dates'}
                             </MDTypography>
                           </MDBox>
                           
+                          {/* Status Row - Yesterday FIRST, Today SECOND */}
                           <MDBox sx={{ 
                             backgroundColor: '#fef2f2', 
                             color: '#dc2626',
@@ -1009,7 +1267,27 @@ function Overview() {
                             </MDTypography>
                           </MDBox>
                           
-                          {/* Res Status Row */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#fef2f2', 
+                            color: '#dc2626',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #fee2e2',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              📋 Status: {listing.activity || 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          {/* Res Status Row - Yesterday FIRST, Today SECOND */}
                           <MDBox sx={{ 
                             backgroundColor: '#f0f9ff', 
                             color: '#0284c7',
@@ -1026,7 +1304,7 @@ function Overview() {
                               fontWeight: 600,
                               lineHeight: 1.3
                             }}>
-                              Res Status: {listing.reservationStatus && listing.reservationStatus !== 'N/A' ? listing.reservationStatus : 'No Status'}
+                              Res Status: {listing.yReservationStatus && listing.yReservationStatus !== 'N/A' ? listing.yReservationStatus : 'No Status'}
                             </MDTypography>
                           </MDBox>
                           
@@ -1046,7 +1324,7 @@ function Overview() {
                               fontWeight: 600,
                               lineHeight: 1.3
                             }}>
-                              Res Status: {listing.yReservationStatus && listing.yReservationStatus !== 'N/A' ? listing.yReservationStatus : 'No Status'}
+                              Res Status: {listing.reservationStatus && listing.reservationStatus !== 'N/A' ? listing.reservationStatus : 'No Status'}
                             </MDTypography>
                           </MDBox>
                         </MDBox>
@@ -1072,8 +1350,7 @@ function Overview() {
                               minHeight: '40px',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              opacity: 0.7
+                              justifyContent: 'center'
                             }}
                           >
                             <MDTypography variant="body2" sx={{ 
@@ -1085,7 +1362,6 @@ function Overview() {
                             </MDTypography>
                           </MDBox>
                           <MDBox 
-                            onClick={(e) => handleStatusClick(e, listing, 'HK')}
                             sx={{ 
                               backgroundColor: listing.hkStatus === 'Clean' ? '#f0fdf4' : '#fffbeb', 
                               color: listing.hkStatus === 'Clean' ? '#15803d' : '#d97706',
@@ -1094,18 +1370,12 @@ function Overview() {
                               flex: 1,
                               textAlign: 'center',
                               border: listing.hkStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
-                              cursor: 'pointer',
+                              cursor: 'default',
                               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                               minHeight: '40px',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              '&:hover': {
-                                transform: 'translateY(-2px)',
-                                boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
-                                opacity: 0.95,
-                                borderColor: listing.hkStatus === 'Clean' ? '#bbf7d0' : '#fdba74'
-                              }
+                              justifyContent: 'center'
                             }}
                           >
                             <MDTypography variant="body2" sx={{ 
@@ -1118,134 +1388,19 @@ function Overview() {
                           </MDBox>
                         </MDBox>
 
-                        {/* Clean Dropdown Menu */}
-                        <Menu
-                          anchorEl={anchorEl}
-                          open={Boolean(anchorEl)}
-                          onClose={handleCloseDropdown}
-                          transformOrigin={{ horizontal: 'center', vertical: 'top' }}
-                          anchorOrigin={{ horizontal: 'center', vertical: 'bottom' }}
-                          PaperProps={{
-                            sx: {
-                              borderRadius: '12px',
-                              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                              minWidth: '160px',
-                              border: '1px solid #e5e7eb',
-                              backgroundColor: '#ffffff',
-                              mt: 0.5,
-                              py: 1
-                            }
-                          }}
-                        >
-                          <MenuItem 
-                            onClick={() => handleStatusUpdate('Clean')}
-                            disabled={isUpdating}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: '#f9fafb'
-                              }
-                            }}
-                          >
-                            <Box sx={{ 
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '4px',
-                              backgroundColor: '#10b981',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              ✅
-                            </Box>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                              <MDTypography sx={{ 
-                                fontSize: '0.9rem', 
-                                fontWeight: 600,
-                                color: '#111827',
-                                lineHeight: 1.2
-                              }}>
-                                Clean
-                              </MDTypography>
-                            </Box>
-                          </MenuItem>
-                          
-                          <MenuItem 
-                            onClick={() => handleStatusUpdate('Not Clean')}
-                            disabled={isUpdating}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: '#f9fafb'
-                              }
-                            }}
-                          >
-                            <Box sx={{ 
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '4px',
-                              backgroundColor: '#ef4444',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              ❌
-                            </Box>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                              <MDTypography sx={{ 
-                                fontSize: '0.9rem', 
-                                fontWeight: 600,
-                                color: '#111827',
-                                lineHeight: 1.2
-                              }}>
-                                Not Clean
-                              </MDTypography>
-                            </Box>
-                          </MenuItem>
-                          
-                          {/* Loading State */}
-                          {isUpdating && (
-                            <MDBox sx={{ 
-                              display: 'flex', 
-                              justifyContent: 'center', 
-                              alignItems: 'center',
-                              py: 2,
-                              borderTop: '1px solid #f1f5f9',
-                              mt: 1
-                            }}>
-                              <CircularProgress size={16} sx={{ color: '#6b7280' }} />
-                              <MDTypography sx={{ 
-                                ml: 1, 
-                                fontSize: '0.8rem', 
-                                color: '#6b7280',
-                                fontWeight: 500
-                              }}>
-                                Updating...
-                              </MDTypography>
-                            </MDBox>
-                          )}
-                        </Menu>
-
                       </MDBox>
                     </Card>
                   ))
-                ) : null}
+                ) : (
+                  <MDBox textAlign="center" py={4} sx={{ gridColumn: '1 / -1' }}>
+                    <MDTypography variant="body1" color="text.secondary">
+                      No apartments found. Total listings: {listings.length}
+                    </MDTypography>
+                    <MDTypography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Check browser console for filter details.
+                    </MDTypography>
+                  </MDBox>
+                )}
               </MDBox>
             </Card>
           </MDBox>
@@ -1480,8 +1635,7 @@ function Overview() {
           )}
 
           {/* Room Availability */}
-          {!loading && (
-            <MDBox px={{ xs: 1, sm: 2, md: 3 }} mb={3}>
+          <MDBox px={{ xs: 1, sm: 2, md: 3 }} mb={3}>
               <Card sx={{ 
                 p: { xs: 2, sm: 3, md: 4 }, 
                 backgroundColor: '#ffffff', 
@@ -1534,16 +1688,16 @@ function Overview() {
                   <>
                     <Grid container spacing={3}>
                       {availabilityData.roomTypes && availabilityData.roomTypes.map((roomType) => (
-                    <Grid item xs={12} sm={6} md={2.4} key={roomType.roomType}>
+                    <Grid item xs={6} sm={4} md={2.4} key={roomType.roomType}>
                       <Card 
                         onClick={() => handleRoomTypeClick(roomType.roomType)}
                         sx={{ 
                           backgroundColor: '#ffffff', 
-                          borderRadius: 3, 
-                          p: 3,
+                          borderRadius: { xs: 2, md: 3 }, 
+                          p: { xs: 2, sm: 2.5, md: 3 },
                           boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                           border: '1px solid #e2e8f0',
-                          minHeight: '160px',
+                          minHeight: { xs: '140px', sm: '150px', md: '160px' },
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
@@ -1553,15 +1707,18 @@ function Overview() {
                             boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                             transform: 'translateY(-2px)',
                             borderColor: '#3b82f6'
+                          },
+                          '&:active': {
+                            transform: 'scale(0.98)'
                           }
                         }}>
                         {/* Room Type Header */}
-                        <MDBox sx={{ textAlign: 'center', mb: 2 }}>
+                        <MDBox sx={{ textAlign: 'center', mb: { xs: 1.5, md: 2 } }}>
                           <MDTypography variant="h6" sx={{ 
                             color: '#1e293b', 
                             fontWeight: 'bold',
-                            fontSize: { xs: '1rem', md: '1.1rem' },
-                            mb: 1
+                            fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                            mb: { xs: 0.5, md: 1 }
                           }}>
                             {roomType.roomType} ▶
                           </MDTypography>
@@ -1569,29 +1726,29 @@ function Overview() {
                         
                         {/* Stats */}
                         <MDBox sx={{ textAlign: 'center' }}>
-                          <MDBox sx={{ mb: 1 }}>
+                          <MDBox sx={{ mb: { xs: 0.5, md: 1 } }}>
                             <MDTypography variant="body2" sx={{ 
                               color: '#64748b',
-                              fontSize: '0.85rem',
+                              fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem' },
                               fontWeight: 500
                             }}>
                               Available: <strong style={{ color: '#059669' }}>{roomType.available}</strong>
                             </MDTypography>
                           </MDBox>
-                          <MDBox sx={{ mb: 1 }}>
+                          <MDBox sx={{ mb: { xs: 0.5, md: 1 } }}>
                             <MDTypography variant="body2" sx={{ 
                               color: '#64748b',
-                              fontSize: '0.85rem',
+                              fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem' },
                               fontWeight: 500
                             }}>
                               Reserved: <strong style={{ color: '#dc2626' }}>{roomType.reserved}</strong>
                             </MDTypography>
                           </MDBox>
                           {roomType.blocked > 0 && (
-                            <MDBox sx={{ mb: 1 }}>
+                            <MDBox sx={{ mb: { xs: 0.5, md: 1 } }}>
                               <MDTypography variant="body2" sx={{ 
                                 color: '#64748b',
-                                fontSize: '0.85rem',
+                                fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem' },
                                 fontWeight: 500
                               }}>
                                 Blocked: <strong style={{ color: '#f59e0b' }}>{roomType.blocked}</strong>
@@ -1601,7 +1758,7 @@ function Overview() {
                           <MDBox>
                             <MDTypography variant="body2" sx={{ 
                               color: '#64748b',
-                              fontSize: '0.8rem',
+                              fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
                               fontWeight: 600
                             }}>
                               Total: <strong style={{ color: '#1e293b' }}>{roomType.total}</strong>
@@ -1664,7 +1821,6 @@ function Overview() {
                 )}
               </Card>
             </MDBox>
-          )}
 
           {/* 📊 Current Occupancy by Room Type */}
           {occupancyData && !loading && !occupancyLoading && (
@@ -1930,10 +2086,13 @@ function Overview() {
             onClose={handleCloseRoomTypeDetails}
             maxWidth="md"
             fullWidth
+            fullScreen={isMobileDevice}
             PaperProps={{
               sx: {
-                borderRadius: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+                borderRadius: { xs: 0, md: '16px' },
+                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                m: { xs: 0, md: 2 },
+                maxHeight: { xs: '100vh', md: '90vh' }
               }
             }}
           >
@@ -1943,25 +2102,25 @@ function Overview() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              p: 3,
+              p: { xs: 2, md: 3 },
               borderBottom: '1px solid #e2e8f0'
             }}>
               <MDBox sx={{ 
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
+                gap: { xs: 1, md: 2 },
                 position: 'relative',
                 zIndex: 1
               }}>
                 <MDBox sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
+                  width: { xs: 36, md: 48 },
+                  height: { xs: 36, md: 48 },
+                  borderRadius: { xs: '8px', md: '12px' },
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  display: 'flex',
+                  display: { xs: 'none', sm: 'flex' },
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.5rem',
+                  fontSize: { xs: '1.2rem', md: '1.5rem' },
                   color: 'white'
                 }}>
                   🏠
@@ -1970,7 +2129,8 @@ function Overview() {
                   <MDTypography variant="h5" sx={{ 
                     color: '#1e293b', 
                     fontWeight: 'bold',
-                    mb: 0.5
+                    mb: { xs: 0, md: 0.5 },
+                    fontSize: { xs: '1.1rem', md: '1.5rem' }
                   }}>
                     {selectedRoomType} Details
                   </MDTypography>
@@ -2246,11 +2406,14 @@ function Overview() {
             onClose={() => setShowTodayCheckinsModal(false)}
             maxWidth="lg"
             fullWidth
+            fullScreen={isMobileDevice}
             PaperProps={{
               sx: {
-                borderRadius: '20px',
+                borderRadius: { xs: 0, md: '20px' },
                 boxShadow: '0 25px 50px rgba(0,0,0,0.08)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                m: { xs: 0, md: 2 },
+                maxHeight: { xs: '100vh', md: '90vh' }
               }
             }}
           >
@@ -2258,32 +2421,32 @@ function Overview() {
               background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
               color: '#1e293b',
               fontWeight: 700,
-              fontSize: '1.5rem',
+              fontSize: { xs: '1.2rem', md: '1.5rem' },
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              py: 3,
-              px: 4
+              py: { xs: 2, md: 3 },
+              px: { xs: 2, md: 4 }
             }}>
-              <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <MDBox sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
                 <MDBox sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
+                  width: { xs: 36, md: 48 },
+                  height: { xs: 36, md: 48 },
+                  borderRadius: { xs: '8px', md: '12px' },
                   background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  display: 'flex',
+                  display: { xs: 'none', sm: 'flex' },
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.5rem'
+                  fontSize: { xs: '1.2rem', md: '1.5rem' }
                 }}>
                   📋
                 </MDBox>
                 <MDBox>
-                  <MDTypography variant="h5" sx={{ color: '#1e293b', fontWeight: 700, mb: 0.5 }}>
+                  <MDTypography variant="h5" sx={{ color: '#1e293b', fontWeight: 700, mb: { xs: 0, md: 0.5 }, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                     Reserved Rooms Details
                   </MDTypography>
-                  <MDTypography variant="body2" sx={{ color: '#64748b' }}>
+                  <MDTypography variant="body2" sx={{ color: '#64748b', display: { xs: 'none', md: 'block' } }}>
                     Currently reserved rooms with guest information
                   </MDTypography>
                 </MDBox>
@@ -2315,151 +2478,390 @@ function Overview() {
                   </MDTypography>
                 </MDBox>
               ) : (
-                <MDBox sx={{ backgroundColor: '#ffffff', p: 2 }}>
-                  {/* Header Row */}
-                  <MDBox sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '25% 25% 25% 25%',
-                    gap: 1.5,
-                    background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                    borderRadius: '8px 8px 0 0',
-                    p: 2.5,
-                    borderBottom: '2px solid #cbd5e1'
-                  }}>
-                    <MDTypography variant="body2" sx={{ 
-                      fontWeight: 700, 
-                      color: '#334155',
-                      fontSize: '0.85rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      textAlign: 'left'
-                    }}>
-                      👤 Guest Name
-                    </MDTypography>
-                    <MDTypography variant="body2" sx={{ 
-                      fontWeight: 700, 
-                      color: '#334155',
-                      fontSize: '0.85rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      textAlign: 'left'
-                    }}>
-                      🏠 Listing Name
-                    </MDTypography>
-                    <MDTypography variant="body2" sx={{ 
-                      fontWeight: 700, 
-                      color: '#334155',
-                      fontSize: '0.85rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      textAlign: 'center'
-                    }}>
-                      🆔 Reservation ID
-                    </MDTypography>
-                    <MDTypography variant="body2" sx={{ 
-                      fontWeight: 700, 
-                      color: '#334155',
-                      fontSize: '0.85rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      textAlign: 'center'
-                    }}>
-                      ⏰ Check-in Time
-                    </MDTypography>
-                  </MDBox>
-
-                  {/* Data Rows */}
-                  {todayCheckinsData.map((room, index) => (
-                    <MDBox 
-                      key={index}
-                      sx={{
+                <MDBox sx={{ backgroundColor: '#ffffff' }}>
+                  {/* Desktop Table View - Only on Desktop */}
+                  <MDBox sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <MDBox sx={{ p: 2 }}>
+                      {/* Header Row */}
+                      <MDBox sx={{
                         display: 'grid',
                         gridTemplateColumns: '25% 25% 25% 25%',
                         gap: 1.5,
+                        background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                        borderRadius: '8px 8px 0 0',
                         p: 2.5,
-                        backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafbfc',
-                        borderBottom: '1px solid #f1f5f9',
-                        '&:hover': {
-                          backgroundColor: '#f0f9ff',
-                          transform: 'scale(1.001)',
-                          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
-                        },
-                        transition: 'all 0.2s ease',
-                        alignItems: 'center',
-                        ...(index === todayCheckinsData.length - 1 && {
-                          borderRadius: '0 0 8px 8px'
-                        })
-                      }}
-                    >
-                      {/* Guest Name */}
-                      <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <MDBox sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: '#3b82f6',
-                          flexShrink: 0
-                        }} />
+                        borderBottom: '2px solid #cbd5e1'
+                      }}>
                         <MDTypography variant="body2" sx={{ 
-                          fontWeight: 600, 
-                          color: '#1e293b',
-                          fontSize: '0.85rem'
+                          fontWeight: 700, 
+                          color: '#334155',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          textAlign: 'left'
                         }}>
-                          {room.guestName || 'Unknown Guest'}
+                          👤 Guest Name
+                        </MDTypography>
+                        <MDTypography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          color: '#334155',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          textAlign: 'left'
+                        }}>
+                          🏠 Listing Name
+                        </MDTypography>
+                        <MDTypography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          color: '#334155',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          textAlign: 'center'
+                        }}>
+                          🆔 Reservation ID
+                        </MDTypography>
+                        <MDTypography variant="body2" sx={{ 
+                          fontWeight: 700, 
+                          color: '#334155',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          textAlign: 'center'
+                        }}>
+                          ⏰ Check-in Time
                         </MDTypography>
                       </MDBox>
 
-                      {/* Listing Name */}
-                      <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <MDBox sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: '#10b981',
-                          flexShrink: 0
-                        }} />
-                        <MDTypography variant="body2" sx={{ 
-                          fontWeight: 600,
-                          color: '#1e293b',
-                          fontSize: '0.85rem'
-                        }}>
-                          {room.listingName || 'N/A'}
-                        </MDTypography>
-                      </MDBox>
+                      {/* Data Rows */}
+                      {todayCheckinsData.map((room, index) => (
+                        <MDBox 
+                          key={index}
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '25% 25% 25% 25%',
+                            gap: 1.5,
+                            p: 2.5,
+                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafbfc',
+                            borderBottom: '1px solid #f1f5f9',
+                            '&:hover': {
+                              backgroundColor: '#f0f9ff',
+                              transform: 'scale(1.001)',
+                              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
+                            },
+                            transition: 'all 0.2s ease',
+                            alignItems: 'center',
+                            ...(index === todayCheckinsData.length - 1 && {
+                              borderRadius: '0 0 8px 8px'
+                            })
+                          }}
+                        >
+                          {/* Guest Name */}
+                          <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <MDBox sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: '#3b82f6',
+                              flexShrink: 0
+                            }} />
+                            <MDTypography variant="body2" sx={{ 
+                              fontWeight: 600, 
+                              color: '#1e293b',
+                              fontSize: '0.85rem'
+                            }}>
+                              {room.guestName || 'Unknown Guest'}
+                            </MDTypography>
+                          </MDBox>
 
-                      {/* Reservation ID */}
-                      <MDBox sx={{ textAlign: 'center' }}>
-                        <MDBox sx={{
-                          display: 'inline-block',
-                          backgroundColor: '#e0f2fe',
-                          color: '#0369a1',
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          fontWeight: 600
-                        }}>
-                          {room.reservationId || 'N/A'}
-                        </MDBox>
-                      </MDBox>
+                          {/* Listing Name */}
+                          <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <MDBox sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: '#10b981',
+                              flexShrink: 0
+                            }} />
+                            <MDTypography variant="body2" sx={{ 
+                              fontWeight: 600,
+                              color: '#1e293b',
+                              fontSize: '0.85rem'
+                            }}>
+                              {room.listingName || 'N/A'}
+                            </MDTypography>
+                          </MDBox>
 
-                      {/* Actual Check-in Time */}
-                      <MDBox sx={{ textAlign: 'center' }}>
-                        <MDBox sx={{
-                          display: 'inline-block',
-                          backgroundColor: '#dcfce7',
-                          color: '#059669',
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          fontWeight: 600
-                        }}>
-                          {room.actualCheckInTime || 'N/A'}
+                          {/* Reservation ID */}
+                          <MDBox sx={{ textAlign: 'center' }}>
+                            <MDBox sx={{
+                              display: 'inline-block',
+                              backgroundColor: '#e0f2fe',
+                              color: '#0369a1',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600
+                            }}>
+                              {room.reservationId || 'N/A'}
+                            </MDBox>
+                          </MDBox>
+
+                          {/* Actual Check-in Time */}
+                          <MDBox sx={{ textAlign: 'center' }}>
+                            <MDBox sx={{
+                              display: 'inline-block',
+                              backgroundColor: '#dcfce7',
+                              color: '#059669',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600
+                            }}>
+                              {room.actualCheckInTime || 'N/A'}
+                            </MDBox>
+                          </MDBox>
                         </MDBox>
-                      </MDBox>
+                      ))}
                     </MDBox>
-                  ))}
+                  </MDBox>
+
+                  {/* Mobile Kanban View - Only on Mobile */}
+                  <MDBox sx={{ display: { xs: 'block', md: 'none' }, p: 3 }}>
+                      <Grid container spacing={3}>
+                        {todayCheckinsData.map((room, index) => (
+                          <Grid item xs={12} sm={6} md={4} key={index}>
+                            <Card sx={{
+                              backgroundColor: '#ffffff',
+                              borderRadius: '16px',
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                              overflow: 'hidden',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                transform: 'translateY(-4px)',
+                                borderColor: '#3b82f6'
+                              }
+                            }}>
+                              {/* Card Header */}
+                              <MDBox sx={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                p: 2.5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                  <MDBox sx={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '10px',
+                                    backgroundColor: 'rgba(255,255,255,0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.2rem'
+                                  }}>
+                                    👤
+                                  </MDBox>
+                                  <MDTypography variant="h6" sx={{ 
+                                    color: '#ffffff',
+                                    fontWeight: 700,
+                                    fontSize: '1rem'
+                                  }}>
+                                    {room.guestName || 'Unknown Guest'}
+                                  </MDTypography>
+                                </MDBox>
+                              </MDBox>
+
+                              {/* Card Body */}
+                              <MDBox sx={{ p: 2.5 }}>
+                                {/* Listing Name */}
+                                <MDBox sx={{ mb: 2 }}>
+                                  <MDTypography variant="caption" sx={{ 
+                                    color: '#64748b',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    display: 'block',
+                                    mb: 0.5
+                                  }}>
+                                    🏠 Listing
+                                  </MDTypography>
+                                  <MDTypography variant="body2" sx={{ 
+                                    color: '#1e293b',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem'
+                                  }}>
+                                    {room.listingName || 'N/A'}
+                                  </MDTypography>
+                                </MDBox>
+
+                                {/* Reservation ID */}
+                                <MDBox sx={{ mb: 2 }}>
+                                  <MDTypography variant="caption" sx={{ 
+                                    color: '#64748b',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    display: 'block',
+                                    mb: 0.5
+                                  }}>
+                                    🆔 Reservation ID
+                                  </MDTypography>
+                                  <Chip 
+                                    label={room.reservationId || 'N/A'}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: '#e0f2fe',
+                                      color: '#0369a1',
+                                      fontWeight: 600,
+                                      fontSize: '0.8rem',
+                                      height: '28px'
+                                    }}
+                                  />
+                                </MDBox>
+
+                                {/* Check-in Date */}
+                                {room.checkInDate && (
+                                  <MDBox sx={{ mb: 2 }}>
+                                    <MDTypography variant="caption" sx={{ 
+                                      color: '#64748b',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.5px',
+                                      display: 'block',
+                                      mb: 0.5
+                                    }}>
+                                      📅 Check-in Date
+                                    </MDTypography>
+                                    <Chip 
+                                      label={new Date(room.checkInDate).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                      size="small"
+                                      sx={{
+                                        backgroundColor: '#dbeafe',
+                                        color: '#1e40af',
+                                        fontWeight: 600,
+                                        fontSize: '0.8rem',
+                                        height: '28px'
+                                      }}
+                                    />
+                                  </MDBox>
+                                )}
+
+                                {/* Check-out Date */}
+                                {room.checkOutDate && (
+                                  <MDBox sx={{ mb: 2 }}>
+                                    <MDTypography variant="caption" sx={{ 
+                                      color: '#64748b',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.5px',
+                                      display: 'block',
+                                      mb: 0.5
+                                    }}>
+                                      📅 Check-out Date
+                                    </MDTypography>
+                                    <Chip 
+                                      label={new Date(room.checkOutDate).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                      size="small"
+                                      sx={{
+                                        backgroundColor: '#fee2e2',
+                                        color: '#991b1b',
+                                        fontWeight: 600,
+                                        fontSize: '0.8rem',
+                                        height: '28px'
+                                      }}
+                                    />
+                                  </MDBox>
+                                )}
+
+                                {/* Check-in Time */}
+                                <MDBox>
+                                  <MDTypography variant="caption" sx={{ 
+                                    color: '#64748b',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    display: 'block',
+                                    mb: 0.5
+                                  }}>
+                                    ⏰ Check-in Time
+                                  </MDTypography>
+                                  <Chip 
+                                    label={room.actualCheckInTime || 'N/A'}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: '#dcfce7',
+                                      color: '#059669',
+                                      fontWeight: 600,
+                                      fontSize: '0.8rem',
+                                      height: '28px'
+                                    }}
+                                  />
+                                </MDBox>
+                              </MDBox>
+
+                              {/* Card Footer */}
+                              <MDBox sx={{
+                                backgroundColor: '#f8fafc',
+                                p: 2,
+                                borderTop: '1px solid #e2e8f0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <MDBox sx={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    backgroundColor: '#10b981'
+                                  }} />
+                                  <MDTypography variant="caption" sx={{ 
+                                    color: '#64748b',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500
+                                  }}>
+                                    Reserved
+                                  </MDTypography>
+                                </MDBox>
+                                {room.reservationStatus && (
+                                  <Chip 
+                                    label={room.reservationStatus}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: '#fef3c7',
+                                      color: '#92400e',
+                                      fontWeight: 600,
+                                      fontSize: '0.7rem',
+                                      height: '24px'
+                                    }}
+                                  />
+                                )}
+                              </MDBox>
+                            </Card>
+                          </Grid>
+                        ))}
+                      </Grid>
+                  </MDBox>
                 </MDBox>
               )}
             </DialogContent>
@@ -2514,10 +2916,13 @@ function Overview() {
             onClose={() => setShowAvailableModal(false)}
             maxWidth="md"
             fullWidth
+            fullScreen={isMobileDevice}
             PaperProps={{
               sx: {
-                borderRadius: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+                borderRadius: { xs: 0, md: '16px' },
+                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                m: { xs: 0, md: 2 },
+                maxHeight: { xs: '100vh', md: '90vh' }
               }
             }}
           >
@@ -2527,27 +2932,27 @@ function Overview() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              py: 3,
-              px: 4
+              py: { xs: 2, md: 3 },
+              px: { xs: 2, md: 4 }
             }}>
-              <MDBox sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <MDBox sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
                 <MDBox sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '12px',
+                  width: { xs: 36, md: 48 },
+                  height: { xs: 36, md: 48 },
+                  borderRadius: { xs: '8px', md: '12px' },
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  display: 'flex',
+                  display: { xs: 'none', sm: 'flex' },
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.5rem'
+                  fontSize: { xs: '1.2rem', md: '1.5rem' }
                 }}>
                   ✅
                 </MDBox>
                 <MDBox>
-                  <MDTypography variant="h5" sx={{ color: '#1e293b', fontWeight: 700, mb: 0.5 }}>
+                  <MDTypography variant="h5" sx={{ color: '#1e293b', fontWeight: 700, mb: { xs: 0, md: 0.5 }, fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
                     Available Rooms Details
                   </MDTypography>
-                  <MDTypography variant="body2" sx={{ color: '#64748b' }}>
+                  <MDTypography variant="body2" sx={{ color: '#64748b', display: { xs: 'none', md: 'block' } }}>
                     Currently available rooms ready for booking
                   </MDTypography>
                 </MDBox>

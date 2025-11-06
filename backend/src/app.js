@@ -184,6 +184,9 @@ const occupancyRoutes = require("./routes/occupancyRoutes");
 const roomRoutes = require("../api/Room");
 const paymentRoutes = require("../api/payment");
 const paymentTeableRoutes = require("../api/payment-teable");
+const roomsTeableRoutes = require("../api/rooms-teable");
+const roomAvailabilityTeableRoutes = require("../api/room-availability-teable");
+const roomDetailsTeableRoutes = require("../api/room-details-teable");
 const monthlyTargetHandler = require("../api/monthly-target");
 
 // Import RevenueTable integration
@@ -191,6 +194,7 @@ const { RevenueTableService } = require("../services/RevenueTable");
 
 // Import and start scheduler
 const schedulerService = require("./services/schedulerService");
+const teableScheduler = require("./services/teableSchedulerService");
 
 // Root route
 app.get("/", (req, res) => {
@@ -218,7 +222,19 @@ app.get("/", (req, res) => {
       revenueTablePopulate: "/api/revenue-table/populate-initial",
       listingRevenue: "/api/listing-revenue",
       listingRevenueData: "/api/listing-revenue/listing-revenue-data",
-      listingRevenuePopulate: "/api/listing-revenue/populate-listing-initial"
+      listingRevenuePopulate: "/api/listing-revenue/populate-listing-initial",
+      roomsTeable: "/api/rooms-teable",
+      roomsTeableData: "/api/rooms-teable/data",
+      roomsTeableSync: "/api/rooms-teable/sync",
+      roomsTeableTest: "/api/rooms-teable/test",
+      roomAvailabilityTeable: "/api/room-availability-teable",
+      roomAvailabilityTeableData: "/api/room-availability-teable/data",
+      roomAvailabilityTeableSync: "/api/room-availability-teable/sync",
+      roomAvailabilityTeableTest: "/api/room-availability-teable/test",
+      roomDetailsTeable: "/api/room-details-teable",
+      roomDetailsTeableData: "/api/room-details-teable/data",
+      roomDetailsTeableSync: "/api/room-details-teable/sync",
+      roomDetailsTeableTest: "/api/room-details-teable/test"
     }
   });
 });
@@ -232,6 +248,9 @@ app.use("/api/occupancy", occupancyRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/payment-teable", paymentTeableRoutes);
+app.use("/api/rooms-teable", roomsTeableRoutes);
+app.use("/api/room-availability-teable", roomAvailabilityTeableRoutes);
+app.use("/api/room-details-teable", roomDetailsTeableRoutes);
 
 // RevenueTable API routes
 app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());
@@ -241,6 +260,50 @@ app.use("/api/listing-revenue", RevenueTableService.createAPIRoutes());
 
 // Monthly target route
 app.all("/api/monthly-target", monthlyTargetHandler);
+
+// Teable scheduler control endpoints
+app.get("/api/teable-scheduler/status", (req, res) => {
+  const status = teableScheduler.getStatus();
+  res.json({
+    success: true,
+    ...status,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post("/api/teable-scheduler/start", (req, res) => {
+  teableScheduler.start();
+  res.json({
+    success: true,
+    message: "Teable scheduler started",
+    status: teableScheduler.getStatus()
+  });
+});
+
+app.post("/api/teable-scheduler/stop", (req, res) => {
+  teableScheduler.stop();
+  res.json({
+    success: true,
+    message: "Teable scheduler stopped",
+    status: teableScheduler.getStatus()
+  });
+});
+
+app.post("/api/teable-scheduler/sync-now", async (req, res) => {
+  try {
+    const result = await teableScheduler.performSync();
+    res.json({
+      success: true,
+      message: "Manual sync completed",
+      result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Simple test route
 app.get("/api/hello", (req, res) => {
@@ -284,10 +347,13 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Start the scheduler automatically when the app is loaded
+// Start the schedulers automatically when the app is loaded
 setTimeout(() => {
   console.log('🚀 Starting Teable hourly scheduler automatically...');
   schedulerService.start();
+  
+  console.log('🚀 Starting Teable 10-minute auto-sync scheduler...');
+  teableScheduler.start();
 }, 2000); // Wait 2 seconds after app initialization
 
 module.exports = app;
