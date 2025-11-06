@@ -81,7 +81,7 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
     if (permissions) {
       try {
         // Filter routes in the correct order to maintain sidebar pattern
-        const orderedKeys = ["fdo-panel", "revenue", "rooms", "admin-panel", "forgot-password", "logout"];
+        const orderedKeys = ["fdo-panel", "revenue", "payments", "rooms", "admin-panel", "forgot-password", "logout"];
 
         for (const key of orderedKeys) {
           switch (key) {
@@ -93,6 +93,11 @@ export const getRoleBasedRoutes = (userRole, isAuthenticated, userPermissions = 
             case "revenue":
               if (permissions?.revenue?.view || permissions?.revenue?.complete) {
                 allowedRoutes.push(...routes.filter(route => route.key === "revenue"));
+              }
+              break;
+            case "payments":
+              if (permissions?.payment?.view || permissions?.payment?.complete) {
+                allowedRoutes.push(...routes.filter(route => route.key === "payments"));
               }
               break;
             case "rooms":

@@ -1850,6 +1850,8 @@ function AdminPanel() {
                                       if (permissions?.rooms?.complete) permissionList.push("Rooms (Complete)");
                                       if (permissions?.revenue?.view) permissionList.push("Revenue (View)");
                                       if (permissions?.revenue?.complete) permissionList.push("Revenue (Complete)");
+                                      if (permissions?.payment?.view) permissionList.push("Payment (View)");
+                                      if (permissions?.payment?.complete) permissionList.push("Payment (Complete)");
                                       if (permissions?.userManagement?.complete) permissionList.push("User Management (Complete)");
                                       if (permissions?.passwordHistory?.complete) permissionList.push("Password History (Complete)");
                                       if (permissions?.monthlyTarget?.view) permissionList.push("Monthly Target (View)");
@@ -2230,6 +2232,37 @@ function AdminPanel() {
                                 checked={editPermissions.monthlyTarget?.complete || false}
                                 onChange={() => handleEditPermissionChange('monthlyTarget', 'complete')}
                                 sx={{ color: "#ca8a04" }}
+                              />
+                            }
+                            label="Complete Access"
+                          />
+                        </MDBox>
+                      </MDBox>
+                    </Grid>
+
+                    {/* Payment Permissions */}
+                    <Grid item xs={12} md={6}>
+                      <MDBox p={3} sx={{ backgroundColor: "#fef3f2", borderRadius: "12px", border: "1px solid #ef4444" }}>
+                        <MDTypography variant="h6" fontWeight="600" sx={{ color: "#dc2626", mb: 2 }}>
+                          💳 Payment
+                        </MDTypography>
+                        <MDBox display="flex" flexDirection="column">
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={editPermissions.payment?.view || false}
+                                onChange={() => handleEditPermissionChange('payment', 'view')}
+                                sx={{ color: "#dc2626" }}
+                              />
+                            }
+                            label="View Access"
+                          />
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={editPermissions.payment?.complete || false}
+                                onChange={() => handleEditPermissionChange('payment', 'complete')}
+                                sx={{ color: "#dc2626" }}
                               />
                             }
                             label="Complete Access"
