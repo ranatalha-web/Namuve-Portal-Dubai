@@ -75,6 +75,8 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 import Logo from "components/Logo";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 // Material Dashboard 2 React example components
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -3488,222 +3490,398 @@ function KanbanView() {
     );
   };
 
+  async function downloadExcel() {
+    if (loadingCheck) {
+      alert("Please wait... Data is still loading.");
+      return;
+    }
+    if (todayCheckIn.length === 0 && todayCheckOut.length === 0) {
+      alert("No data available to download.");
+      return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString("en-GB");
+    const fileDate = dateStr.replace(/\//g, "-");
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Upcoming Reservations");
+
+    // ===== ROW 1 =====
+    ws.mergeCells("B1:O1");
+    ws.getCell("A1").value = dateStr;
+    ws.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell("A1").font = { bold: true };
+
+    ws.getCell("B1").value = "Upcoming Reservation";
+    ws.getCell("B1").alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell("B1").font = { bold: true, size: 13 };
+
+    // ===== ROW 2 =====
+    ws.mergeCells("A2:H2");
+    ws.getCell("A2").value = "Today Upcoming Arrivals";
+    ws.getCell("A2").alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell("A2").font = { bold: true, size: 12 };
+
+    ws.mergeCells("I2:O2");
+    ws.getCell("I2").value = "Today Upcoming Departures";
+    ws.getCell("I2").alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell("I2").font = { bold: true, size: 12 };
+
+    // ===== ROW 3 HEADERS =====
+    const headers = [
+      "Sr#",
+      "Apt#",
+      "Name",
+      "Phone#",
+      "Vehicle#",
+      "Reservation Status",
+      "Remarks",
+      "Payment",
+      "Sr#",
+      "Apt#",
+      "Name",
+      "Phone#",
+      "Vehicle#",
+      "Remarks",
+      "Payment",
+    ];
+    ws.addRow(headers);
+
+    ws.getRow(3).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF17621B" },
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // ===== DATA ROWS =====
+    const maxLength = Math.max(todayCheckIn.length, todayCheckOut.length);
+    for (let i = 0; i < maxLength; i++) {
+      const checkIn = todayCheckIn[i] || {};
+      const checkOut = todayCheckOut[i] || {};
+
+      const rowData = [
+        checkIn.apartment ? i + 1 : "",
+        checkIn.apartment || "",
+        checkIn.guest || "",
+        checkIn.phone || "",
+        checkIn.vehicle || "",
+        "", // Reservation Status
+        "", // Remarks
+        checkIn.apartment
+          ? checkIn.paymentStatus &&
+            checkIn.paymentStatus.toLowerCase() !== "unknown"
+            ? checkIn.paymentStatus
+            : "Due"
+          : "",
+
+        checkOut.apartment ? i + 1 : "",
+        checkOut.apartment || "",
+        checkOut.guest || "",
+        checkOut.phone || "",
+        checkOut.vehicle || "",
+        "", // Remarks
+        checkOut.apartment
+          ? checkOut.paymentStatus &&
+            checkOut.paymentStatus.toLowerCase() !== "unknown"
+            ? checkOut.paymentStatus
+            : "Due"
+          : "",
+      ];
+
+      ws.addRow(rowData);
+    }
+
+    // ===== STYLING =====
+    for (let r = 4; r <= ws.rowCount; r++) {
+      const row = ws.getRow(r);
+      const fillColor = r % 2 === 0 ? "FFF5F7F5" : "FFFFFFFF";
+      row.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: fillColor },
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    }
+
+    // ===== AUTO WIDTH FOR NORMAL COLUMNS =====
+    ws.columns.forEach((column) => {
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        if (!cell.value) return;
+        const len = cell.value.toString().trim().length;
+        if (len > maxLength) maxLength = len;
+      });
+      column.width = Math.max(maxLength * 0.9, 4);
+    });
+
+    // ===== SHRINK SMALL COLUMNS (Sr#, Apt#, Vehicle#, Payment) =====
+    const shrinkCols = ["A", "B", "E", "H", "I", "J", "M", "N"];
+    shrinkCols.forEach((col) => {
+      let maxLen = 0;
+      ws.getColumn(col).eachCell({ includeEmpty: true }, (cell) => {
+        if (!cell.value) return;
+        const len = cell.value.toString().trim().length;
+        if (len > maxLen) maxLen = len;
+      });
+      ws.getColumn(col).width = Math.min(maxLen + 1, 9);
+    });
+
+    // ===== FINAL ALIGNMENT + SHRINK FIT =====
+    ws.eachRow({ includeEmpty: true }, (row) => {
+      row.eachCell((cell) => {
+        cell.alignment = {
+          horizontal: "center",
+          vertical: "middle",
+          wrapText: false,
+          shrinkToFit: true,
+        };
+      });
+    });
+
+    ws.getRow(1).height = 25;
+    ws.getRow(2).height = 20;
+    ws.getRow(3).height = 23;
+
+    // ===== SAVE FILE =====
+    const buffer = await wb.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `Upcoming_Reservation_${fileDate}.xlsx`);
+  }
+
   // ✅ Download PDF for Today's Check-In/Out
   function downloadPDF() {
-      if (loadingCheck) {
-        alert("Please wait... Data is still loading.");
-        return;
-      }
-      if (todayCheckIn.length === 0 && todayCheckOut.length === 0) {
-        alert("No data available to download.");
-        return;
-      }
-  
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 10;
-      const cellHeight = 8;
-      let y = 10;
-  
-      // === COLUMN WIDTHS (includes Vehicle#) ===
-      const colWidths = [
-        10, 18, 35, 28, 25, 28, 20, 20, // Left table (8)
-        10, 18, 35, 28, 25, 20, 20      // Right table (7)
-      ];
-      const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
-      const availableWidth = pageWidth - 2 * margin;
-      const gap = 2;
-      const scale = (availableWidth - gap) / totalColWidth;
-      const scaledWidths = colWidths.map(w => w * scale);
-  
-      // === Helper: Auto-fit text ===
-      const fitText = (text, maxWidth, baseSize = 8.5) => {
-        let size = baseSize;
-        doc.setFontSize(size);
-        while (doc.getTextWidth(text) > maxWidth && size > 5) {
-          size -= 0.3;
-          doc.setFontSize(size);
-        }
-        return size;
-      };
-  
-      // === Helper: New Page Header (for pagination) ===
-      const drawHeader = () => {
-        const dateStr = new Date().toLocaleDateString("en-GB");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.text(dateStr, margin + 2, y + 5.5);
-  
-        const titleStartX = margin + scaledWidths[0];
-        const titleWidth = scaledWidths.slice(1).reduce((a, b) => a + b, 0) + gap;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(15);
-        doc.text("Upcoming Reservation", titleStartX + titleWidth / 2, y + 5.5, { align: "center" });
-  
-        y += cellHeight + 2;
-  
-        // === SECTION TITLES ===
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0);
-  
-        const leftStartX = margin;
-        const leftWidth = scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0);
-        const rightStartX = leftStartX + leftWidth + gap;
-        const rightWidth = scaledWidths.slice(8).reduce((a, b) => a + b, 0);
-  
-        // LEFT
-        doc.setFillColor(220, 220, 220);
-        doc.rect(leftStartX, y, leftWidth, cellHeight, "F");
-        doc.text("Today Upcoming Arrivals", leftStartX + leftWidth / 2, y + 5.5, { align: "center" });
-  
-        // RIGHT
-        doc.setFillColor(220, 220, 220);
-        doc.rect(rightStartX, y, rightWidth, cellHeight, "F");
-        doc.text("Today Upcoming Departures", rightStartX + rightWidth / 2, y + 5.5, { align: "center" });
-  
-        // Divider lines
-        doc.setDrawColor(200, 200, 200);
-        doc.line(rightStartX, y, rightStartX, y + cellHeight);
-  
-        y += cellHeight + 1;
-  
-        // === HEADERS ===
-        const headers = [
-          "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Reservation Status", "Remarks", "Payment",
-          "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Remarks", "Payment"
-        ];
-  
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(255);
-  
-        let x = margin;
-        headers.forEach((header, i) => {
-          if (i === 8) x += gap;
-          const width = scaledWidths[i];
-          doc.setFillColor(23, 98, 27);
-          doc.rect(x, y, width, cellHeight, "F");
-  
-          const maxWidth = width - 3;
-          const fittedSize = fitText(header, maxWidth, 8.5);
-          doc.setFontSize(fittedSize);
-          doc.text(header, x + width / 2, y + 5.3, { align: "center" });
-  
-          x += width;
-        });
-  
-        y += cellHeight;
-  
-        // ✅ Reset text color and font for data rows
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-      };
-  
-      // === Draw header for the first page ===
-      drawHeader();
-  
-      // === DATA ROWS ===
-      const checkInData = todayCheckIn;
-      const checkOutData = todayCheckOut;
-      const rowHeight = 7;
-      const maxLength = Math.max(checkInData.length, checkOutData.length);
-  
-      doc.setTextColor(0);
-      doc.setDrawColor(200, 200, 200);
-      doc.setFont("helvetica", "normal");
-  
-      for (let i = 0; i < maxLength; i++) {
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-  
-        // Page break if needed
-        if (y + rowHeight > pageHeight - 10) {
-          doc.addPage();
-          y = 10;
-  
-          // 🔧 Reset colors to prevent white text on new pages
-          doc.setTextColor(0, 0, 0);
-          doc.setFillColor(255, 255, 255);
-          doc.setDrawColor(200, 200, 200);
-  
-          drawHeader();
-        }
-  
-        const isEven = i % 2 === 0;
-        const bg = isEven ? [245, 247, 245] : [255, 255, 255];
-        const checkIn = checkInData[i] || {};
-        const checkOut = checkOutData[i] || {};
-  
-        // LEFT
-        let x = margin;
-        const leftData = [
-          checkInData[i] ? (i + 1).toString() : "",
-          checkIn.apartment || "",
-          checkIn.guest || "",
-          checkIn.phone || "",
-          checkIn.vehicle || "",
-          "",
-          "",
-          checkInData[i]
-            ? (checkIn.paymentStatus &&
-              checkIn.paymentStatus.toLowerCase() !== "unknown"
-              ? checkIn.paymentStatus
-              : "Due")
-            : ""
-        ];
-  
-        leftData.forEach((cell, j) => {
-          const width = scaledWidths[j];
-          doc.setFillColor(...bg);
-          doc.rect(x, y, width, rowHeight, "F");
-          doc.rect(x, y, width, rowHeight, "S");
-          if (cell) {
-            const maxWidth = width - 4;
-            const fittedSize = fitText(cell, maxWidth, 8.2);
-            doc.setFontSize(fittedSize);
-            doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
-          }
-          x += width;
-        });
-  
-        // RIGHT
-        x = margin + scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0) + gap;
-        const rightData = [
-          checkOutData[i] ? (i + 1).toString() : "",
-          checkOut.apartment || "",
-          checkOut.guest || "",
-          checkOut.phone || "",
-          checkOut.vehicle || "",
-          "",
-          checkOutData[i]
-            ? (checkOut.paymentStatus &&
-              checkOut.paymentStatus.toLowerCase() !== "unknown"
-              ? checkOut.paymentStatus
-              : "Due")
-            : ""
-        ];
-  
-        rightData.forEach((cell, j) => {
-          const width = scaledWidths[j + 8];
-          doc.setFillColor(...bg);
-          doc.rect(x, y, width, rowHeight, "F");
-          doc.rect(x, y, width, rowHeight, "S");
-          if (cell) {
-            const maxWidth = width - 4;
-            const fittedSize = fitText(cell, maxWidth, 8.2);
-            doc.setFontSize(fittedSize);
-            doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
-          }
-          x += width;
-        });
-  
-        y += rowHeight;
-      }
-  
-      const dateStr = new Date().toLocaleDateString("en-GB");
-      doc.save(`Upcoming_Reservation_${dateStr.replace(/\//g, "-")}.pdf`);
+    if (loadingCheck) {
+      alert("Please wait... Data is still loading.");
+      return;
     }
+    if (todayCheckIn.length === 0 && todayCheckOut.length === 0) {
+      alert("No data available to download.");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const cellHeight = 8;
+    let y = 10;
+
+    // === COLUMN WIDTHS (includes Vehicle#) ===
+    const colWidths = [
+      10, 18, 35, 28, 25, 28, 20, 20, // Left table (8)
+      10, 18, 35, 28, 25, 20, 20      // Right table (7)
+    ];
+    const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+    const availableWidth = pageWidth - 2 * margin;
+    const gap = 2;
+    const scale = (availableWidth - gap) / totalColWidth;
+    const scaledWidths = colWidths.map(w => w * scale);
+
+    // === Helper: Auto-fit text ===
+    const fitText = (text, maxWidth, baseSize = 8.5) => {
+      let size = baseSize;
+      doc.setFontSize(size);
+      while (doc.getTextWidth(text) > maxWidth && size > 5) {
+        size -= 0.3;
+        doc.setFontSize(size);
+      }
+      return size;
+    };
+
+    // === Helper: New Page Header (for pagination) ===
+    const drawHeader = () => {
+      const dateStr = new Date().toLocaleDateString("en-GB");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(dateStr, margin + 2, y + 5.5);
+
+      const titleStartX = margin + scaledWidths[0];
+      const titleWidth = scaledWidths.slice(1).reduce((a, b) => a + b, 0) + gap;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Upcoming Reservation", titleStartX + titleWidth / 2, y + 5.5, { align: "center" });
+
+      y += cellHeight + 2;
+
+      // === SECTION TITLES ===
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0);
+
+      const leftStartX = margin;
+      const leftWidth = scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0);
+      const rightStartX = leftStartX + leftWidth + gap;
+      const rightWidth = scaledWidths.slice(8).reduce((a, b) => a + b, 0);
+
+      // LEFT
+      doc.setFillColor(220, 220, 220);
+      doc.rect(leftStartX, y, leftWidth, cellHeight, "F");
+      doc.text("Today Upcoming Arrivals", leftStartX + leftWidth / 2, y + 5.5, { align: "center" });
+
+      // RIGHT
+      doc.setFillColor(220, 220, 220);
+      doc.rect(rightStartX, y, rightWidth, cellHeight, "F");
+      doc.text("Today Upcoming Departures", rightStartX + rightWidth / 2, y + 5.5, { align: "center" });
+
+      // Divider lines
+      doc.setDrawColor(200, 200, 200);
+      doc.line(rightStartX, y, rightStartX, y + cellHeight);
+
+      y += cellHeight + 1;
+
+      // === HEADERS ===
+      const headers = [
+        "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Reservation Status", "Remarks", "Payment",
+        "Sr#", "Apt#", "Name", "Phone#", "Vehicle#", "Remarks", "Payment"
+      ];
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255);
+
+      let x = margin;
+      headers.forEach((header, i) => {
+        if (i === 8) x += gap;
+        const width = scaledWidths[i];
+        doc.setFillColor(23, 98, 27);
+        doc.rect(x, y, width, cellHeight, "F");
+
+        const maxWidth = width - 3;
+        const fittedSize = fitText(header, maxWidth, 8.5);
+        doc.setFontSize(fittedSize);
+        doc.text(header, x + width / 2, y + 5.3, { align: "center" });
+
+        x += width;
+      });
+
+      y += cellHeight;
+
+      // ✅ Reset text color and font for data rows
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+    };
+
+    // === Draw header for the first page ===
+    drawHeader();
+
+    // === DATA ROWS ===
+    const checkInData = todayCheckIn;
+    const checkOutData = todayCheckOut;
+    const rowHeight = 7;
+    const maxLength = Math.max(checkInData.length, checkOutData.length);
+
+    doc.setTextColor(0);
+    doc.setDrawColor(200, 200, 200);
+    doc.setFont("helvetica", "normal");
+
+    for (let i = 0; i < maxLength; i++) {
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+
+      // Page break if needed
+      if (y + rowHeight > pageHeight - 10) {
+        doc.addPage();
+        y = 10;
+
+        // 🔧 Reset colors to prevent white text on new pages
+        doc.setTextColor(0, 0, 0);
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(200, 200, 200);
+
+        drawHeader();
+      }
+
+      const isEven = i % 2 === 0;
+      const bg = isEven ? [245, 247, 245] : [255, 255, 255];
+      const checkIn = checkInData[i] || {};
+      const checkOut = checkOutData[i] || {};
+
+      // LEFT
+      let x = margin;
+      const leftData = [
+        checkInData[i] ? (i + 1).toString() : "",
+        checkIn.apartment || "",
+        checkIn.guest || "",
+        checkIn.phone || "",
+        checkIn.vehicle || "",
+        "",
+        "",
+        checkInData[i]
+          ? (checkIn.paymentStatus &&
+            checkIn.paymentStatus.toLowerCase() !== "unknown"
+            ? checkIn.paymentStatus
+            : "Due")
+          : ""
+      ];
+
+      leftData.forEach((cell, j) => {
+        const width = scaledWidths[j];
+        doc.setFillColor(...bg);
+        doc.rect(x, y, width, rowHeight, "F");
+        doc.rect(x, y, width, rowHeight, "S");
+        if (cell) {
+          const maxWidth = width - 4;
+          const fittedSize = fitText(cell, maxWidth, 8.2);
+          doc.setFontSize(fittedSize);
+          doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
+        }
+        x += width;
+      });
+
+      // RIGHT
+      x = margin + scaledWidths.slice(0, 8).reduce((a, b) => a + b, 0) + gap;
+      const rightData = [
+        checkOutData[i] ? (i + 1).toString() : "",
+        checkOut.apartment || "",
+        checkOut.guest || "",
+        checkOut.phone || "",
+        checkOut.vehicle || "",
+        "",
+        checkOutData[i]
+          ? (checkOut.paymentStatus &&
+            checkOut.paymentStatus.toLowerCase() !== "unknown"
+            ? checkOut.paymentStatus
+            : "Due")
+          : ""
+      ];
+
+      rightData.forEach((cell, j) => {
+        const width = scaledWidths[j + 8];
+        doc.setFillColor(...bg);
+        doc.rect(x, y, width, rowHeight, "F");
+        doc.rect(x, y, width, rowHeight, "S");
+        if (cell) {
+          const maxWidth = width - 4;
+          const fittedSize = fitText(cell, maxWidth, 8.2);
+          doc.setFontSize(fittedSize);
+          doc.text(cell, x + width / 2, y + 4.5, { align: "center" });
+        }
+        x += width;
+      });
+
+      y += rowHeight;
+    }
+
+    const dateStr = new Date().toLocaleDateString("en-GB");
+    doc.save(`Upcoming_Reservation_${dateStr.replace(/\//g, "-")}.pdf`);
+  }
 
   // ✅ Fetch Apartment Status data for admin users
   const fetchListings = async () => {
@@ -4030,26 +4208,51 @@ function KanbanView() {
             </Typography>
 
             {!loadingCheck && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={downloadPDF}
-                sx={{
-                  borderRadius: "12px",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                  color: "#17621B",
-                  border: "2px solid #17621B",
-                  "&:hover": {
-                    backgroundColor: "#1e7a20",
-                    borderColor: "#145517",
-                    color: "#fff",
-                  },
-                }}
-              >
-                Download PDF
-              </Button>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                {/* PDF Button */}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={downloadPDF}
+                  sx={{
+                    borderRadius: "12px",
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                    color: "#17621B",
+                    border: "2px solid #17621B",
+                    "&:hover": {
+                      backgroundColor: "#1e7a20",
+                      borderColor: "#145517",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  Download PDF
+                </Button>
+
+                {/* CSV Button */}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={downloadExcel}
+                  sx={{
+                    borderRadius: "12px",
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                    color: "#d97706",
+                    border: "2px solid #d97706",
+                    "&:hover": {
+                      backgroundColor: "#f59e0b",
+                      borderColor: "#d97706",
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  Download Sheet
+                </Button>
+              </Box>
             )}
           </Box>
 

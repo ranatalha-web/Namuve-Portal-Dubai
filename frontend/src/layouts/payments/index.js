@@ -365,29 +365,38 @@ function Payments() {
                                             key={row.id}
                                             style={{
                                                 backgroundColor:
-                                                    row.Type === "Charge" ? "#d4edda" :
-                                                        row.Type === "Refund" ? "#e2e3e5" :
-                                                            "inherit"
+                                                    row.Title.toLowerCase() === "payment on airbnb pro"
+                                                        ? "#fff3cd"   // Bootstrap warning yellow
+                                                        : row.Type === "Charge"
+                                                            ? "#d4edda"   // Light green
+                                                            : row.Type === "Refund"
+                                                                ? "#e2e3e5"   // Light gray
+                                                                : "inherit"
                                             }}
                                         >
                                             {(() => {
+                                       
+                                                // ---- START OF NEW TEXT-COLOR LOGIC ----
+                                                const isAirbnbPro = row.Title.toLowerCase() === "payment on airbnb pro";
+
                                                 const hasChargeLink = row.Type === "Charge" &&
-                                                    row.QB_TXN_id &&
-                                                    row.QB_TXN_id !== "-" &&
-                                                    row.QB_TXN_id !== "null" &&
-                                                    row.QB_TXN_id.trim() !== "";
+                                                    row.QB_TXN_id && row.QB_TXN_id !== "-" && row.QB_TXN_id !== "null" && row.QB_TXN_id.trim() !== "";
 
                                                 const hasRefundLink = row.Type === "Refund" &&
-                                                    row.Expense_id &&
-                                                    row.Expense_id !== "-" &&
-                                                    row.Expense_id !== "null" &&
-                                                    row.Expense_id.trim() !== "";
+                                                    row.Expense_id && row.Expense_id !== "-" && row.Expense_id !== "null" && row.Expense_id.trim() !== "";
 
-                                                const rowTextColor = hasChargeLink
-                                                    ? "#155724"      // Dark green
-                                                    : hasRefundLink
-                                                        ? "#6c757d"    // Gray
-                                                        : "#721c24";   // Dark red
+                                                const hasLink = hasChargeLink || hasRefundLink;
+
+                                                const rowTextColor = isAirbnbPro
+                                                    ? hasLink
+                                                        ? "#856404"   // **Yellow** (dark) when Airbnb-Pro has a QB link
+                                                        : "#721c24"   // **Red** when Airbnb-Pro has no link
+                                                    : hasChargeLink
+                                                        ? "#155724"   // Green for normal charges
+                                                        : hasRefundLink
+                                                            ? "#6c757d"   // Gray for normal refunds
+                                                            : "#721c24";  // Red for everything else
+                                                // ---- END OF NEW TEXT-COLOR LOGIC ----
 
                                                 // Apply to all cells
                                                 const dynamicCellStyle = {
@@ -399,7 +408,37 @@ function Payments() {
                                                 return (
                                                     <>
                                                         <td style={dynamicCellStyle}>{row.id}</td>
-                                                        <td style={dynamicCellStyle}>{row.reservationId}</td>
+                                                        <td style={dynamicCellStyle}>
+                                                            {row.reservationId && row.reservationId !== "-" ? (
+                                                                <a
+                                                                    href={`https://dashboard.hostaway.com/v3/reservations/${row.reservationId}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="d-flex align-items-center"
+                                                                    style={{
+                                                                        color: "inherit",
+                                                                        textDecoration: "underline",
+                                                                        fontWeight: "500",
+                                                                        gap: "4px"
+                                                                    }}
+                                                                    title="Open in Hostaway"
+                                                                >
+                                                                    {row.reservationId}
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        width="12"
+                                                                        height="12"
+                                                                        fill="currentColor"
+                                                                        viewBox="0 0 16 16"
+                                                                    >
+                                                                        <path fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 0-1" />
+                                                                        <path fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z" />
+                                                                    </svg>
+                                                                </a>
+                                                            ) : (
+                                                                "-"
+                                                            )}
+                                                        </td>
                                                         <td style={dynamicCellStyle}>
                                                             <span style={{ fontWeight: "500" }}>
                                                                 {row.Type}
@@ -495,8 +534,17 @@ function Payments() {
                                                                     </button>
                                                                 </div>
                                                             ) : row.Title === "Payment on Airbnb Pro" ? (
-                                                                <span style={{ color: "#6c757d", fontWeight: "bold" }}>
-                                                                    Locked
+                                                                <span className="text-secondary fw-bold" style={{ fontSize: "0.75rem" }}>
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        width="14"
+                                                                        height="14"
+                                                                        fill="currentColor"
+                                                                        className="bi bi-lock-fill"
+                                                                        viewBox="0 0 16 16"
+                                                                    >
+                                                                        <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                                                                    </svg>
                                                                 </span>
                                                             ) : (
                                                                 <button
