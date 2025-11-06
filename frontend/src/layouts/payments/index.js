@@ -4,8 +4,25 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import axios from "axios";
+import { useAuth } from "context/AuthContext";
 
 function Payments() {
+    // Get auth context for custom permissions
+    const { hasPermission } = useAuth();
+
+    // Get user role from localStorage
+    const userRole = localStorage.getItem('userRole') || 'user';
+    
+    // Check if user has edit access
+    // - view_only role: no edit access
+    // - custom role: check payment.complete permission
+    // - admin/user roles: full access
+    const canEdit = userRole === 'view_only' ? false :
+                    userRole === 'custom' ? hasPermission('payment', 'complete') :
+                    true; // admin and user have full access
+    
+    const isViewOnly = !canEdit;
+
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [data, setData] = useState([]);
@@ -174,6 +191,12 @@ function Payments() {
     });
 
     const handleSave = async (row) => {
+        // Block view-only users from saving
+        if (isViewOnly) {
+            alert('View-only users cannot save changes');
+            return;
+        }
+        
         const { recordId, id, reservationId } = row;
         const newTitle = editForm.Title;
         const newDescription = editForm.Description;
@@ -520,15 +543,43 @@ function Payments() {
                                                                 <div className="d-flex gap-1 justify-content-center">
                                                                     <button
                                                                         className="btn btn-success btn-sm"
-                                                                        style={{ padding: "1px 5px", fontSize: "0.7rem" }}
-                                                                        onClick={() => handleSave(row)}
+                                                                        style={{ 
+                                                                            padding: "1px 5px", 
+                                                                            fontSize: "0.7rem",
+                                                                            pointerEvents: isViewOnly ? 'none' : 'auto',
+                                                                            opacity: isViewOnly ? 0.5 : 1
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            if (isViewOnly) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                return false;
+                                                                            }
+                                                                            handleSave(row);
+                                                                        }}
+                                                                        disabled={isViewOnly}
+                                                                        title={isViewOnly ? "View-only users cannot save changes" : ""}
                                                                     >
                                                                         Save
                                                                     </button>
                                                                     <button
                                                                         className="btn btn-secondary btn-sm"
-                                                                        style={{ padding: "1px 5px", fontSize: "0.7rem" }}
-                                                                        onClick={() => setEditingId(null)}
+                                                                        style={{ 
+                                                                            padding: "1px 5px", 
+                                                                            fontSize: "0.7rem",
+                                                                            pointerEvents: isViewOnly ? 'none' : 'auto',
+                                                                            opacity: isViewOnly ? 0.5 : 1
+                                                                        }}
+                                                                        onClick={(e) => {
+                                                                            if (isViewOnly) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                return false;
+                                                                            }
+                                                                            setEditingId(null);
+                                                                        }}
+                                                                        disabled={isViewOnly}
+                                                                        title={isViewOnly ? "View-only users cannot cancel" : ""}
                                                                     >
                                                                         Cancel
                                                                     </button>
@@ -549,11 +600,23 @@ function Payments() {
                                                             ) : (
                                                                 <button
                                                                     className="btn btn-primary btn-sm"
-                                                                    style={{ padding: "2px 6px", fontSize: "0.7rem" }}
-                                                                    onClick={() => {
+                                                                    style={{ 
+                                                                        padding: "2px 6px", 
+                                                                        fontSize: "0.7rem",
+                                                                        pointerEvents: isViewOnly ? 'none' : 'auto',
+                                                                        opacity: isViewOnly ? 0.5 : 1
+                                                                    }}
+                                                                    onClick={(e) => {
+                                                                        if (isViewOnly) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            return false;
+                                                                        }
                                                                         setEditingId(row.recordId);
                                                                         setEditForm({ Title: row.Title, Description: row.Description });
                                                                     }}
+                                                                    disabled={isViewOnly}
+                                                                    title={isViewOnly ? "View-only users cannot edit" : ""}
                                                                 >
                                                                     Edit
                                                                 </button>
