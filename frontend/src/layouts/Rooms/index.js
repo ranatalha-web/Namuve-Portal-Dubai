@@ -461,7 +461,6 @@ function Overview() {
           };
 
           console.log('📋 Listings array length:', listings.length);
-          
           // Count from listings array
           listings.forEach(listing => {
             const roomType = listing.roomType;
@@ -1015,67 +1014,82 @@ function Overview() {
               </MDBox>
               
               {/* Apartment Cards Grid */}
-              <MDBox sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, 1fr)',
-                  md: 'repeat(2, 1fr)',
-                  lg: 'repeat(3, 1fr)',
-                  xl: 'repeat(4, 1fr)'
-                },
-                gap: { xs: 2, sm: 2.5, md: 3 },
-                width: '100%'
-              }}>
+              <MDBox>
                 {loading ? (
-                  <MDBox textAlign="center" py={4} sx={{ gridColumn: '1 / -1' }}>
+                  <MDBox textAlign="center" py={4}>
                     <CircularProgress />
                     <MDTypography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
                       Loading apartments...
                     </MDTypography>
                   </MDBox>
                 ) : error ? (
-                  <MDBox textAlign="center" py={4} sx={{ gridColumn: '1 / -1' }}>
+                  <MDBox textAlign="center" py={4}>
                     <MDTypography variant="body1" color="error">
                       Error: {error}
                     </MDTypography>
                   </MDBox>
                 ) : filteredListings.length > 0 ? (
-                  filteredListings.map((listing, index) => (
+                  <>
+                    {/* Vacant Apartments Grid - More columns */}
+                    {[...filteredListings].filter(l => l.activity === 'Vacant').length > 0 && (
+                      <MDBox sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: 'repeat(2, 1fr)',
+                          sm: 'repeat(4, 1fr)',
+                          md: 'repeat(4, 1fr)',
+                          lg: 'repeat(4, 1fr)',
+                          xl: 'repeat(4, 1fr)'
+                        },
+                        gap: { xs: 1.5, sm: 2, md: 2 },
+                        width: '100%',
+                        mb: 3,
+                        justifyItems: 'stretch',
+                        alignItems: 'start'
+                      }}>
+                        {[...filteredListings].filter(l => l.activity === 'Vacant').map((listing, index) => (
                     <Card
                       key={listing.id}
                       sx={{
-                        backgroundColor: '#fefefe',
-                        borderRadius: { xs: '16px', md: '20px' },
-                        border: '1px solid #f1f5f9',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06)',
-                        overflow: 'hidden',
+                        backgroundColor: listing.activity === 'Vacant' ? 'transparent' : '#fefefe',
+                        borderRadius: listing.activity === 'Vacant' ? '0' : { xs: '16px', md: '20px' },
+                        border: listing.activity === 'Vacant' ? 'none' : '1px solid #f1f5f9',
+                        boxShadow: listing.activity === 'Vacant' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06)',
+                        overflow: 'visible',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         position: 'relative',
-                        minHeight: { xs: '420px', sm: '440px', md: '460px' },
+                        minHeight: listing.activity === 'Vacant' ? 'auto' : 'auto',
                         display: 'flex',
                         flexDirection: 'column',
+                        p: 0,
                         '&:hover': {
-                          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.08), 0 3px 10px rgba(0, 0, 0, 0.1)',
-                          transform: 'translateY(-4px)',
-                          borderColor: '#e2e8f0'
+                          boxShadow: listing.activity === 'Vacant' ? 'none' : '0 8px 25px rgba(0, 0, 0, 0.08), 0 3px 10px rgba(0, 0, 0, 0.1)',
+                          transform: listing.activity === 'Vacant' ? 'none' : 'translateY(-4px)',
+                          borderColor: listing.activity === 'Vacant' ? 'transparent' : '#e2e8f0'
                         }
                       }}
                     >
                       {/* Apartment Header */}
                       <MDBox sx={{ 
-                        backgroundColor: '#f8fafc',
-                        p: { xs: 2.5, sm: 2 },
+                        backgroundColor: listing.activity === 'Vacant' ? '#ffffff' : '#f8fafc',
+                        p: listing.activity === 'Vacant' ? { xs: 1, sm: 1 } : { xs: 2.5, sm: 2 },
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 2,
-                        borderBottom: '1px solid #e2e8f0'
+                        justifyContent: 'space-between',
+                        gap: { xs: 1, sm: 1.5 },
+                        borderBottom: listing.activity === 'Vacant' ? 'none' : '1px solid #e2e8f0',
+                        border: listing.activity === 'Vacant' ? '1px solid #d1d5db' : 'none',
+                        borderRadius: listing.activity === 'Vacant' ? '8px 8px 0 0' : '0',
+                        width: '100%',
+                        borderBottom: listing.activity === 'Vacant' ? 'none' : '1px solid #e2e8f0'
                       }}>
                         <MDTypography variant="h6" fontWeight="bold" sx={{ 
-                          fontSize: { xs: '1rem', sm: '0.9rem' },
+                          fontSize: (listing.name && listing.name.length > 12) 
+                            ? { xs: '0.65rem', sm: '0.7rem' } 
+                            : { xs: '0.9rem', sm: '0.85rem' },
                           color: '#1e293b',
-                          letterSpacing: '0.5px'
+                          letterSpacing: '0.3px',
+                          whiteSpace: 'nowrap'
                         }}>
                           {listing.name || 'Unknown Apartment'}
                         </MDTypography>
@@ -1091,23 +1105,79 @@ function Overview() {
                                 listing.activity === 'Occupied' ? '#dc2626' :
                                 listing.activity === 'Checkin' ? '#0284c7' :
                                 listing.activity === 'Checkout' ? '#d97706' : '#6b7280',
-                          px: 2,
-                          py: 0.5,
-                          borderRadius: { xs: '8px', sm: '6px' },
-                          fontSize: { xs: '0.75rem', sm: '0.7rem' },
+                          px: { xs: 1.2, sm: 1.5 },
+                          py: { xs: 0.3, sm: 0.4 },
+                          borderRadius: { xs: '6px', sm: '5px' },
+                          fontSize: { xs: '0.7rem', sm: '0.65rem' },
                           fontWeight: 600,
                           border: listing.activity === 'Vacant' ? '1px solid #dcfce7' : 
                                  listing.activity === 'Occupied' ? '1px solid #fee2e2' :
                                  listing.activity === 'Checkin' ? '1px solid #e0f2fe' :
-                                 listing.activity === 'Checkout' ? '1px solid #fed7aa' : '1px solid #e5e7eb'
+                                 listing.activity === 'Checkout' ? '1px solid #fed7aa' : '1px solid #e5e7eb',
+                          whiteSpace: 'nowrap'
                         }}>
                           {listing.activity || 'Unknown'}
                         </MDBox>
                       </MDBox>
 
-                      {/* Card Content */}
+                      {/* HW/HK Status - Show for vacant apartments */}
+                      {listing.activity === 'Vacant' && (
+                        <MDBox sx={{ 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          '@media (min-width: 600px)': {
+                            flexDirection: 'row'
+                          },
+                          gap: { xs: 2, sm: 3 },
+                          p: { xs: 1, sm: 1 },
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          width: '100%',
+                          border: '1px solid #d1d5db',
+                          borderTop: 'none',
+                          borderRadius: '0 0 8px 8px',
+                          backgroundColor: '#ffffff'
+                        }}>
+                          {/* HW Status */}
+                          <MDBox sx={{
+                            backgroundColor: listing.hwStatus === 'Clean' ? '#f0fdf4' : '#fffbeb',
+                            color: listing.hwStatus === 'Clean' ? '#15803d' : '#d97706',
+                            p: { xs: 0.6, sm: 0.7 },
+                            px: { xs: 1.5, sm: 2 },
+                            borderRadius: '6px',
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            border: listing.hwStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            HW Status: {listing.hwStatus || 'N/A'}
+                          </MDBox>
+                          
+                          {/* HK Status */}
+                          <MDBox sx={{
+                            backgroundColor: listing.hkStatus === 'Clean' ? '#f0fdf4' : '#fffbeb',
+                            color: listing.hkStatus === 'Clean' ? '#15803d' : '#d97706',
+                            p: { xs: 0.6, sm: 0.7 },
+                            px: { xs: 1.5, sm: 2 },
+                            borderRadius: '6px',
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            border: listing.hkStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            HK Status: {listing.hkStatus || 'N/A'}
+                          </MDBox>
+                        </MDBox>
+                      )}
+
+                      {/* Card Content - Only show for non-vacant apartments */}
+                      {listing.activity !== 'Vacant' && (
                       <MDBox sx={{ 
-                        p: { xs: 1.5, sm: 2, md: 2.5 },
+                        pt: { xs: 1.5, sm: 2, md: 2.5 },
+                        px: { xs: 1.5, sm: 2, md: 2.5 },
+                        pb: 0,
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column'
@@ -1119,7 +1189,440 @@ function Overview() {
                           gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                           gridTemplateRows: { sm: 'repeat(5, 1fr)' },
                           gap: { xs: 1, sm: '8px 12px' }, 
-                          mb: 2,
+                          mb: 1,
+                          minHeight: { sm: '200px' }
+                        }}>
+                          
+                          {/* Guest Row - Yesterday FIRST, Today SECOND */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#fafbfc', 
+                            color: '#374151',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #f3f4f6',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              👤 Guest: {listing.yGuestName && listing.yGuestName !== 'N/A' ? listing.yGuestName : 'No Guest'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          <MDBox sx={{ 
+                            backgroundColor: '#fafbfc', 
+                            color: '#374151',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #f3f4f6',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              👤 Guest: {listing.guestName && listing.guestName !== 'N/A' ? listing.guestName : 'No Guest'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          {/* ID Row - Yesterday FIRST, Today SECOND */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#faf5ff', 
+                            color: '#7c3aed',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #e9d5ff',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              🆔 ID: {listing.yReservationId && listing.yReservationId !== 'N/A' ? listing.yReservationId : 'No ID'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          <MDBox sx={{ 
+                            backgroundColor: '#faf5ff', 
+                            color: '#7c3aed',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #e9d5ff',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              🆔 ID: {listing.reservationId && listing.reservationId !== 'N/A' ? listing.reservationId : 'No ID'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          {/* Stay Row - Yesterday FIRST, Today SECOND */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#f0fdf4', 
+                            color: '#15803d',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #dcfce7',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              📅 Stay: {listing.yCheckInDate && listing.yCheckInDate !== 'N/A' ? `${listing.yCheckInDate} - ${listing.yCheckOutDate}` : 'No Dates'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          <MDBox sx={{ 
+                            backgroundColor: '#f0fdf4', 
+                            color: '#15803d',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #dcfce7',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              📅 Stay: {listing.checkInDate && listing.checkInDate !== 'N/A' ? `${listing.checkInDate} - ${listing.checkOutDate}` : 'No Dates'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          {/* Status Row - Yesterday FIRST, Today SECOND */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#fef2f2', 
+                            color: '#dc2626',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #fee2e2',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              📋 Status: {listing.yActivity || 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          <MDBox sx={{ 
+                            backgroundColor: '#fef2f2', 
+                            color: '#dc2626',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #fee2e2',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              📋 Status: {listing.activity || 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          {/* Res Status Row - Yesterday FIRST, Today SECOND */}
+                          <MDBox sx={{ 
+                            backgroundColor: '#f0f9ff', 
+                            color: '#0284c7',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #e0f2fe',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              Res Status: {listing.yReservationStatus && listing.yReservationStatus !== 'N/A' ? listing.yReservationStatus : 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                          
+                          <MDBox sx={{ 
+                            backgroundColor: '#f0f9ff', 
+                            color: '#0284c7',
+                            p: { xs: 1, sm: 0.8 },
+                            borderRadius: { xs: '8px', sm: '6px' },
+                            mb: { xs: 1, sm: 0 },
+                            border: '1px solid #e0f2fe',
+                            minHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              Res Status: {listing.reservationStatus && listing.reservationStatus !== 'N/A' ? listing.reservationStatus : 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                        </MDBox>
+
+
+                        {/* HW and HK Status Row (Full Width) */}
+                        <MDBox sx={{ 
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                          columnGap: { xs: '24px', sm: '80px' },
+                          px: { xs: 1.5, sm: 2, md: 2.5 },
+                          pb: { xs: 2.5, sm: 3, md: 3.5 },
+                          mt: 0
+                        }}>
+                          <MDBox 
+                            sx={{ 
+                              backgroundColor: listing.hwStatus === 'Clean' ? '#f0fdf4' : '#fffbeb', 
+                              color: listing.hwStatus === 'Clean' ? '#15803d' : '#d97706',
+                              p: { xs: 1.2, sm: 0.8 },
+                              borderRadius: { xs: '10px', sm: '8px' },
+                              textAlign: 'center',
+                              border: listing.hwStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                              cursor: 'default',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.75rem', sm: '0.7rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              HW Status: {listing.hwStatus || 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                          <MDBox 
+                            sx={{ 
+                              backgroundColor: listing.hkStatus === 'Clean' ? '#f0fdf4' : '#fffbeb', 
+                              color: listing.hkStatus === 'Clean' ? '#15803d' : '#d97706',
+                              p: { xs: 1.2, sm: 0.8 },
+                              borderRadius: { xs: '10px', sm: '8px' },
+                              textAlign: 'center',
+                              border: listing.hkStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                              cursor: 'default',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <MDTypography variant="body2" sx={{ 
+                              fontSize: { xs: '0.75rem', sm: '0.7rem' },
+                              fontWeight: 600,
+                              lineHeight: 1.3
+                            }}>
+                              HK Status: {listing.hkStatus || 'No Status'}
+                            </MDTypography>
+                          </MDBox>
+                        </MDBox>
+
+                      </MDBox>
+                      )}
+                    </Card>
+                        ))}
+                      </MDBox>
+                    )}
+
+                    {/* Non-Vacant Apartments Grid - Original layout */}
+                    {[...filteredListings].filter(l => l.activity !== 'Vacant').length > 0 && (
+                      <MDBox sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: 'repeat(2, 1fr)',
+                          md: 'repeat(2, 1fr)',
+                          lg: 'repeat(3, 1fr)',
+                          xl: 'repeat(4, 1fr)'
+                        },
+                        gap: { xs: 2, sm: 2.5, md: 3 },
+                        width: '100%'
+                      }}>
+                        {[...filteredListings].filter(l => l.activity !== 'Vacant').map((listing, index) => (
+                    <Card
+                      key={listing.id}
+                      sx={{
+                        backgroundColor: listing.activity === 'Vacant' ? 'transparent' : '#fefefe',
+                        borderRadius: listing.activity === 'Vacant' ? '0' : { xs: '16px', md: '20px' },
+                        border: listing.activity === 'Vacant' ? 'none' : '1px solid #f1f5f9',
+                        boxShadow: listing.activity === 'Vacant' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06)',
+                        overflow: 'visible',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        minHeight: listing.activity === 'Vacant' ? 'auto' : 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        p: 0,
+                        '&:hover': {
+                          boxShadow: listing.activity === 'Vacant' ? 'none' : '0 8px 25px rgba(0, 0, 0, 0.08), 0 3px 10px rgba(0, 0, 0, 0.1)',
+                          transform: listing.activity === 'Vacant' ? 'none' : 'translateY(-4px)',
+                          borderColor: listing.activity === 'Vacant' ? 'transparent' : '#e2e8f0'
+                        }
+                      }}
+                    >
+                      {/* Apartment Header */}
+                      <MDBox sx={{ 
+                        backgroundColor: listing.activity === 'Vacant' ? '#ffffff' : '#f8fafc',
+                        p: listing.activity === 'Vacant' ? { xs: 0.5, sm: 0.5 } : { xs: 2.5, sm: 2 },
+                        py: listing.activity === 'Vacant' ? { xs: 0.3, sm: 0.3 } : undefined,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: { xs: 1, sm: 1.5 },
+                        borderBottom: listing.activity === 'Vacant' ? 'none' : '1px solid #e2e8f0',
+                        border: listing.activity === 'Vacant' ? '1px solid #d1d5db' : 'none',
+                        borderRadius: listing.activity === 'Vacant' ? '6px 6px 0 0' : '0',
+                        width: '100%',
+                        borderBottom: listing.activity === 'Vacant' ? 'none' : '1px solid #e2e8f0'
+                      }}>
+                        <MDTypography variant="h6" fontWeight="bold" sx={{ 
+                          fontSize: (listing.name && listing.name.length > 12) 
+                            ? { xs: '0.65rem', sm: '0.7rem' } 
+                            : { xs: '0.9rem', sm: '0.85rem' },
+                          color: '#1e293b',
+                          letterSpacing: '0.3px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {listing.name || 'Unknown Apartment'}
+                        </MDTypography>
+                        {/* Activity Status Badge */}
+                        <MDBox sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          backgroundColor: listing.activity === 'Vacant' ? '#f0fdf4' : 
+                                         listing.activity === 'Occupied' ? '#fef2f2' :
+                                         listing.activity === 'Checkin' ? '#f0f9ff' :
+                                         listing.activity === 'Checkout' ? '#fffbeb' : '#f9fafb',
+                          color: listing.activity === 'Vacant' ? '#15803d' : 
+                                listing.activity === 'Occupied' ? '#dc2626' :
+                                listing.activity === 'Checkin' ? '#0284c7' :
+                                listing.activity === 'Checkout' ? '#d97706' : '#6b7280',
+                          px: { xs: 1.2, sm: 1.5 },
+                          py: { xs: 0.3, sm: 0.4 },
+                          borderRadius: { xs: '6px', sm: '5px' },
+                          fontSize: { xs: '0.7rem', sm: '0.65rem' },
+                          fontWeight: 600,
+                          border: listing.activity === 'Vacant' ? '1px solid #dcfce7' : 
+                                 listing.activity === 'Occupied' ? '1px solid #fee2e2' :
+                                 listing.activity === 'Checkin' ? '1px solid #e0f2fe' :
+                                 listing.activity === 'Checkout' ? '1px solid #fed7aa' : '1px solid #e5e7eb',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {listing.activity || 'Unknown'}
+                        </MDBox>
+                      </MDBox>
+
+                      {/* HW/HK Status - Show for vacant apartments */}
+                      {listing.activity === 'Vacant' && (
+                        <MDBox sx={{ 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          '@media (min-width: 600px)': {
+                            flexDirection: 'row'
+                          },
+                          gap: { xs: 0.5, sm: 0.5 },
+                          p: { xs: 0.5, sm: 0.5 },
+                          py: { xs: 0.3, sm: 0.3 },
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: '100%',
+                          border: '1px solid #d1d5db',
+                          borderTop: 'none',
+                          borderRadius: '0 0 6px 6px',
+                          backgroundColor: '#ffffff'
+                        }}>
+                          {/* HW Status */}
+                          <MDBox sx={{
+                            backgroundColor: listing.hwStatus === 'Clean' ? '#f0fdf4' : '#fffbeb',
+                            color: listing.hwStatus === 'Clean' ? '#15803d' : '#d97706',
+                            p: { xs: 0.5, sm: 0.5 },
+                            px: { xs: 1, sm: 1.2 },
+                            borderRadius: '6px',
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            border: listing.hwStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            HW Status: {listing.hwStatus || 'N/A'}
+                          </MDBox>
+                          
+                          {/* HK Status */}
+                          <MDBox sx={{
+                            backgroundColor: listing.hkStatus === 'Clean' ? '#f0fdf4' : '#fffbeb',
+                            color: listing.hkStatus === 'Clean' ? '#15803d' : '#d97706',
+                            p: { xs: 0.5, sm: 0.5 },
+                            px: { xs: 1, sm: 1.2 },
+                            borderRadius: '6px',
+                            fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            border: listing.hkStatus === 'Clean' ? '1px solid #dcfce7' : '1px solid #fed7aa',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            HK Status: {listing.hkStatus || 'N/A'}
+                          </MDBox>
+                        </MDBox>
+                      )}
+
+                      {/* Card Content - Only show for non-vacant apartments */}
+                      {listing.activity !== 'Vacant' && (
+                      <MDBox sx={{ 
+                        pt: { xs: 1.5, sm: 2, md: 2.5 },
+                        px: { xs: 1.5, sm: 2, md: 2.5 },
+                        pb: 0,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        
+                        {/* Information Grid - Perfect Alignment */}
+                        <MDBox sx={{ 
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                          gridTemplateRows: { sm: 'repeat(5, 1fr)' },
+                          gap: { xs: 1, sm: '8px 12px' }, 
+                          mb: 1,
                           minHeight: { sm: '200px' }
                         }}>
                           
@@ -1334,7 +1837,8 @@ function Overview() {
                         <MDBox sx={{ 
                           display: 'flex', 
                           flexDirection: { xs: 'column', sm: 'row' },
-                          gap: { xs: 1, sm: 0.5 }
+                          gap: { xs: 1, sm: 0.5 },
+                          pb: { xs: 2.5, sm: 3, md: 3.5 }
                         }}>
                           <MDBox 
                             sx={{ 
@@ -1389,10 +1893,14 @@ function Overview() {
                         </MDBox>
 
                       </MDBox>
+                      )}
                     </Card>
-                  ))
+                        ))}
+                      </MDBox>
+                    )}
+                  </>
                 ) : (
-                  <MDBox textAlign="center" py={4} sx={{ gridColumn: '1 / -1' }}>
+                  <MDBox textAlign="center" py={4}>
                     <MDTypography variant="body1" color="text.secondary">
                       No apartments found. Total listings: {listings.length}
                     </MDTypography>
@@ -2541,7 +3049,7 @@ function Overview() {
                           sx={{
                             display: 'grid',
                             gridTemplateColumns: '25% 25% 25% 25%',
-                            gap: 1.5,
+                            gap: { xs: 1, sm: 1.5 },
                             p: 2.5,
                             backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafbfc',
                             borderBottom: '1px solid #f1f5f9',
