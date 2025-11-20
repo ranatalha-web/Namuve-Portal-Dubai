@@ -12,15 +12,15 @@ function Payments() {
 
     // Get user role from localStorage
     const userRole = localStorage.getItem('userRole') || 'user';
-    
+
     // Check if user has edit access
     // - view_only role: no edit access
     // - custom role: check payment.complete permission
     // - admin/user roles: full access
     const canEdit = userRole === 'view_only' ? false :
-                    userRole === 'custom' ? hasPermission('payment', 'complete') :
-                    true; // admin and user have full access
-    
+        userRole === 'custom' ? hasPermission('payment', 'complete') :
+            true; // admin and user have full access
+
     const isViewOnly = !canEdit;
 
     const [startDate, setStartDate] = useState("");
@@ -45,6 +45,19 @@ function Payments() {
         return diffDays >= 1 && diffDays <= 7;
     };
 
+    // Helper: Get UTC end-of-day adjusted for Karachi (UTC+5)
+    const getEndOfDayKarachiUTC = (dateStr) => {
+        const date = new Date(dateStr + 'T00:00:00'); // Start of selected day in local time
+        date.setHours(18, 59, 59, 999); // 23:59:59 PKT = 18:59:59 UTC (subtract 5 hours)
+        return date.toISOString(); // Outputs e.g., "2025-11-16T18:59:59.000Z"
+    };
+
+    // Helper: Get UTC start-of-day (unchanged, as it aligns)
+    const getStartOfDayUTC = (dateStr) => {
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toISOString(); // e.g., "2025-11-16T00:00:00.000Z" (midnight UTC = 5 AM PKT, but with timeZone it adjusts)
+    };
+
     // Fetch payments data
     const fetchPayments = async () => {
         if (!startDate || !endDate) return;
@@ -59,7 +72,7 @@ function Payments() {
                         operator: "isOnOrAfter",
                         value: {
                             mode: "exactDate",
-                            exactDate: `${startDate}T00:00:00.000Z`,
+                            exactDate: getStartOfDayUTC(startDate),  // e.g., "2025-11-16T00:00:00.000Z"
                             timeZone: "Asia/Karachi",
                         },
                     },
@@ -68,7 +81,7 @@ function Payments() {
                         operator: "isOnOrBefore",
                         value: {
                             mode: "exactDate",
-                            exactDate: `${endDate}T23:59:59.000Z`,
+                            exactDate: getEndOfDayKarachiUTC(endDate),  // e.g., "2025-11-16T18:59:59.000Z"
                             timeZone: "Asia/Karachi",
                         },
                     },
@@ -196,7 +209,7 @@ function Payments() {
             alert('View-only users cannot save changes');
             return;
         }
-        
+
         const { recordId, id, reservationId } = row;
         const newTitle = editForm.Title;
         const newDescription = editForm.Description;
@@ -398,7 +411,7 @@ function Payments() {
                                             }}
                                         >
                                             {(() => {
-                                       
+
                                                 // ---- START OF NEW TEXT-COLOR LOGIC ----
                                                 const isAirbnbPro = row.Title.toLowerCase() === "payment on airbnb pro";
 
@@ -543,8 +556,8 @@ function Payments() {
                                                                 <div className="d-flex gap-1 justify-content-center">
                                                                     <button
                                                                         className="btn btn-success btn-sm"
-                                                                        style={{ 
-                                                                            padding: "1px 5px", 
+                                                                        style={{
+                                                                            padding: "1px 5px",
                                                                             fontSize: "0.7rem",
                                                                             pointerEvents: isViewOnly ? 'none' : 'auto',
                                                                             opacity: isViewOnly ? 0.5 : 1
@@ -564,8 +577,8 @@ function Payments() {
                                                                     </button>
                                                                     <button
                                                                         className="btn btn-secondary btn-sm"
-                                                                        style={{ 
-                                                                            padding: "1px 5px", 
+                                                                        style={{
+                                                                            padding: "1px 5px",
                                                                             fontSize: "0.7rem",
                                                                             pointerEvents: isViewOnly ? 'none' : 'auto',
                                                                             opacity: isViewOnly ? 0.5 : 1
@@ -584,7 +597,24 @@ function Payments() {
                                                                         Cancel
                                                                     </button>
                                                                 </div>
-                                                            ) : row.Title === "Payment on Airbnb Pro" ? (
+                                                            ) : hasLink ? (
+                                                                <span
+                                                                    className={isAirbnbPro ? "text-warning" : "text-success"}
+                                                                    style={{ fontSize: "0.75rem", fontWeight: "bold" }}
+                                                                    title="Locked: QB Link Generated"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        width="14"
+                                                                        height="14"
+                                                                        fill="currentColor"
+                                                                        className="bi bi-lock-fill"
+                                                                        viewBox="0 0 16 16"
+                                                                    >
+                                                                        <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                                                                    </svg>
+                                                                </span>
+                                                            ) : row.Title.toLowerCase() === "payment on airbnb pro" ? (
                                                                 <span className="text-secondary fw-bold" style={{ fontSize: "0.75rem" }}>
                                                                     <svg
                                                                         xmlns="http://www.w3.org/2000/svg"
@@ -600,8 +630,8 @@ function Payments() {
                                                             ) : (
                                                                 <button
                                                                     className="btn btn-primary btn-sm"
-                                                                    style={{ 
-                                                                        padding: "2px 6px", 
+                                                                    style={{
+                                                                        padding: "2px 6px",
                                                                         fontSize: "0.7rem",
                                                                         pointerEvents: isViewOnly ? 'none' : 'auto',
                                                                         opacity: isViewOnly ? 0.5 : 1

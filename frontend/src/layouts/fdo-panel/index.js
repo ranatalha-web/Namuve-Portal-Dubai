@@ -13,7 +13,7 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import Table from "react-bootstrap/Table";
 import { Row, Col } from "react-bootstrap";
@@ -35,6 +35,8 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import PrintIcon from "@mui/icons-material/Print";
 import EventIcon from "@mui/icons-material/Event";
+import CommentIcon from "@mui/icons-material/Comment";
+import CommentSection from "components/CommentSection/CommentSection";
 
 // Authentication context
 import { useAuth } from "context/AuthContext";
@@ -59,6 +61,7 @@ import {
   Avatar,
   Box,
   Typography,
+  Badge,
 } from "@mui/material";
 
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -83,6 +86,12 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import Notifications from "components/Notifications/index";
+
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 // Clear console on component load
 //console.clear();
 
@@ -99,1179 +108,166 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   const [canPrintCheckOut, setCanPrintCheckOut] = useState(false);
   const { user } = useAuth(); // ✅ get logged-in user
   const [bookingDate, setBookingDate] = useState(null);
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [latestComment, setLatestComment] = useState(null);
+  const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkInDateTime, setCheckInDateTime] = useState(dayjs());
+  const [savingCheckIn, setSavingCheckIn] = useState(false);
+  const [openDatePickerDialog, setOpenDatePickerDialog] = useState(false);
+  const [openCheckOutDialog, setOpenCheckOutDialog] = useState(false);
+  const [checkOutDateTime, setCheckOutDateTime] = useState(dayjs());
 
   const HOSTAWAY_API = "https://api.hostaway.com/v1/reservations";
   const HOSTAWAY_TOKEN =
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzNhNzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE";
 
-  const TEABLE_API_URL = "https://teable.namuve.com/api/table/tblQaO1sLn5llEOsBuf/record";
-  const TEABLE_API_TOKEN = "teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE="; // 🔐 replace this
+  const TEABLE_API_URL = "https://teable.namuve.com/api/table/tblp5m9nSIoBg97I32a/record";
+  const TEABLE_API_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg="; // 🔐 replace this
 
-  const handlePrintCheckIn = async () => {
+  const TEABLE_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
+  const TABLE_URL = "https://teable.namuve.com/api/table/tblSeofkNz53TgqghsR/record";
+
+  const NOTIFICATION_API = "https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record";
+
+  const API_ENDPOINT = "https://teable.namuve.com/api/table/tbliOdo8ldmMO8rrYyN/record";
+  const API_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
+
+  const searchUrl = `https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record?search=${guest.reservationId}&search=Reservation+ID&search=true`;
+
+  const handleSendNotification = async (commentText, type = "comment") => {
+    if (!guest.reservationId || !commentText?.trim()) return;
+
+    const payload = {
+      records: [{
+        fields: {
+          User: user?.name || user?.username,
+          Time: new Date().toISOString(),
+          Text: commentText.trim(),
+          "Reservation ID": Number(guest.reservationId),
+          Type: type, // Dynamic!
+          APT: guest.apartment || guest.listingName || "N/A",
+          "Guest Name": guest.guestName || "Unknown",
+        },
+      }],
+    };
+
+    console.log("Sending notification →", NOTIFICATION_API);
+    console.log("Type →", type);
+
     try {
-      // Prevent view_only users and custom users without complete access from printing
-      if (isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))) {
-        console.log('❌ User does not have permission to print check-in forms');
-        setSnackbar({ open: true, message: 'You do not have permission to print forms', severity: 'error' });
-        return;
-      }
-
-      // Fetch latest reservation from API
-      const response = await fetch(`${HOSTAWAY_API}/${guest.reservationId}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` },
-      });
-
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-
-      const data = await response.json();
-      const reservation = data.result || {};
-      const guestName = reservation.guestName || "N/A";
-
-      const cnic =
-        reservation.customFieldValues?.find(
-          (field) => field.customField?.name === "ID card Number/ Passport number"
-        )?.value || "Not provided";
-
-      const listingMapId = guest.listingName || "N/A";
-      const listingType = guest.type || "N/A";
-      const contact = reservation.phone || "N/A";
-      const duration = reservation.nights || "N/A";
-      const totalPrice = reservation.totalPrice || "N/A";
-      const currencyLabel = reservation.currency || "";
-      let earlyCheckIn = "0";
-      if (Array.isArray(reservation.financeField)) {
-        // 🔹 Early Check-in Fee
-        const earlyCheckinField = reservation.financeField.find(
-          (field) => field.alias === "Early Checkin Charges per hour" && field.isDeleted === 0
-        );
-        if (earlyCheckinField) {
-          earlyCheckIn = earlyCheckinField.total ?? earlyCheckinField.value ?? "0";
-        }
-      }
-
-      let pricePerNight = "N/A";
-      if (Array.isArray(reservation.customFieldValues)) {
-        const priceField = reservation.customFieldValues.find(
-          (field) => field.customField?.id === 63430
-        );
-        if (priceField) {
-          pricePerNight = priceField.value || "N/A";
-        }
-      }
-      const channelName = reservation.channelName || "N/A";
-
-      const address =
-        reservation.customFieldValues?.find((field) => field.customField?.name === "Address")
-          ?.value ||
-        guest.address ||
-        "Not provided";
-
-      const email = reservation.guestEmail || "Not provided";
-      const adults = reservation.numberOfGuests || "N/A";
-      const children = reservation.children || "0";
-      const arrival = reservation.arrivalDate || "N/A";
-      const checkInTime = reservation.checkInTime
-        ? formatTime(reservation.checkInTime)
-        : guest.checkinTime
-          ? formatTime(guest.checkinTime)
-          : "N/A";
-
-      const departure = reservation.departureDate || guest.checkoutDate || "N/A";
-
-      const checkOutTime = reservation.checkOutTime
-        ? formatTime(reservation.checkOutTime)
-        : guest.checkoutTime
-          ? formatTime(guest.checkoutTime)
-          : "N/A";
-
-      const vehicleNumber =
-        reservation.customFieldValues?.find((field) => field.customField?.name === "Vehicle Number")
-          ?.value ||
-        "Not provided";
-
-      let securityDepositFee = "N/A";
-      if (Array.isArray(reservation.financeField)) {
-        const securityField = reservation.financeField.find(
-          (field) => field.alias === "Security Deposit" && field.isDeleted === 0
-        );
-        if (securityField) {
-          securityDepositFee = securityField.total ?? securityField.value ?? "0";
-        }
-      }
-
-      let actualCheckInTime = "N/A";
-
-      if (Array.isArray(reservation.customFieldValues)) {
-        const checkInField = reservation.customFieldValues.find(
-          (item) =>
-            item.customField?.name === "Actual Check-in Time" && item.customFieldId === 76281
-        );
-
-        if (checkInField && checkInField.value) {
-          const parsedDate = new Date(checkInField.value);
-          if (!isNaN(parsedDate)) {
-            actualCheckInTime = parsedDate.toLocaleString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            });
-          } else {
-            actualCheckInTime = checkInField.value; // fallback if not a date
-          }
-        }
-      }
-
-      const reservationId = reservation.reservationId || "N/A";
-
-      const formWindow = window.open("", "_blank");
-
-      // Fill guest details dynamically
-      const htmlContent = `
-    <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <link
-            rel="icon"
-            href="https://i.ibb.co/vC3k9ZXv/favicon-32x32.png"
-            type="image/png"
-          />
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-          <style>
-            input[readonly] {
-              pointer-events: none;
-              user-select: none;
-            }
-            body {
-              margin: 0;
-              padding: 15px;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 80vh;
-              background-color: #f0f0f0;
-            }
-            .form {
-              width: 160mm;
-              height: 240mm;
-              padding: 10px;
-              margin: auto;
-              background-color: white;
-              border-radius: 5px;
-              border: 1px solid lightblue;
-              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            }
-            .logo-img {
-              display: flex;
-              justify-content: center;
-              height: 60px;
-              margin: 10px 0px 20px 0px;
-            }
-            .logo-img img {
-              height: 100%;
-              width: auto;
-              object-fit: contain;
-            }
-            .heading-text h1 {
-              padding-bottom: 0.5rem !important;
-              font-size: 20px;
-              text-align: center;
-              
-            }
-            .form-container {
-              display: flex;
-              gap: 20px;
-              padding: 10px;
-              font-family: Helvetica;
-            }
-            .left-section,
-            .right-section {
-              flex: 1;
-            }
-            .form-field {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    font-size: 12px;
-  }
-
-  .form-field label {
-    width: 100px;
-    flex-shrink: 0;
-    font-weight: bold;
-  }
-
-  .form-field .field-value {
-  flex: 1;
-  border-bottom: 1px solid black;
-  padding-bottom: 2px;
-  word-break: break-word;
-  font-size: 11.5px;
-  min-height: 16px;
-  font-family: Arial;
-}
-
-  /* To style readonly input fields consistently */
-  .form-field input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #000000;
-  font-size: 11.5px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-}
-
-            .address-field input {
-              width: calc(100% - 90px);
-            }
-            ul {
-  padding-top: 2px;
-  padding-bottom: 2px;
-}
-
-ul li {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
-  line-height: 1;   /* slightly increased for readability */
-  margin-bottom: 6px; /* adds space between list items */
-}
-
-            .space {
-              padding: 8px !important;
-              font-family: Arial;
-            }
-            .row .row-field {
-              margin-top: 5px;
-}
-            .row .row-field h3 {
-              font-size: 13px;
-              margin: 4px 0 !important;
-              font-family: Arial;
-            }
-            .row .row-field h4 {
-              font-size: 12px;
-              margin: 4px 0 !important;
-              text-align: right;
-            }
-              .download-btn {
-    padding: 7px 9px;
-    background: transparent;
-    color: black;
-    border: 1px solid black;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 15px;
-    transition: background 0.3s, color 0.3s;
-}
-
-.download-btn:hover {
-  background: black;
-  color: white;
-}
-
-          </style>
-        </head>
-        <body>
-          <div class="form">
-            <div style="position: absolute; top: 5px; right: 5px; z-index: 1000;">
-            <button onclick="printForm()" class="download-btn">
-              Print
-            </button>
-  <button onclick="downloadForm()" class="download-btn">
-    Download
-  </button>
-</div>
-<div style="display: flex; flex-direction: row; margin-top: 15px">
-            <div class="logo-img"
-            >
-              <img
-                src="img/booknrent-logo.png"
-                alt="Booknrent Logo"
-              />
-            </div>
-            <div class="heading-text" style="margin: 20px 0px 0px 40px !important">
-              <h3 style="margin: 0; font-size: 20px; font-weight: bold; font-family: sans-serif; "> ${guestName}'s Check-in Form <span style="font-size: 12px; color: #666;">(${guest.reservationId
-        })</span></h3>
-              <p style="margin: 4px 0 0 0; font-size: 14px; color: #555; font-family: Arial;">Actual Check-in Date / Time: ${actualCheckInTime}</p>
-            </div>
-            <!-- 
-            <div style="position: absolute; margin-left: 400px; margin-top: -16px; font-family: Arial; color: #b6bfb6;">
-    Printed By: ${user?.name}
-  </div>
-  -->
-            </div>
-            <div class="form-container">
-  <div class="left-section">
-    <div class="form-field"><label>Name:</label><div class="field-value">${guestName}</div></div>
-    <div class="form-field"><label>CNIC:</label><div class="field-value">${cnic}</div></div>
-    <div class="form-field"><label>Unit:</label><div class="field-value">${listingMapId}</div></div>
-    <div class="form-field"><label>Type:</label><div class="field-value">${listingType}</div></div>
-    <div class="form-field"><label>Contact:</label><div class="field-value">${contact}</div></div>
-    <div class="form-field"><label>Total Nights:</label><div class="field-value">${duration}</div></div>
-<div class="form-field">
-  <label>Total Amount:</label>
-  <div class="field-value">
-    ${totalPrice} ${currencyLabel} 
-    ${currencyLabel === "USD" ? "" : "<br> ☐ Cash / ☐ IBFT / ☐ Card"}
-  </div>
-</div>
-    <div class="form-field"><label>Early Check-in:</label><div class="field-value">${earlyCheckIn} ${currencyLabel} </div></div>
-    <div class="form-field"><label>Price/Night:</label><div class="field-value">${pricePerNight}</div></div>
-    <div class="form-field"><label>Channel ID:</label><div class="field-value">${channelName}</div></div>
-  </div>
-
-  <div class="right-section">
-  <div class="form-field"><label>Address:</label><div class="field-value">${address}</div></div>
-  <div class="form-field"><label>Email:</label><div class="field-value">${email}</div></div>
-  <div class="form-field"><label>Adults:</label><div class="field-value">${adults}</div></div>
-  <div class="form-field"><label>Children:</label><div class="field-value">${children}</div></div>
-  <div class="form-field"><label>Check-in Date:</label><div class="field-value">${arrival}</div></div>
-  <div class="form-field"><label>Check-in Time:</label><div class="field-value">${checkInTime}</div></div>
-  <div class="form-field"><label>Check-out Date:</label><div class="field-value">${departure}</div></div>
-  <div class="form-field"><label>Check-out Time:</label><div class="field-value">${checkOutTime}</div></div>
-  <div class="form-field" ><label>Vehicle No:</label><div class="field-value" >${vehicleNumber}</div></div>
-<div class="form-field">
-  <label>Security Deposit:</label>
-  <div class="field-value">
-    ${securityDepositFee} ${currencyLabel}
-    ${currencyLabel === "USD" ? "" : "<br> ☐ Cash / ☐ IBFT / ☐ Card"}
-  </div>
-</div>
-</div>
-</div>
-
-            
-            <div class="space" style="padding: 15px">
-              <div class="terms">
-                <h3 style="margin: -15px 0px -15px 0px; text-align: left" >Terms and Conditions</h3>
-                <ul>
-                  <li>Original CNIC or Passport is required at the time of Check-in.</li>
-                  <li>Only one car parking is allowed inside the building, Extra vehicles will be charged accordingly.</li>
-                  <li>Pets are not allowed.</li>
-                  <li>It is mandatory for guests to maintain a peaceful environment.</li>
-                  <li>Anti-Social Behaviour and unethical activities are strictly prohibited.</li>
-                  <li>Guests are requested to check out before 12:00pm on the day of check-out.</li>
-                  <li><strong>Guests will bear financial liability for any damage inside the apartment and building due to their fault/negligence.</strong></li>
-                  <li>Guests are requested to submit any complaints regarding the quality of services at the reception desk.</li>
-                  <li>Money/Jewelry or other valuables brought to the property are at the guest's sole risk.</li>
-                  </ul>
-<p style="font-size: 13px; text-align: center;">
-  <strong> <u>Security deposit will be refunded within 2–3 working days, after your checkout.</u></strong>
-</p>
-
-                <p style="font-family: 'Segoe UI', TTahoma, Geneva, Verdana, sans-serif;
-    font-size: 13px;
-    margin-bottom: 2px;
-    text-align: center;">I have read and understand the terms and conditions and agree to them. <br> I will be responsible for any damage or loss to the property as per list attached.</p>
-              </div>
-              <div class="row">
-                <div class="row-field" style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-                  <div class="inner-col" style="text-align: left">
-                    <div style="border-bottom: 1px solid black; width:140px; margin-bottom: 5px;"></div>
-                    <h3>Management Team <br><span style="color:#b6bfb6; font-size:9px;">(${user?.name})</span></h3>
-                  </div>
-                  <div class="inner-col" style="text-align: right">
-                    <div style="border-bottom: 1px solid black; width: 140px; margin-bottom: 5px; margin-left: auto;"></div>
-                    <h3>Guest Signature</h3>
-                  </div>
-                </div>
-                <div style="text-align: center; margin-top: -40px;">
-  <h5 style="margin: 0; font-size: 17px;">CHECK OUT TIME 12:00 NOON</h5>
-  <p style="margin: 4px 0 0; font-size: 11px;">(Late Check Out charges applicable @ Rs. 1000 per hour) <br> (*Subject to Availability)</p>
-</div>
-
-                <div style="
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0px 5px 0px 4px;
-    margin-top: 40px;
-    margin-right: -17px;
-    margin-left: -17px;
-    font-size: 12px;
-    font-family: 'monospace';
-    background-color:rgb(0, 0, 0);
-    color: white;
-    ">
-                  <div style="text-align: left;">
-                    <h4>0300-0454711</h4>
-                  </div>
-                  <div style="text-align: right;">
-                    <h4>30-A, Block L, Gulberg 3, Lahore</h4>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-          <script>
-            async function downloadForm() {
-              const formElement = document.querySelector('.form');
-              const canvas = await html2canvas(formElement, {
-                scale: 2,
-                logging: false,
-                useCORS: true
-              });
-              
-              const link = document.createElement('a');
-              link.download = \`${guestName}'s Checkin-form (${guest.reservationId}).png\`;
-              link.href = canvas.toDataURL('image/png');
-              link.click();
-            }
-            
-
-    // ---------- PRINT ----------
-    async function printForm() {
-      try {
-        const el = document.querySelector('.form');
-        const canvas = await html2canvas(el, {scale:3, useCORS:true, backgroundColor:'#fff'});
-        const imgData = canvas.toDataURL('image/png');
-
-        const pw = window.open('', '_blank', 'width=900,height=1000');
-        pw.document.write(\`
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>
-<style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;background:#fff;display:flex;justify-content:center;align-items:center;}
-  img{max-width:100%;max-height:100%;box-shadow:none;}
-  @page{size:A4 portrait;margin:0;}
-</style></head><body>
-  <img src="\${imgData}" onload="setTimeout(()=>{window.print();window.close();},300);">
-</body></html>\`);
-        pw.document.close();
-      } catch (e) { console.error(e); alert('Print failed – use Download'); }
-    }
-          </script>
-        </body>
-      </html>
-  `;
-
-      // ADD THESE 2 LINES:
-      formWindow.guestName = guestName;
-      formWindow.reservationId = guest.reservationId;
-
-      formWindow.document.open();
-      formWindow.document.write(htmlContent);
-      formWindow.document.close();
-
-      // ✅ After printing, update Hostaway custom field (ID 84716)
-      const updatePayload = {
-        customFieldValues: [
-          {
-            customFieldId: 84716,
-            value: "Yes",
-          },
-        ],
-      };
-
-      const updateResponse = await fetch(`${HOSTAWAY_API}/${guest.reservationId}`, {
-        method: "PUT",
+      const res = await fetch(NOTIFICATION_API, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${HOSTAWAY_TOKEN}`,
+          Authorization: `Bearer ${TEABLE_TOKEN}`,
+          "X-Teable-Field-Names": "true",
         },
-        body: JSON.stringify(updatePayload),
+        body: JSON.stringify(payload),
       });
 
-      const updateResult = await updateResponse.json();
-
-      if (!updateResponse.ok || updateResult.status === "fail") {
-        console.error("❌ Failed to update Print Check In field:", updateResult);
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Notification failed:", res.status, err);
       } else {
-        console.log("✅ Successfully marked Print Check In as 'Yes' in Hostaway.");
-        setCanPrintCheckIn(false);
+        console.log("Notification saved:", type);
       }
+    } catch (err) {
+      console.error("Network error:", err);
+    }
+  };
 
-      // ✅ Prepare Teable record
-      const teablePayload = {
+  /* ------------------------------------------------- POST COMMENT ------------------------------------------------- */
+  const handleSend = async () => {
+    // FIXED: Only block if empty OR no reservationId
+    if (!newComment.trim() || !guest.reservationId) {
+      // if (!newComment.trim()) alert("Please write a comment.");
+      // if (!guest.reservationId) alert("Reservation ID is missing.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
         records: [
           {
             fields: {
-              User: user?.name,
-              "Button Clicked": "Print Check In",
-              "Date & Time": formattedDateTime,
+              User: user?.name || user?.username, // ← FIXED: use userName
+              Time: new Date().toISOString(),
+              Comment: newComment,
+              ReservationID: guest.reservationId,
             },
           },
         ],
       };
 
-      // ✅ Send record to Teable
-      const teableRes = await fetch(TEABLE_API_URL, {
+      console.log("Sending payload:", payload); // ← DEBUG
+
+      const res = await fetch(TABLE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${TEABLE_API_TOKEN}`,
+          Authorization: `Bearer ${TEABLE_TOKEN}`,
         },
-        body: JSON.stringify(teablePayload),
+        body: JSON.stringify(payload),
       });
 
-      if (!teableRes.ok) {
-        const errText = await teableRes.text();
-        throw new Error(`Failed to log to Teable: ${errText}`);
-      }
+      const responseData = await res.json();
+      console.log("Response:", responseData); // ← DEBUG
 
-      console.log("✅ Logged Check-In action to Teable");
-
-    } catch (err) {
-      console.error("Error preparing check-in form:", err);
-      alert("Could not load reservation for printing.");
-    }
-  };
-
-  const handlePrintCheckOut = async () => {
-    try {
-      // Prevent view_only users and custom users without complete access from printing
-      if (isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))) {
-        console.log('❌ User does not have permission to print check-out forms');
-        setSnackbar({ open: true, message: 'You do not have permission to print forms', severity: 'error' });
-        return;
-      }
-
-      // ✅ Fetch latest reservation from API
-      const response = await fetch(`${HOSTAWAY_API}/${guest.reservationId}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` },
-      });
-
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-
-      let damageCharges = "";
-
-      const data = await response.json();
-      const reservation = data.result || {};
-      const guestName = reservation.guestName || "N/A";
-
-      const listingMapId = guest.listingName || "N/A";
-      const currencyLabel = reservation.currency || "";
-
-      // ✅ Fetch Finance Fields from API (includes deposit and damage logic)
-      const { lateCheckOutCharges, allTotalCharges, financeFields } =
-        await getFinanceFields(guest.reservationId);
-
-      const channelName = reservation.channelName || "N/A";
-
-      const departure = reservation.departureDate || guest.checkoutDate || "N/A";
-
-      const checkOutTime = reservation.checkOutTime
-        ? formatTime(reservation.checkOutTime)
-        : guest.checkoutTime
-          ? formatTime(guest.checkoutTime)
-          : "N/A";
-
-      const vehicleNumber =
-        reservation.customFieldValues?.find((field) => field.customField?.name === "Vehicle Number")
-          ?.value ||
-        "Not provided";
-
-      let CheckOutSecurityDeposit = "N/A";
-      if (Array.isArray(reservation.financeField)) {
-        const securityField = reservation.financeField.find(
-          (field) => field.alias === "Security Deposit" && field.isDeleted === 0
-        );
-        if (securityField) {
-          CheckOutSecurityDeposit = securityField.total ?? securityField.value ?? "0";
-        }
-      }
-
-      // ✅ Get Damage Fee directly from reservation.financeField
-      let CheckOutDamageDeposit = 0;
-      if (Array.isArray(reservation.financeField)) {
-        const damageField = reservation.financeField.find(
-          (field) => field.alias === "Damage Fee" && field.isDeleted === 0
-        );
-        if (damageField) {
-          CheckOutDamageDeposit = damageField.total ?? damageField.value ?? 0;
-        }
-      }
-
-      let actualCheckOutTime = "N/A";
-
-      if (Array.isArray(reservation.customFieldValues)) {
-        const checkOutField = reservation.customFieldValues.find(
-          (item) =>
-            item.customField?.name === "Actual Check-out Time" && item.customFieldId === 76282
-        );
-
-        if (checkOutField && checkOutField.value) {
-          const parsedDate = new Date(checkOutField.value);
-          if (!isNaN(parsedDate)) {
-            actualCheckOutTime = parsedDate.toLocaleString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            });
-          } else {
-            actualCheckOutTime = checkOutField.value; // fallback if not a date
-          }
-        }
-      }
-
-      const reservationId = reservation.reservationId || "N/A";
-
-      const formWindow = window.open("", "_blank");
-
-      // Fill guest details dynamically
-      const htmlContent = `
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      padding: 15px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 80vh;
-      background-color: #F0F0F0;
-      font-family: Arial, Helvetica, sans-serif;
-      color: #333;
-    }
-    .form {
-      width: 170mm;
-      height: auto;
-      min-height: 240mm;
-      padding: 20px;
-      margin: auto;
-      background-color: white;
-      border-radius: 5px;
-      border: 1px solid lightblue;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    .logo-img {
-      display: flex;
-      justify-content: center;
-      height: 60px;
-      margin: 10px 0px 20px 0px;
-    }
-    .logo-img img {
-      height: 100%;
-      width: auto;
-      object-fit: contain;
-    }
-    h2 {
-      text-align: center;
-      font-size: 20px;
-      margin: 10px 0;
-    }
-    p {
-      line-height: 1.5;
-      font-size: 17px;
-    }
-    ul {
-      list-style: none;
-      padding-left: 0;
-      margin: 10px 0;
-    }
-    ul li {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      font-size: 13px;
-      line-height: 1.2;
-      margin-bottom: 2px;
-    }
-  
-    .signature-section {
-      margin-top: 35px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .signature-block {
-      width: 45%;
-      text-align: center;
-    }
-    .signature-line {
-      border-bottom: 1px solid #333;
-      margin: 30px auto 10px;
-      width: 80%;
-    }
-    .footer {
-      font-size: 12px;
-      color: #666;
-      display: inline-block;
-      vertical-align: top;
-      width: 50%;
-      margin-top: -15px;
-    }
-    
-    .charges-breakdown {
-    margin: -15px 23px 0px 0px;
-      padding: 15px;
-      display: inline-block;
-      vertical-align: top;
-    }
-    .charges-breakdown p {
-      margin: 5px 0;
-      font-size: 12px;
-      color: #333;
-      line-height: 1.3;
-    }
-    .charges-breakdown h6 {
-      margin: 5px 0;
-      font-size: 16px;
-      color: #333;
-      line-height: 1.3;
-      font-family: math;
-    }
-    
-    /* Container to hold both elements */
-    .footer-container {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: -19px;
-    }
-}
-
-    .charges-breakdown p:first-child {
-      font-weight: bold !important;
-      color: #2c3e50;
-      font-size: 14px;
-    }
-
-    .download-btn {
-    padding: 7px 9px;
-    background: transparent;
-    color: black;
-    border: 1px solid black;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 15px;
-    transition: background 0.3s, color 0.3s;
-}
-
-    .download-btn:hover {
-      background: black;
-      color: white;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="form">
-    <div style="position: absolute; top: 5px; right: 5px; z-index: 1000;">
-    <button onclick="printForm()" class="download-btn">
-              Print
-            </button>
-  <button onclick="downloadForm()" class="download-btn">
-    Download
-  </button>
-</div>
-<div style="display: flex; flex-direction: row;">
-    <div class="logo-img">
-      <img src="img/booknrent-logo.png" alt="Booknrent Logo">
-    </div>
-    <div class="heading-text" style="margin: 20px 0px 0px 40px !important">
-  ${(() => {
-          const today = new Date().toISOString().split("T")[0];
-          const arrival = guest.arrivalDate ? guest.arrivalDate.split("T")[0] : null;
-          const departure = guest.departureDate ? guest.departureDate.split("T")[0] : null;
-
-          let formTitle = "Check-out Form ";
-          let formSubtitle = `Actual Check-out Date / Time: ${actualCheckOutTime}`;
-
-          if (arrival === today) {
-            formTitle = "Same Day Check-out Form";
-            formSubtitle = `Actual Check-out Date / Time: ${actualCheckOutTime}`;
-          } else if (departure && departure !== today) {
-            formTitle = "Early Check-out Form";
-            formSubtitle = `Actual Check-out Date / Time: ${actualCheckOutTime}`;
-          }
-
-          return `
-    <h3 style="margin: 0; font-size: 20px; font-weight: bold;">
-      ${guestName}'s ${formTitle} 
-      <span style="font-size: 12px; color: #666;">(${guest.reservationId})</span>
-    </h3>
-    <p style="margin: 4px 0 0 0; font-size: 14px; color: #555;">
-      ${formSubtitle}
-    </p>
-  `;
-        })()}
-   </div>
-   <!--
-   <div style="position: absolute; margin-left: 400px; margin-top: -9px; font-family: monospace; color: #b6bfb6;">
-    Printed By: ${user?.name}
-  </div>
-  -->
-</div>
-
-    <p style="text-align: center; font-size: 18px;">
-      I, <strong>${guestName}</strong>, have checked out of the apartment <strong>${listingMapId}</strong> on <strong>${departure}</strong>. 
-      I have checked the apartment for any personal belongings, including but not limited to:
-    </p>
-
-    <div class="single-line-layout">
-  <div class="items-list">
-    <div class="list-item">• Clothes</div>
-    <div class="list-item">• Jewelry</div>
-    <div class="list-item">• Cash</div>
-    <div class="list-item">• Electronics</div>
-    <div class="list-item">• Other valuables</div>
-  </div>
-  <div class="info-fields">
-  <div class="field-group">
-    <span class="field-label">Vehicle Number:</span>
-    <span class="field-value" >${vehicleNumber || "N/A"}</span>
-  </div>
-
-  <div class="field-group">
-    <span class="field-label">Standard Check Out Date & Time:</span>
-    <span class="field-value">${departure} & ${checkOutTime} pm</span>
-  </div>
-
-  <div class="field-group">
-  <span class="field-label">Late Check out Charges (if applicable):</span>
-  <span class="field-value">
-    ${lateCheckOutCharges || "0"}
-    ${channelName === "direct" ? currencyLabel : "Pkr"}
-  </span>
-</div>
-
-<div class="field-group">
-  <span class="field-label">Any other Charges (if applicable):</span>
-  <span class="field-value">
-   ${allTotalCharges ? Math.round(allTotalCharges) : "0"}
-    ${channelName === "direct" ? currencyLabel : "Pkr"}
-  </span>
-</div>
-
-<div class="field-group">
-  <span class="field-label">Security Deposit Amount Returned:</span>
-  <span class="field-value">
-    ${CheckOutSecurityDeposit || "0"}
-    ${channelName === "direct" ? currencyLabel : "Pkr"}
-    <span style="font-weight: normal;">☐ Cash / ☐ IBFT</span>
-  </span>
-</div>
-
-</div>
-
-
-</div>
-
-<style>
-  .single-line-layout {
-    display: flex;
-    gap: 20px;
-    margin: 45px 0;
-  }
-
-  .items-list {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .list-item {
-    font-size: 14px;
-    white-space: nowrap;
-  }
-
-  .info-fields {
-    flex: 2;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    border: 1px solid black;
-    padding: 10px 5px 10px 15px;
-    margin: -8px 0px 10px 0px;
-  }
-
-  .field-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .field-label {
-    font-size: 13px;
-    white-space: nowrap;
-    min-width: 200px;
-  }
-
-  .field-value {
-    font-size: 13px;
-    font-weight: bold;
-    white-space: nowrap;
-  }
-</style>
-
-    <p style="font-size: 17px; text-align: center; margin-top: -15px;">
-      I have found all of my belongings and have taken them with me. <br>
-      I understand that the Apartment management/host is not responsible for any valuables that are left behind.
-    </p>
-
-    <div class="signature-section">
-      <div class="signature-block">
-        <div class="signature-line"></div>
-        <p>Management Team <span style="color:#b6bfb6;">(${user?.name})</span></p>
-      </div>
-      <div class="signature-block">
-        <div class="signature-line"></div>
-        <p>Guest Signature</p>
-      </div>
-    </div>
-<div class="footer-container">
-  <div class="footer">
-    <p>📞 0300-0454711</p>
-    <p>📍 30-A, Block L, Gulberg 3, Lahore</p>
-  </div>
-
-  ${allTotalCharges > 0
-          ? `
-    <div class="charges-breakdown">
-      <h6 style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Charges Breakdown:</h6>
-      ${financeFields.baseRate > 0
-            ? `<p>• <strong>Base Rate:</strong> ${financeFields.baseRate.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.cleaningFeeValue > 0
-            ? `<p>• <strong>Cleaning Fee:</strong> ${financeFields.cleaningFeeValue.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.additionalCleaningFee > 0
-            ? `<p>• <strong>Cleaning Fee:</strong> ${financeFields.additionalCleaningFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.midstayCleaningFee > 0
-            ? `<p>• <strong>Midstay Cleaning Fee:</strong> ${financeFields.midstayCleaningFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-     ${CheckOutDamageDeposit !== 0
-            ? `<p>• <strong>Damage Deposit:</strong> ${CheckOutDamageDeposit} ${currencyLabel}</p>`
-            : ""
-          }
-${CheckOutSecurityDeposit !== "0"
-            ? `<p>• <strong>Security Deposit:</strong> ${CheckOutSecurityDeposit} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.salesTax > 0
-            ? `<p>• <strong>Sales Tax:</strong> ${financeFields.salesTax.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.earlyCheckinFee > 0
-            ? `<p>• <strong>Early Check-in Fee:</strong> ${financeFields.earlyCheckinFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.bedLinenFee > 0
-            ? `<p>• <strong>Bed Linen Fee:</strong> ${financeFields.bedLinenFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.extraBedsFee > 0
-            ? `<p>• <strong>Extra Beds Fee:</strong> ${financeFields.extraBedsFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.lateCheckoutFee > 0
-            ? `<p>• <strong>Late Checkout Fee:</strong> ${financeFields.lateCheckoutFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.damageDeposit > 0
-            ? `<p>• <strong>Damage Deposit:</strong> ${financeFields.damageDeposit.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.parkingFee > 0
-            ? `<p>• <strong>Parking Fee:</strong> ${financeFields.parkingFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.serviceFee > 0
-            ? `<p>• <strong>Service Fee:</strong> ${financeFields.serviceFee.toFixed(
-              2
-            )}  ${currencyLabel}</p>`
-            : ""
-          }
-      ${financeFields.towelChangeFee > 0
-            ? `<p>• <strong>Towel Change Fee:</strong> ${financeFields.towelChangeFee.toFixed(
-              2
-            )} ${currencyLabel}</p>`
-            : ""
-          }
-    </div>
-    `
-          : ""
-        }
-</div>
-<div>
-<span style="margin-left: -19px;"> ✂-------------------------------------------------------------------------------------------------------------------------
-</span>
-</div>
-<div>
-<div>
-<div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-  <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-    <div style="flex: 1;">
-      <p style="margin: 5px 0;"><strong>Guest Name:</strong> <br> ${guestName || "N/A"}</p>
-    </div>
-    <div style="flex: 1;">
-      <p style="margin: 5px 0;">
-  <strong>Vehicle Number:</strong> <br>
-  <span>
-    ${vehicleNumber || "N/A"}
-  </span>
-</p>
-
-    </div>
-  </div>
-  <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-    
-    <div style="flex: 1;">
-      <p style="margin: 5px 0;"><strong>Apartment:</strong> <br> ${listingMapId || "N/A"}</p>
-    </div>
-    <div style="flex: 1;">
-      <p style="margin: 5px 0;"><strong>Departure Date and Time:</strong> <br> ${actualCheckOutTime || "N/A"
-        }</p>
-    </div>
-  </div>
-  
-    </div>
-</div>
-<p style="text-align: center; margin: -2px 0px -6px 0px;">Thank you for staying with <img src="img/booknrent-logo2.png" alt="Booknrent Logo" style="width: 95px; object-fit: contain; margin-bottom: -2px;">, Good Bye!</p>
-</div>
-
-  <script>
-  async function downloadForm() {
-    const formElement = document.querySelector('.form');
-    const canvas = await html2canvas(formElement, {
-      scale: 2,
-      logging: false,
-      useCORS: true
-    });
-    
-    const link = document.createElement('a');
-    link.download = \`${guestName}'s Checkout-form ${guest.reservationId}.png\`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  }
-  
-  // ---------- PRINT ----------
-    async function printForm() {
-      try {
-        const el = document.querySelector('.form');
-        const canvas = await html2canvas(el, {scale:3, useCORS:true, backgroundColor:'#fff'});
-        const imgData = canvas.toDataURL('image/png');
-
-        const pw = window.open('', '_blank', 'width=900,height=1000');
-        pw.document.write(\`
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>
-<style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;background:#fff;display:flex;justify-content:center;align-items:center;}
-  img{max-width:100%;max-height:100%;box-shadow:none;}
-  @page{size:A4 portrait;margin:0;}
-</style></head><body>
-  <img src="\${imgData}" onload="setTimeout(()=>{window.print();window.close();},300);">
-</body></html>\`);
-        pw.document.close();
-      } catch (e) { console.error(e); alert('Print failed – use Download'); }
-    }
-</script>
-</body>
-</html>
-  `;
-
-
-      formWindow.document.open();
-      formWindow.document.write(htmlContent);
-      formWindow.document.close();
-
-      // ✅ 3. After printing, update Hostaway custom field (ID 84717)
-      const updatePayload = {
-        customFieldValues: [
-          {
-            customFieldId: 84717,
-            value: "Yes",
-          },
-        ],
-      };
-
-      const updateResponse = await fetch(`${HOSTAWAY_API}/${guest.reservationId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${HOSTAWAY_TOKEN}`,
-        },
-        body: JSON.stringify(updatePayload),
-      });
-
-      // ✅ Prepare Teable record
-      const teablePayload = {
-        records: [
-          {
-            fields: {
-              User: user?.name,
-              "Button Clicked": "Print Check Out",
-              "Date & Time": formattedDateTime,
-            },
-          },
-        ],
-      };
-
-      // ✅ Send record to Teable
-      const teableRes = await fetch(TEABLE_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${TEABLE_API_TOKEN}`,
-        },
-        body: JSON.stringify(teablePayload),
-      });
-
-      if (!teableRes.ok) {
-        const errText = await teableRes.text();
-        throw new Error(`Failed to log to Teable: ${errText}`);
-      }
-
-      console.log("✅ Logged Check-In action to Teable");
-
-      if (!updateResponse.ok) {
-        const errText = await updateResponse.text();
-        console.error("❌ Failed to update Print Check Out field:", errText);
+      if (res.ok) {
+        setNewComment("");
+        fetchCommentCount(guest.reservationId); // ← REFRESH COMMENTS counts
+        handleSendNotification(newComment, "commented");
+        // alert("Comment posted successfully!"); // ← SUCCESS
       } else {
-        console.log("✅ Successfully marked Print Check Out as 'Yes' in Hostaway.");
-        setCanPrintCheckOut(false); // disable button if you have such state
+        // alert("Save failed: " + (responseData.message || "Unknown error"));
       }
     } catch (err) {
-      console.error("Error preparing check-in form:", err);
-      alert("Could not load reservation for printing.");
+      console.error("Fetch error:", err);
+      // alert("Network error: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const fetchCommentCount = async (reservationId) => {
+    try {
+      const res = await fetch(
+        "https://teable.namuve.com/api/table/tblSeofkNz53TgqghsR/record",
+        {
+          headers: {
+            Authorization: "Bearer teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=",
+          },
+        }
+      );
+      const data = await res.json();
+
+      const filtered = data.records?.filter(r => r.fields.ReservationID === reservationId) || [];
+
+      const count = filtered.length;
+      setCommentCount(count);
+
+      // ← ADD THIS LINE ONLY
+      if (count > 0) {
+        const latest = filtered.sort((a, b) => new Date(b.fields.Time) - new Date(a.fields.Time))[0];
+        setLatestComment(latest.fields.Comment || "No text");
+      } else {
+        setLatestComment(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch comment count", err);
+      setCommentCount(0);
+      setLatestComment(null);
+    }
+  };
+
+  useEffect(() => {
+    if (guest?.reservationId) {
+      fetchCommentCount(guest.reservationId);
+    }
+  }, [guest?.reservationId]);
 
   // New function for Mark Check In
   const handleMarkCheckIn = async () => {
@@ -1326,16 +322,12 @@ ${CheckOutSecurityDeposit !== "0"
         return;
       }
 
-      const now = new Date();
-      const formattedDateTime = now.toLocaleString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
+      if (!checkInDateTime) {
+        setSnackbar({ open: true, message: "Please select check-in date & time", severity: "warning" });
+        return;
+      }
+
+      const formattedDateTime = checkInDateTime.format("MM/DD/YYYY, hh:mm:ss A");
 
       const apiUrl = `${HOSTAWAY_API}/${guest.reservationId}?forceOverbooking=1`;
 
@@ -1409,7 +401,7 @@ ${CheckOutSecurityDeposit !== "0"
 
 
       fetch(
-        "https://chat.googleapis.com/v1/spaces/AAQANIuKBgw/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=oSxAMzHxA2VKi4AoEK_6Wf335vxr1H5Cd7XNxzeyS-o",
+        "https://chat.googleapis.com/v1/spaces/AAQAnSxEbXc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=0mKmnsPTJusRGQNMtX9MeByLf3zHPMYfOXJVrT0wU90",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1517,16 +509,13 @@ ${CheckOutSecurityDeposit !== "0"
         return;
       }
 
-      const now = new Date();
-      const formattedDateTime = now.toLocaleString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
+      // ← THIS IS THE KEY CHANGE: Use selected time instead of "now"
+      if (!checkOutDateTime) {
+        setSnackbar({ open: true, message: "Please select check-out time", severity: "warning" });
+        return;
+      }
+
+      const formattedDateTime = checkOutDateTime.format("MM/DD/YYYY, hh:mm:ss A");
 
       const apiUrl = `${HOSTAWAY_API}/${guest.reservationId}?forceOverbooking=1`;
 
@@ -1600,7 +589,7 @@ ${CheckOutSecurityDeposit !== "0"
       ].join("\n");
 
       fetch(
-        "https://chat.googleapis.com/v1/spaces/AAQANIuKBgw/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=oSxAMzHxA2VKi4AoEK_6Wf335vxr1H5Cd7XNxzeyS-o",
+        "https://chat.googleapis.com/v1/spaces/AAQAnSxEbXc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=0mKmnsPTJusRGQNMtX9MeByLf3zHPMYfOXJVrT0wU90",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1868,6 +857,9 @@ ${CheckOutSecurityDeposit !== "0"
             }
           });
 
+          // FORCE PKR LABEL IN BREAKDOWN
+          const currencyLabel = "PKR"; // This overrides any incoming USD
+
           return {
             securityDepositFee: convertedFields.otherFees || "",
             lateCheckOutCharges: convertedFields.lateCheckoutFee || "",
@@ -1925,7 +917,7 @@ ${CheckOutSecurityDeposit !== "0"
 
     try {
       const response = await fetch(
-        "https://n8n.namuve.com/webhook/a56db5c8-324a-4118-bba7-304de5efb9cd",
+        "https://n8n.namuve.com/webhook/1eea0938-306f-47af-820d-28fa66d115ac",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1963,34 +955,52 @@ ${CheckOutSecurityDeposit !== "0"
   };
 
   const fetchPrintButtonStatus = async (reservationId) => {
+    if (!reservationId) {
+      setCanPrintCheckIn(false);
+      setCanPrintCheckOut(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${HOSTAWAY_API}/${guest.reservationId}`, {
+
+      const response = await fetch(searchUrl, {
         method: "GET",
-        headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` },
+        headers: {
+          Authorization: `Bearer teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=`,
+        },
       });
+
+      if (!response.ok) {
+        console.error("Teable search failed");
+        setCanPrintCheckIn(false);
+        setCanPrintCheckOut(false);
+        return;
+      }
+
       const data = await response.json();
+      const record = data.records?.[0];
 
-      const fieldArray = data?.result?.customFieldValues || [];
+      if (!record) {
+        // No record in Teable → allow printing both
+        setCanPrintCheckIn(true);
+        setCanPrintCheckOut(true);
+        return;
+      }
 
-      // Find the "Print Check In" field by its ID
-      const printField = fieldArray.find(
-        (field) => field.customFieldId === 84716
-      );
+      const fields = record.fields;
 
-      const printValue = printField?.value?.trim().toLowerCase() || "";
-      const isPrinted = printValue === "yes";
+      // Check "Print Check In" and "Print Check Out"
+      const printCheckIn = fields["Print Check In"]?.toString().trim().toLowerCase() || "";
+      const printCheckOut = fields["Print Check Out"]?.toString().trim().toLowerCase() || "";
 
-      // ✅ "Print Check Out" (ID: 84717)
-      const printCheckOutField = fieldArray.find(
-        (field) => field.customFieldId === 84717
-      );
-      const printCheckOutValue = printCheckOutField?.value?.trim().toLowerCase() || "";
-      const isCheckOutPrinted = printCheckOutValue === "yes";
+      const isCheckInPrinted = printCheckIn === "yes";
+      const isCheckOutPrinted = printCheckOut === "yes";
 
-      setCanPrintCheckIn(!isPrinted); // only show button if NOT printed
-      setCanPrintCheckOut(!isCheckOutPrinted); // same for checkout
+      setCanPrintCheckIn(!isCheckInPrinted);     // show button only if NOT "Yes"
+      setCanPrintCheckOut(!isCheckOutPrinted);
+
     } catch (error) {
-      console.error("Failed to fetch Print Check In status:", error);
+      console.error("Failed to fetch print status from Teable:", error);
       setCanPrintCheckIn(false);
       setCanPrintCheckOut(false);
     }
@@ -2138,7 +1148,7 @@ ${CheckOutSecurityDeposit !== "0"
 
         {/* Check-in / Check-out */}
         <MDBox mt={0}>
-          {guest.actualCheckin && guest.actualCheckin !== "N/A" && (
+          {guest.actualCheckin && guest.actualCheckin !== "N/A" && guest.actualCheckin !== "null" && (
             <MDBox display="flex" alignItems="center" mb={0.5}>
               <CheckCircleIcon fontSize="small" sx={{ mr: 1, color: "#17621B" }} />
               <MDTypography variant="body2" sx={{ fontSize: "0.85rem", color: "#17621B", fontWeight: 500 }}>
@@ -2147,7 +1157,7 @@ ${CheckOutSecurityDeposit !== "0"
             </MDBox>
           )}
 
-          {guest.actualCheckout && guest.actualCheckout !== "N/A" && (
+          {guest.actualCheckout && guest.actualCheckout !== "N/A" && guest.actualCheckout !== "null" && (
             <MDBox display="flex" alignItems="center">
               <ExitToAppIcon fontSize="small" sx={{ mr: 1, color: "#951718" }} />
               <MDTypography variant="body2" sx={{ fontSize: "0.85rem", color: "#951718", fontWeight: 500 }}>
@@ -2157,41 +1167,162 @@ ${CheckOutSecurityDeposit !== "0"
           )}
         </MDBox>
 
-        {/* Tags */}
+        {/* Tags + Comment Icon */}
         {guest.tags?.length > 0 && (
-          <MDBox display="flex" flexWrap="wrap" mt={3}>
-            {guest.tags.map((tag, index) => {
-              // Define the background colors for each tag
-              const tagColors = {
-                "Urgent": "#007bff",
-                "Normal": "#ffec99",
-                "Paid": "#28a745",
-                "Partially paid": "#a3cca3",
-                "Due": "#ae0814",
-                "Unknown": "#404040",
-                "Not Cleaned ❌": "#c4c4c4",
-                "Cleaned ✅": "#a3cca3",
-                "Unpaid": "#ccaa2f"
-              };
+          <MDBox display="flex" mt={1}>
+            {/* Tags on the left */}
+            <MDBox display="flex" flexWrap="wrap">
+              {guest.tags.map((tag, index) => {
+                const tagColors = {
+                  "Urgent": "#007bff",
+                  "Normal": "#ffec99",
+                  "Paid": "#28a745",
+                  "Partially paid": "#a3cca3",
+                  "Due": "#ae0814",
+                  "Unknown": "#404040",
+                  "Not Cleaned ❌": "#c4c4c4",
+                  "Cleaned ✅": "#a3cca3",
+                  "Unpaid": "#ccaa2f"
+                };
 
-              return (
-                <Chip
-                  key={index}
-                  label={tag}
-                  size="small"
-                  sx={{
-                    mr: 0.5,
-                    mb: 0.5,
-                    bgcolor: tagColors[tag] || "#808080", // fallback color
-                    color: "#fff", // text color
-                    fontWeight: "bold",
-                    fontSize: "0.71rem",
-                  }}
-                />
-              );
-            })}
+                return (
+                  <Chip
+                    key={index}
+                    label={tag}
+                    size="small"
+                    sx={{
+                      mr: 0.5,
+                      mb: 0.5,
+                      bgcolor: tagColors[tag] || "#808080",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      fontSize: "0.71rem",
+                    }}
+                  />
+                );
+              })}
+            </MDBox>
           </MDBox>
         )}
+
+        {/* === INPUT + CONDITIONAL COMMENT ICON === */}
+        <MDBox display="flex" justifyContent="space-between" alignItems="center" mt={1} gap={1}>
+          {/* INPUT WITH POST INSIDE */}
+          <MDBox
+            flex={1}
+            bgcolor="#f8f9fa"
+            borderRadius={2}
+            sx={{ position: "relative" }}
+          >
+            <MDInput
+              fullWidth
+              multiline
+              rows={1}
+              placeholder="Write comment here"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && newComment.trim()) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={loading}
+              InputProps={{
+                endAdornment: newComment.trim() && (
+                  <MDTypography
+                    component="span"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (!loading) handleSend();
+                    }}
+                    sx={{
+                      fontWeight: "bold",
+                      fontSize: "0.875rem",
+                      color: "#1976d2",
+                      textDecoration: "underline",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      userSelect: "none",
+                      opacity: loading ? 0.6 : 1,
+                      mr: 1,
+                      alignSelf: "flex-end",
+                      pb: 0.5,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {loading ? "..." : "Post"}
+                  </MDTypography>
+                ),
+              }}
+              sx={{
+                "& .MuiInputBase-input": {
+                  fontSize: "0.875rem",
+                  color: "#495057",
+                  pr: newComment.trim() ? 9 : 2,
+                  py: 0.75,               // ← Less height
+                  lineHeight: 1.4,
+                },
+                "& .MuiInputBase-root": {
+                  borderRadius: "20px",
+                  bgcolor: "transparent",
+                  border: "none",
+                  "&:hover": { border: "none" },
+                  "&.Mui-focused": { border: "none", boxShadow: "none" },
+                },
+                "& .MuiInputBase-input::placeholder": {
+                  fontSize: "0.75rem",     // ← SMALLER
+                  color: "#9ca3af",        // ← LIGHTER GRAY
+                  opacity: 1,
+                },
+              }}
+            />
+          </MDBox>
+
+          {/* COMMENT ICON — ONLY SHOWS IF commentCount > 0 */}
+          {commentCount > 0 && (
+            <MDBox>
+              <IconButton
+                size="small"
+                color="inherit"
+                onClick={() => setShowComments(true)}
+                sx={{ p: 0.5 }}
+              >
+                <Badge badgeContent={commentCount} color="error">
+                  <CommentIcon fontSize="small" />
+                </Badge>
+              </IconButton>
+            </MDBox>
+          )}
+        </MDBox>
+
+        {/* === COMMENT DIALOG POPUP === */}
+        <Dialog
+          open={showComments}
+          onClose={() => {
+            setShowComments(false)
+            fetchCommentCount(guest.reservationId);
+          }}
+          maxWidth="md"
+          fullWidth
+          scroll="paper"
+        >
+          <DialogTitle sx={{ m: 0, p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <MDTypography variant="h6" fontWeight="bold">
+              Reservation ID - {guest.reservationId}
+            </MDTypography>
+            <IconButton onClick={() => {
+              setShowComments(false)
+              fetchCommentCount(guest.reservationId);
+            }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            <CommentSection guest={guest}
+              bookingDate={bookingDate} />
+          </DialogContent>
+        </Dialog>
 
         <Divider sx={{ my: 1, borderWidth: "2px" }} /> {/* my: 1 adds margin top and bottom */}
 
@@ -2253,102 +1384,16 @@ ${CheckOutSecurityDeposit !== "0"
                 <SyncIcon sx={{ fontSize: "1rem" }} />
               )}
             </IconButton>
-            {/* 🖨️ Reprint Check-In (only show if in Checked In stack) */}
-            {stack === "Checked In" && (
-              <IconButton
-                onClick={handlePrintCheckIn}
-                disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-                sx={{
-                  color: "#28282B",
-                  border: "1.5px solid #28282B",
-                  borderRadius: "12px",
-                  padding: "6px 9px",
-                  fontWeight: "bold",
-                  fontSize: "0.85rem",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-                  transition: "all 0.25s ease-in-out",
-                  "&:hover": {
-                    transform: "scale(1.05)",
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  },
-                  "&:disabled": {
-                    opacity: 0.6,
-                    cursor: "not-allowed",
-                  },
-                }}
-              >
-                <PrintIcon sx={{ fontSize: "1rem" }} />
-              </IconButton>
-            )}
-
-            {/* 🖨️ Reprint Check-Out (only show if in Checked Out stack) */}
-            {stack === "Checked Out" && (
-              <IconButton
-                onClick={handlePrintCheckOut}
-                disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-                sx={{
-                  color: "#28282B",
-                  border: "1.5px solid #28282B",
-                  borderRadius: "12px",
-                  padding: "6px 9px",
-                  fontWeight: "bold",
-                  fontSize: "0.85rem",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-                  transition: "all 0.25s ease-in-out",
-                  "&:hover": {
-                    transform: "scale(1.05)",
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  },
-                  "&:disabled": {
-                    opacity: 0.6,
-                    cursor: "not-allowed",
-                  },
-                }}
-              >
-                <PrintIcon sx={{ fontSize: "1rem" }} />
-              </IconButton>
-            )}
           </MDBox>
 
           {/* Mark Check in Button - only show in Upcoming Stay */}
-          {(!guest.actualCheckin || guest.actualCheckin === "N/A") ? (
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleMarkCheckIn}
-              disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-              sx={{
-                borderRadius: "12px",
-                textTransform: "none",
-                fontWeight: "bold",
-                boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                color: "#17621B",
-                border: "2px solid #17621B",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  backgroundColor: "#1e7a20",
-                  borderColor: "#145517",
-                  color: "#fff",
-                },
-                "&:focus": {
-                  backgroundColor: "#145517",
-                  color: "#fff",
-                },
-                "&:active": {
-                  backgroundColor: "#145517",
-                  color: "#fff",
-                },
-              }}
-            >
-              Mark Check In
-            </Button>
-          ) : (
-            canPrintCheckIn && (
+          {(!guest.actualCheckin || guest.actualCheckin === "N/A" || guest.actualCheckin === "null") && (
+            <>
+              {/* Button that opens the dialog */}
               <Button
                 variant="outlined"
                 size="small"
-                onClick={handlePrintCheckIn}
-                disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
+                onClick={() => setOpenDatePickerDialog(true)}
                 sx={{
                   borderRadius: "12px",
                   textTransform: "none",
@@ -2372,90 +1417,264 @@ ${CheckOutSecurityDeposit !== "0"
                   },
                 }}
               >
-                Print Check In
+                Mark Check In
               </Button>
-            )
+
+              {/* Beautiful Dialog with Date + Time Picker */}
+              <Dialog
+                open={openDatePickerDialog}
+                onClose={() => setOpenDatePickerDialog(false)}
+                maxWidth="xs"
+                fullWidth
+              >
+                <DialogTitle sx={{ textAlign: "center", fontWeight: "bold" }}>
+                  Select Actual Check-In Time
+                </DialogTitle>
+
+                {/* The X Close Button */}
+                <IconButton
+                  aria-label="close"
+                  onClick={() => setOpenDatePickerDialog(false)}
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    color: "#555",
+                    "&:hover": { color: "#000" },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+
+                <DialogContent>
+                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", pt: 2 }}>
+                    <DatePicker
+                      selected={checkInDateTime?.toDate() || new Date()}
+                      onChange={(date) => setCheckInDateTime(dayjs(date))}
+                      showTimeSelect
+                      timeFormat="hh:mm aa"
+                      timeIntervals={15}
+                      dateFormat="MMMM d, yyyy - h:mm aa"
+                      inline
+                      calendarClassName="custom-datepicker"
+                    />
+
+                    {/* Current selected time display */}
+                    <Typography variant="body2" sx={{ mt: 2, color: "#17621B", fontWeight: "bold" }}>
+                      Selected: {checkInDateTime?.format("D MMM YYYY, h:mm A") || "Not selected"}
+                    </Typography>
+                  </Box>
+                </DialogContent>
+                <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 3 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setOpenDatePickerDialog(false)}
+                    sx={{
+                      borderRadius: "12px",
+                      textTransform: "none",
+                      fontWeight: "bold",
+                      boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                      color: "#951718",
+                      border: "2px solid #951718",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "#b21c1d",
+                        borderColor: "#831415ff",
+                        color: "#fff",
+                      },
+                      "&:focus": {
+                        backgroundColor: "#7a1213",
+                        color: "#fff",
+                      },
+                      "&:active": {
+                        backgroundColor: "#7a1213",
+                        color: "#fff",
+                      },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      handleMarkCheckIn();
+                      setOpenDatePickerDialog(false);
+                    }}
+                    disabled={!checkInDateTime || savingCheckIn}
+                    sx={{
+                      borderRadius: "12px",
+                      textTransform: "none",
+                      fontWeight: "bold",
+                      boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                      color: "#17621B",
+                      border: "2px solid #17621B",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "#1e7a20",
+                        borderColor: "#145517",
+                        color: "#fff",
+                      },
+                      "&:focus": {
+                        backgroundColor: "#145517",
+                        color: "#fff",
+                      },
+                      "&:active": {
+                        backgroundColor: "#145517",
+                        color: "#fff",
+                      },
+                    }}
+                  >
+                    {savingCheckIn ? "Saving..." : "Confirm Check-In"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </>
           )}
 
           {/* Mark Check Out Button - show in all stacks apart from Upcoming Stay */}
           {/* ✅ MARK CHECK OUT BUTTON */}
           {guest.actualCheckin &&
             guest.actualCheckin !== "N/A" &&
-            (!guest.actualCheckout || guest.actualCheckout === "N/A") &&
-            !canPrintCheckIn && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleMarkCheckOut}
-                disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-                sx={{
-                  borderRadius: "12px",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                  color: "#951718",
-                  border: "2px solid #951718",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "#b21c1d",
-                    borderColor: "#831415ff",
-                    color: "#fff",
-                  },
-                  "&:focus": {
-                    backgroundColor: "#7a1213",
-                    color: "#fff",
-                  },
-                  "&:active": {
-                    backgroundColor: "#7a1213",
-                    color: "#fff",
-                  },
-                }}
-              >
-                Mark Check Out
-              </Button>
-            )}
+            guest.actualCheckin !== "null" &&
+            (!guest.actualCheckout || guest.actualCheckout === "N/A" || guest.actualCheckout === "null") &&
+            (
+              <>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setOpenCheckOutDialog(true)}
+                  disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
+                  sx={{
+                    borderRadius: "12px",
+                    textTransform: "none",
+                    fontWeight: "bold",
+                    boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                    color: "#951718",
+                    border: "2px solid #951718",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      backgroundColor: "#b21c1d",
+                      borderColor: "#831415",
+                      color: "#fff",
+                    },
+                    "&:disabled": {
+                      opacity: 0.6,
+                      cursor: "not-allowed"
+                    }
+                  }}
+                >
+                  Mark Check Out
+                </Button>
 
-          {/* ✅ PRINT CHECK OUT BUTTON */}
-          {guest.actualCheckout &&
-            guest.actualCheckout !== "N/A" &&
-            !canPrintCheckIn &&
-            canPrintCheckOut && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handlePrintCheckOut}
-                disabled={isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
-                sx={{
-                  borderRadius: "12px",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                  color: "#951718",
-                  border: "2px solid #951718",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "#b21c1d",
-                    borderColor: "#7a1213",
-                    color: "#fff",
-                  },
-                  "&:focus": {
-                    backgroundColor: "#7a1213",
-                    color: "#fff",
-                  },
-                  "&:active": {
-                    backgroundColor: "#7a1213",
-                    color: "#fff",
-                  },
-                }}
-              >
-                Print Check Out
-              </Button>
+                {/* Check-Out Dialog - Same style as Check-In but RED */}
+                <Dialog
+                  open={openCheckOutDialog}
+                  onClose={() => setOpenCheckOutDialog(false)}
+                  maxWidth="xs"
+                  fullWidth
+                >
+                  <DialogTitle sx={{ textAlign: "center", fontWeight: "bold" }}>
+                    Select Actual Check-Out Time
+
+                    {/* The X Close Button */}
+                    <IconButton
+                      aria-label="close"
+                      onClick={() => setOpenCheckOutDialog(false)}
+                      sx={{
+                        position: "absolute",
+                        right: 8,
+                        top: 8,
+                        color: "#555",
+                        "&:hover": { color: "#000" },
+                      }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </DialogTitle>
+
+                  <DialogContent sx={{ pt: 3 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <DatePicker
+                        selected={checkOutDateTime?.toDate() || new Date()}
+                        onChange={(date) => setCheckOutDateTime(dayjs(date))}
+                        showTimeSelect
+                        timeFormat="hh:mm aa"
+                        timeIntervals={15}
+                        dateFormat="MMMM d, yyyy - h:mm aa"
+                        inline
+                        calendarClassName="custom-checkout-datepicker"
+                      />
+
+                      <Typography variant="body2" sx={{ mt: 2, color: "#17621B", fontWeight: "bold" }}>
+                        Selected: {checkOutDateTime?.format("D MMM YYYY, h:mm A") || "Not selected"}
+                      </Typography>
+                    </Box>
+                  </DialogContent>
+
+                  <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 3 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setOpenCheckOutDialog(false)}
+                      sx={{
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        color: "#951718",
+                        border: "2px solid #951718",
+                        "&:hover": {
+                          backgroundColor: "#b21c1d",
+                          color: "#fff",
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        handleMarkCheckOut();  // You already have this function
+                        setOpenCheckOutDialog(false);
+                      }}
+                      disabled={!checkOutDateTime}
+                      sx={{
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                        color: "#17621B",
+                        border: "2px solid #17621B",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          backgroundColor: "#1e7a20",
+                          borderColor: "#145517",
+                          color: "#fff",
+                        },
+                        "&:focus": {
+                          backgroundColor: "#145517",
+                          color: "#fff",
+                        },
+                        "&:active": {
+                          backgroundColor: "#145517",
+                          color: "#fff",
+                        },
+                      }}
+                    >
+                      Confirm Check-Out
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+              </>
             )}
 
           {/* ✅ Checked Out Label */}
-          {guest.actualCheckin && guest.actualCheckin !== "N/A" &&
-            guest.actualCheckout && guest.actualCheckout !== "N/A" &&
-            !canPrintCheckOut && (
+          {guest.actualCheckin && guest.actualCheckin !== "N/A" && guest.actualCheckin !== "null" &&
+            guest.actualCheckout && guest.actualCheckout !== "N/A" && guest.actualCheckout !== "null" &&
+            (
               <Button
                 variant="outlined"
                 size="small"
@@ -2807,7 +2026,7 @@ ${CheckOutSecurityDeposit !== "0"
           </Button>
         </DialogActions>
       </Dialog>
-    </Card>
+    </Card >
   );
 }
 
@@ -2858,6 +2077,8 @@ function KanbanView() {
   const [syncing, setSyncing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [prevCount, setPrevCount] = useState(0);
 
   // ✅ Tab functionality for admin users
   const [activeTab, setActiveTab] = useState(0);
@@ -2867,19 +2088,184 @@ function KanbanView() {
   const [todayCheckOut, setTodayCheckOut] = useState([]);
   const [loadingCheck, setLoadingCheck] = useState(false);
   const [errorCheck, setErrorCheck] = useState(null);
+  const anchorRef = useRef(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [lastNotifiedId, setLastNotifiedId] = useState(null);
+  const [latestNotification, setLatestNotification] = useState(null);
+  const notifiedRecordIdsRef = useRef(new Set());
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const hasAutoLoaded = useRef(false);
 
   // API Configuration
-  const API_ENDPOINT = "https://teable.namuve.com/api/table/tbliOdo8ldmMO8rrYyN/record";
-  const API_TOKEN = "teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=";
+  const API_ENDPOINT = "https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record";
+  const API_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
   const HOSTAWAY_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzNhNzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE";
+  const NOTIFICATION_API = `https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record?filter=${encodeURIComponent(
+    JSON.stringify({
+      conjunction: "or",
+      filterSet: [
+        {
+          fieldId: "Time",
+          operator: "is",
+          value: { mode: "today", timeZone: "Asia/Karachi" },
+        },
+        {
+          fieldId: "Time",
+          operator: "is",
+          value: { mode: "yesterday", timeZone: "Asia/Karachi" },
+        },
+      ],
+    })
+  )}&sort=${encodeURIComponent(
+    JSON.stringify({ fieldId: "Time", direction: "desc" })
+  )}`;
+  const TEABLE_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
+
+  // Helper: Get UTC start of day (00:00:00 in Karachi = 19:00:00 previous day UTC)
+  const getStartOfDayUTC = (dateStr) => {
+    const date = new Date(dateStr + "T00:00:00"); // Local midnight
+    return date.toISOString(); // e.g., "2025-11-20T00:00:00.000Z"
+  };
+
+  // Helper: Get UTC end of day (23:59:59 in Karachi = 18:59:59 UTC same day)
+  const getEndOfDayKarachiUTC = (dateStr) => {
+    const date = new Date(dateStr + "T23:59:59.999");
+    // Karachi is UTC+5 → subtract 5 hours to get correct UTC
+    date.setHours(date.getHours() - 5);
+    return date.toISOString(); // e.g., "2025-11-20T18:59:59.999Z"
+  };
+
 
   const LISTINGS_DATA = {
-    "2BR Premium": [305055, 309909, 323227, 288688],
-    "3BR": [288686, 305327, 288676, 389366],
-    "1BR": [307143, 306032, 288691, 305069, 288681, 288726, 288679, 288723, 288678, 323258, 400763, 387833, 387834],
-    Studio: [288682, 288690, 323229, 323261, 336255, 383744, 410263, 413218, 392230],
-    "2BR": [288677, 288684, 288687, 288977, 288685, 288683, 306543, 288724, 378076, 378078, 400779, 400769, 395345, 414090, 421015, 422302],
+    "2BR Premium": [],
+    "3BR": [],
+    "1BR": [387833, 387834, 451414,],
+    Studio: [392230],
+    "2BR": [441361, 443140, 449910, 452131, 453688, 453690, 454454],
   };
+
+  // Add function
+  const playNotificationSound = () => {
+    const audio = new Audio("/notification.mp3"); // Put in public/
+    audio.volume = 0.4;
+    audio.play().catch(() => { });
+  };
+
+  // useEffect
+  useEffect(() => {
+    const fetchNotificationUpdate = async () => {
+      try {
+        const res = await fetch(NOTIFICATION_API, {
+          headers: {
+            Authorization: `Bearer ${TEABLE_TOKEN}`,
+            "X-Teable-Field-Names": "true",
+          },
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const records = data.records || [];
+
+        // === Get only NEW records (not seen before) ===
+        const newRecords = records.filter(
+          (record) => !notifiedRecordIdsRef.current.has(record.id)
+        );
+
+        if (newRecords.length === 0) {
+          return; // ← Keep badge unchanged
+        }
+
+        const currentUserNames = [
+          user?.name,
+          user?.username,
+          user?.email?.split("@")[0],
+        ]
+          .filter(Boolean)
+          .map((s) => s.trim().toLowerCase());
+
+        let latestOtherComment = null;
+
+        for (const record of newRecords) {
+          const sender = record?.fields?.User?.trim() || "";
+          const senderLower = sender.toLowerCase();
+          const cleanSender = senderLower
+            .replace(/\s*\(you\)$/i, "")
+            .replace(/\s*-\s*fdo$/i, "")
+            .replace(/\s*admin$/i, "")
+            .trim();
+
+          const isOwnComment = currentUserNames.some((name) => {
+            const cleanName = name.replace(/[@.]/g, " ");
+            return (
+              cleanSender === name ||
+              cleanSender === cleanName ||
+              cleanSender.includes(name) ||
+              name.includes(cleanSender)
+            );
+          });
+
+          notifiedRecordIdsRef.current.add(record.id);
+
+          if (!isOwnComment && !latestOtherComment) {
+            latestOtherComment = { sender, fields: record.fields };
+          }
+        }
+
+        // === Show styled toast for latest OTHER comment ===
+        if (latestOtherComment) {
+          const { sender, fields } = latestOtherComment;
+
+          setSnackbar({
+            open: true,
+            severity: "info",
+            richContent: (
+              <Typography
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  flexWrap: "wrap",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  color: "#fff",
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>{sender}</span>
+                <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
+                  commented
+                </Typography>
+                <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
+                  on
+                </Typography>
+                <Typography component="span" variant="caption" sx={{ color: "#fbbf24", fontWeight: 600 }}>
+                  {fields["Guest Name"] || "Guest"}
+                </Typography>
+                <Typography component="span" variant="caption" sx={{ color: "#34d399", fontWeight: 600 }}>
+                  {fields.APT || "Unit"}
+                </Typography>
+              </Typography>
+            ),
+          });
+
+          playNotificationSound();
+        }
+
+        // === Badge: INCREMENT by number of new records ===
+        setUnreadCount((prev) => prev + newRecords.length);
+
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
+
+    fetchNotificationUpdate();
+    const interval = setInterval(fetchNotificationUpdate, 30000);
+    return () => clearInterval(interval);
+  }, [user?.name, user?.username, user?.email]);
 
   const stacks = [
     "Upcoming Stay",
@@ -2972,11 +2358,92 @@ function KanbanView() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  // 1. On first mount → set default 7-day range (today → today+6)
   useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_ENDPOINT}?user_field_names=true`, {
+    const today = new Date();
+    const start = today.toISOString().split("T")[0]; // e.g., "2025-11-20"
+
+    const end = new Date(today);
+    end.setDate(today.getDate() + 6); // +6 days = 7-day window
+    const endStr = end.toISOString().split("T")[0]; // e.g., "2025-11-26"
+
+    setStartDate(start);
+    setEndDate(endStr);
+  }, []); // Runs only once on mount
+
+  // 2. Auto-fetch when default dates are set (or when user clicks Start)
+  useEffect(() => {
+    if (startDate && endDate && !hasAutoLoaded.current) {
+      hasAutoLoaded.current = true;
+      fetchReservationsByDateRange();
+    }
+  }, [startDate, endDate]);
+
+  // Returns true if date range is valid (1–31 days)
+  const isValidDateRange = () => {
+    if (!startDate || !endDate) return false;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start > end) return false;
+
+    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays >= 1 && diffDays <= 31;
+  };
+
+  // Fetch reservations based on date range when "Start" is clicked
+  const fetchReservationsByDateRange = async () => {
+    if (!startDate || !endDate) {
+      setError("Please select both From and To dates");
+      return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      setError("From date cannot be after To date");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const filter = {
+        conjunction: "and",
+        filterSet: [
+          {
+            fieldId: "Arrival Date", // This must match EXACT field ID in Teable
+            operator: "isOnOrAfter",
+            value: {
+              mode: "exactDate",
+              exactDate: getStartOfDayUTC(startDate),
+              timeZone: "Asia/Karachi",
+            },
+          },
+          {
+            fieldId: "Arrival Date",
+            operator: "isOnOrBefore",
+            value: {
+              mode: "exactDate",
+              exactDate: getEndOfDayKarachiUTC(endDate),
+              timeZone: "Asia/Karachi",
+            },
+          },
+        ],
+      };
+
+      let allRecords = [];
+      let skip = 0;
+      const take = 500;
+
+      while (true) {
+        const url = new URL(API_ENDPOINT);
+        url.searchParams.append("filter", JSON.stringify(filter));
+        url.searchParams.append("take", take);
+        url.searchParams.append("skip", skip);
+        url.searchParams.append("user_field_names", "true");
+
+        const response = await fetch(url, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${API_TOKEN}`,
@@ -2989,87 +2456,71 @@ function KanbanView() {
         }
 
         const data = await response.json();
-        // console.log("API Response:", data); // Debug: Log the raw API response
+        const records = data.records || [];
 
-        if (!data.records || !Array.isArray(data.records)) {
-          throw new Error("Invalid API response: 'records' is missing or not an array");
-        }
+        if (records.length === 0) break;
 
-        const mappedReservations = data.records.map((row) => {
-          // Access fields from row.fields
-          const fields = row.fields || {};
+        allRecords = allRecords.concat(records);
+        skip += take;
 
-          // Parse Tags field
-          let tags = [];
-          const rawTags = fields[FIELD_MAP.tags];
-          try {
-            if (Array.isArray(rawTags)) {
-              tags = rawTags;
-            } else if (typeof rawTags === "string" && rawTags) {
-              tags = JSON.parse(rawTags);
-            } else {
-              tags = [];
-            }
-          } catch (e) {
-            console.warn(`Failed to parse tags for row ${row.id}:`, e);
-            tags = [];
-          }
-
-          // Normalize Status to match stack names
-          let stack = fields[FIELD_MAP.stack] || "Unknown";
-
-          // Map fields to reservation object
-          const reservation = {
-            id: row.id || `fallback-${Date.now()}-${Math.random()}`,
-            guestName: fields[FIELD_MAP.guestName] || "N/A",
-            reservationId: fields[FIELD_MAP.reservationId] || "N/A",
-            listingName: fields[FIELD_MAP.listingName] || "N/A",
-            arrivalDate: fields[FIELD_MAP.arrivalDate] || "N/A",
-            departureDate: fields[FIELD_MAP.departureDate] || "N/A",
-            aptStatus: fields[FIELD_MAP.aptStatus] || "N/A",
-            stayDuration: fields[FIELD_MAP.stayDuration] || "N/A",
-            actualCheckin: fields[FIELD_MAP.actualCheckin] || "N/A",
-            actualCheckout: fields[FIELD_MAP.actualCheckout] || "N/A",
-            tags,
-            stack: stacks.includes(stack) ? stack : "Unknown", // Ensure valid stack
-            listingName: fields[FIELD_MAP.listingName] ? fields[FIELD_MAP.listingName] : "N/A",
-            type: fields[FIELD_MAP.listingName]
-              ? (() => {
-                const rawType = fields[FIELD_MAP.listingName].match(/\(([^)]+)\)/)?.[1] || "N/A";
-                const typeMap = {
-                  "1B": "1 Bedroom",
-                  "2B": "2 Bedroom",
-                  "3B": "3 Bedroom",
-                  S: "Studio",
-                };
-                return typeMap[rawType] || rawType;
-              })()
-              : "N/A",
-          };
-
-          return reservation;
-        });
-
-        setReservations(mappedReservations);
-      } catch (err) {
-        console.error("❌ Fetch error:", err);
-
-        // Handle specific network errors
-        if (err.message === "Failed to fetch" || err.message.includes("NetworkError")) {
-          setError("Network error: Please check your internet connection.");
-        } else if (err.message.startsWith("API Error")) {
-          setError("Server error: Unable to fetch reservations. Please try again later.");
-        } else {
-          setError(`Unexpected error: ${err.message}`);
-        }
-      } finally {
-        setLoading(false);
+        // Optional: safety cap
+        if (records.length < take) break;
       }
-    };
 
-    fetchReservations();
+      // Map records exactly like before
+      const mappedReservations = allRecords.map((row) => {
+        const fields = row.fields || {};
 
-  }, []);
+        let tags = [];
+        const rawTags = fields[FIELD_MAP.tags];
+        try {
+          if (Array.isArray(rawTags)) tags = rawTags;
+          else if (typeof rawTags === "string" && rawTags) tags = JSON.parse(rawTags);
+        } catch (e) {
+          console.warn("Tag parse error:", e);
+        }
+
+        const stack = fields[FIELD_MAP.stack] || "Unknown";
+
+        return {
+          id: row.id || `fallback-${Date.now()}-${Math.random()}`,
+          guestName: fields[FIELD_MAP.guestName] || "N/A",
+          reservationId: fields[FIELD_MAP.reservationId] || "N/A",
+          listingName: fields[FIELD_MAP.listingName] || "N/A",
+          arrivalDate: fields[FIELD_MAP.arrivalDate] || "N/A",
+          departureDate: fields[FIELD_MAP.departureDate] || "N/A",
+          aptStatus: fields[FIELD_MAP.aptStatus] || "N/A",
+          stayDuration: fields[FIELD_MAP.stayDuration] || "N/A",
+          actualCheckin: fields[FIELD_MAP.actualCheckin] || "N/A",
+          actualCheckout: fields[FIELD_MAP.actualCheckout] || "N/A",
+          tags,
+          stack: stacks.includes(stack) ? stack : "Unknown",
+          type: fields[FIELD_MAP.listingName]
+            ? (() => {
+              const rawType = fields[FIELD_MAP.listingName].match(/\(([^)]+)\)/)?.[1] || "N/A";
+              const typeMap = { "1B": "1 Bedroom", "2B": "2 Bedroom", "3B": "3 Bedroom", S: "Studio" };
+              return typeMap[rawType] || rawType;
+            })()
+            : "N/A",
+        };
+      });
+
+      setReservations(mappedReservations);
+      {/*
+      setSnackbar({
+        open: true,
+        message: `Loaded ${mappedReservations.length} reservations`,
+        severity: "success",
+      });
+      */}
+    } catch (err) {
+      console.error("Fetch failed:", err);
+      setError("Failed to load reservations: " + err.message);
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Fetch when Apartment Status tab opens (for admin users) - MUST BE BEFORE CONDITIONAL RETURNS
   useEffect(() => {
@@ -3149,11 +2600,10 @@ function KanbanView() {
             (listing) =>
               !(
                 (listing.country &&
-                  listing.country.toLowerCase().includes("united arab emirates")) ||
+                  listing.country.toLowerCase().includes("pakistan")) ||
                 (listing.countryCode &&
-                  listing.countryCode.toUpperCase() === "AE") ||
-                (listing.city && listing.city.toLowerCase().includes("dubai")) ||
-                (listing.city && listing.city.toLowerCase().includes("abu dhabi"))
+                  listing.countryCode.toUpperCase() === "PK") ||
+                (listing.city && listing.city.toLowerCase().includes("lahore"))
               )
           );
 
@@ -3391,7 +2841,7 @@ function KanbanView() {
 
     try {
       const response = await fetch(
-        "https://n8n.namuve.com/webhook/68542fac-bcac-4458-be3c-bff32534caf9",
+        "https://n8n.namuve.com/webhook/0f5a7e5e-3ba7-485f-8cba-dc162d573e33",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -3420,7 +2870,7 @@ function KanbanView() {
       });
 
       // ⏳ Start 3-minute cooldown (180 seconds)
-      setCooldown(180);
+      setCooldown(120);
       console.log("⏳ Cooldown started for 180 seconds");
 
       // 🔁 Countdown and refresh when done
@@ -3891,7 +3341,7 @@ function KanbanView() {
 
       console.log("🏢 Fetching apartment status...");
 
-      const res = await fetch("https://api.hostaway.com/v1/listings?country=Pakistan", {
+      const res = await fetch("https://api.hostaway.com/v1/listings?country=United Arab Emirates", {
         headers: {
           Authorization: `Bearer ${HOSTAWAY_TOKEN}`,
           "Content-Type": "application/json",
@@ -4050,6 +3500,21 @@ function KanbanView() {
                 <Typography sx={{ color: "#1f2937", fontWeight: 600 }}>
                   {user?.name || user?.username}
                 </Typography>
+
+                {/* NOTIFICATION ICON */}
+                <IconButton
+                  ref={anchorRef}
+                  size="small"
+                  sx={{
+                    color: "#4b5563",
+                    "&:hover": { backgroundColor: "#f3f4f6" },
+                  }}
+                  onClick={() => setNotificationsOpen(true)}
+                >
+                  <Badge badgeContent={unreadCount} color="error">
+                    <NotificationsIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
               </Box>
             </Box>
           </Toolbar>
@@ -4376,11 +3841,117 @@ function KanbanView() {
 
                 {/* Right side (Search + Button) */}
                 <MDBox display="flex" alignItems="center" gap={2}>
+
+                  {/* From Date */}
+                  <MDBox display="flex" alignItems="center" gap={1}>
+                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                      From:
+                    </MDTypography>
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={startDate}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        if (endDate && new Date(newStart) > new Date(endDate)) {
+                          setStartDate(endDate); // auto-fix
+                          setSnackbar({ open: true, message: "From cannot be after To", severity: "info" });
+                        } else {
+                          setStartDate(newStart);
+                        }
+                      }}
+                      InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
+                      sx={{ width: { xs: 130, sm: 140, md: 150 } }}
+                      inputProps={{
+                        max: endDate || new Date().toISOString().split("T")[0], // can't pick future if no end
+                      }}
+                    />
+                  </MDBox>
+
+                  {/* To Date */}
+                  <MDBox display="flex" alignItems="center" gap={1}>
+                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                      To:
+                    </MDTypography>
+                    <TextField
+                      type="date"
+                      size="small"
+                      value={endDate}
+                      onChange={(e) => {
+                        const newEnd = e.target.value;
+                        if (startDate && new Date(newEnd) < new Date(startDate)) {
+                          setEndDate(startDate);
+                          setSnackbar({ open: true, message: "To cannot be before From", severity: "info" });
+                        } else if (startDate) {
+                          const diff = Math.floor((new Date(newEnd) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                          if (diff > 31) {
+                            setSnackbar({ open: true, message: "Maximum 31 days allowed", severity: "warning" });
+                            // Auto-correct to max 31 days
+                            const maxEnd = new Date(startDate);
+                            maxEnd.setDate(maxEnd.getDate() + 30);
+                            setEndDate(maxEnd.toISOString().split("T")[0]);
+                          } else {
+                            setEndDate(newEnd);
+                          }
+                        } else {
+                          setEndDate(newEnd);
+                        }
+                      }}
+                      InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
+                      sx={{ width: { xs: 130, sm: 140, md: 150 } }}
+                      inputProps={{
+                        min: startDate,
+                      }}
+                    />
+                  </MDBox>
+
+                  {/* START BUTTON — Looks perfect, no logic attached */}
+                  <MDButton
+                    variant="contained"
+                    size="small"
+                    onClick={() => {
+                      if (!isValidDateRange()) {
+                        setSnackbar({
+                          open: true,
+                          message: "Date range must be 1 to 31 days only",
+                          severity: "warning",
+                        });
+                        return;
+                      }
+                      fetchReservationsByDateRange();
+                    }}
+                    disabled={!startDate || !endDate || startDate > endDate || loading}
+                    sx={{
+                      borderRadius: "12px",
+                      textTransform: "none",
+                      fontWeight: "bold",
+                      boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                      color: "#17621B",
+                      border: "2px solid #17621B",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "#1e7a20",
+                        borderColor: "#145517",
+                        color: "#fff",
+                      },
+                      "&:focus": {
+                        backgroundColor: "#145517",
+                        color: "#fff",
+                      },
+                      "&:active": {
+                        backgroundColor: "#145517",
+                        color: "#fff",
+                      },
+                    }}
+                  >
+                    Start
+                  </MDButton>
+
                   {/* Search Bar */}
                   <MDBox
                     sx={{
                       position: "relative",
-                      width: 260,
+                      width: 160,
                     }}
                   >
                     {/* Search icon inside input */}
@@ -4390,7 +3961,7 @@ function KanbanView() {
                         left: 12,
                         top: "50%",
                         transform: "translateY(-50%)",
-                        fontSize: 20,
+                        fontSize: 15,
                         color: "#666",
                         zIndex: 1,
                         pointerEvents: "none",
@@ -4410,7 +3981,7 @@ function KanbanView() {
                         borderRadius: "10px",
                         border: "1px solid #ccc",
                         backgroundColor: "#fff",
-                        fontSize: "0.9rem",
+                        fontSize: "0.65rem",
                         transition: "border 0.2s ease, box-shadow 0.2s ease",
                         "&:hover": {
                           border: "1.5px solid #555",
@@ -4433,7 +4004,7 @@ function KanbanView() {
                       gap: 1,
                       textTransform: "none",
                       fontWeight: "bold",
-                      fontSize: "1rem",
+                      fontSize: "0.8rem",
                       borderRadius: "10px",
                       px: 2,
                       py: 0.6,
@@ -4455,7 +4026,7 @@ function KanbanView() {
                   >
                     <SyncIcon
                       sx={{
-                        fontSize: 20,
+                        fontSize: 10,
                         animation: syncing ? "spin 1s linear infinite" : "none",
                         "@keyframes spin": {
                           "0%": { transform: "rotate(0deg)" },
@@ -4573,54 +4144,55 @@ function KanbanView() {
         </DashboardLayout>
       )}
 
-      {/* ✅ Snackbar placed outside layout with high z-index */}
+      <Notifications
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        anchorEl={anchorRef.current}
+      />
+
       {/* ✅ Global Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        autoHideDuration={snackbar.richContent ? 5000 : 4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false, richContent: null })}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        sx={{ zIndex: (theme) => theme.zIndex.drawer + 9999 }}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 9999, mb: 8, mr: 3 }}
       >
         <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          onClose={() => setSnackbar({ ...snackbar, open: false, richContent: null })}
           severity={snackbar.severity}
           variant="filled"
           sx={{
             width: "100%",
-            borderRadius: "8px",
+            minWidth: 320,
+            borderRadius: "12px",
             fontWeight: "bold",
-            backgroundColor: (() => {
-              switch (snackbar.severity) {
-                case "error":
-                  return "#F8D7DA"; // light red
-                case "warning":
-                  return "#FFF3CD"; // light yellow
-                case "info":
-                  return "#CCE5FF"; // light blue
-                case "success":
-                  return "#D4EDDA"; // light green
-                default:
-                  return undefined;
-              }
-            })(),
-            color: (() => {
-              switch (snackbar.severity) {
-                case "error":
-                  return "#842029"; // dark red text
-                case "warning":
-                  return "#856404"; // dark yellow text
-                case "info":
-                  return "#084298"; // dark blue text
-                case "success":
-                  return "#155724"; // dark green text
-                default:
-                  return undefined;
-              }
-            })(),
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            background: snackbar.richContent
+              ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+              : (() => {
+                switch (snackbar.severity) {
+                  case "error": return "#F8D7DA";
+                  case "warning": return "#FFF3CD";
+                  case "info": return "#CCE5FF";
+                  case "success": return "#D4EDDA";
+                  default: return undefined;
+                }
+              })(),
+            color: snackbar.richContent
+              ? "#fff"
+              : (() => {
+                switch (snackbar.severity) {
+                  case "error": return "#842029";
+                  case "warning": return "#856404";
+                  case "info": return "#084298";
+                  case "success": return "#155724";
+                  default: return undefined;
+                }
+              })(),
           }}
         >
-          {snackbar.message}
+          {snackbar.richContent || snackbar.message}
         </Alert>
       </Snackbar>
     </>

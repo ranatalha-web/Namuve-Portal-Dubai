@@ -1,22 +1,48 @@
 import { useAuth } from "context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { AppBar, Toolbar, Typography, Box, Avatar, Tabs, Tab, Button } from "@mui/material";
+import { AppBar, Toolbar, Typography, Box, Avatar, Tabs, Tab, Button, IconButton, Badge } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import Logo from "components/Logo";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Row, Col, Table } from "react-bootstrap";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { TextField } from "@mui/material";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import Notifications from "components/Notifications/index";
+import { Snackbar, Alert } from "@mui/material";
 
 
 const API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzNhNzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE"; // replace with your key
+
+const TEABLE_TOKEN =
+  "teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=";
+
+const NOTIFICATION_API = `https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record?filter=${encodeURIComponent(
+  JSON.stringify({
+    conjunction: "or",
+    filterSet: [
+      {
+        fieldId: "Time",
+        operator: "is",
+        value: { mode: "today", timeZone: "Asia/Karachi" },
+      },
+      {
+        fieldId: "Time",
+        operator: "is",
+        value: { mode: "yesterday", timeZone: "Asia/Karachi" },
+      },
+    ],
+  })
+)}&sort=${encodeURIComponent(
+  JSON.stringify({ fieldId: "Time", direction: "desc" })
+)}`;
 
 function UserLayout({ children }) {
   const { logout, user } = useAuth();
@@ -30,6 +56,110 @@ function UserLayout({ children }) {
   const [todayCheckOut, setTodayCheckOut] = useState([]);
   const [loadingCheck, setLoadingCheck] = useState(false);
   const [errorCheck, setErrorCheck] = useState(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const anchorRef = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [prevCount, setPrevCount] = useState(0);
+  const [latestNotification, setLatestNotification] = useState(null);
+  const notifiedRecordIdsRef = useRef(new Set());
+
+  // Add function
+  const playNotificationSound = () => {
+    const audio = new Audio("/notification.mp3"); // Put in public/
+    audio.volume = 0.4;
+    audio.play().catch(() => { });
+  };
+
+  // useEffect
+  useEffect(() => {
+    const fetchNotificationUpdate = async () => {
+      try {
+        const res = await fetch(NOTIFICATION_API, {
+          headers: {
+            Authorization: `Bearer ${TEABLE_TOKEN}`,
+            "X-Teable-Field-Names": "true",
+          },
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const records = data.records || [];
+
+        // === 1. Only NEW records (never seen before) ===
+        const newRecords = records.filter(
+          (record) => !notifiedRecordIdsRef.current.has(record.id)
+        );
+
+        // === 2. No new records → keep current badge! ===
+        if (newRecords.length === 0) return;
+
+        // === 3. Current user identifiers ===
+        const currentUserNames = [
+          user?.name,
+          user?.username,
+          user?.email?.split("@")[0],
+        ]
+          .filter(Boolean)
+          .map((s) => s.trim().toLowerCase());
+
+        let latestOtherComment = null;
+
+        // === 4. Process each new record ===
+        for (const record of newRecords) {
+          const sender = record?.fields?.User?.trim() || "";
+          const senderLower = sender.toLowerCase();
+          const cleanSender = senderLower
+            .replace(/\s*\(you\)$/i, "")
+            .replace(/\s*-\s*fdo$/i, "")
+            .replace(/\s*admin$/i, "")
+            .trim();
+
+          const isOwnComment = currentUserNames.some((name) => {
+            const cleanName = name.replace(/[@.]/g, " ");
+            return (
+              cleanSender === name ||
+              cleanSender === cleanName ||
+              cleanSender.includes(name) ||
+              name.includes(cleanSender)
+            );
+          });
+
+          // Mark as seen (prevents duplicates)
+          notifiedRecordIdsRef.current.add(record.id);
+
+          // Only track latest OTHER comment for toast
+          if (!isOwnComment && !latestOtherComment) {
+            latestOtherComment = { sender, fields: record.fields };
+          }
+        }
+
+        // === 5. Show toast for latest OTHER comment ===
+        if (latestOtherComment) {
+          const { sender, fields } = latestOtherComment;
+          setLatestNotification({
+            author: sender,
+            type: "commented",
+            guestName: fields["Guest Name"] || "Guest",
+            apt: fields.APT || "Unit",
+          });
+          setSnackbarOpen(true);
+          playNotificationSound();
+        }
+
+        // === 6. Badge: INCREMENT by number of new records (yours + others) ===
+        setUnreadCount((prev) => prev + newRecords.length);
+
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
+
+    fetchNotificationUpdate();
+    const interval = setInterval(fetchNotificationUpdate, 30000);
+    return () => clearInterval(interval);
+  }, [user?.name, user?.username, user?.email]); // ← include email
 
   async function downloadExcel() {
     if (loadingCheck) {
@@ -483,16 +613,15 @@ function UserLayout({ children }) {
           const data = await res.json();
           let listings = data.result || [];
 
-          // 🇴🇦 Exclude UAE listings
+          // 🇴🇦 Exclude Pakistan listings
           listings = listings.filter(
             (listing) =>
               !(
                 (listing.country &&
-                  listing.country.toLowerCase().includes("united arab emirates")) ||
+                  listing.country.toLowerCase().includes("pakistan")) ||
                 (listing.countryCode &&
-                  listing.countryCode.toUpperCase() === "AE") ||
-                (listing.city && listing.city.toLowerCase().includes("dubai")) ||
-                (listing.city && listing.city.toLowerCase().includes("abu dhabi"))
+                  listing.countryCode.toUpperCase() === "PK") ||
+                (listing.city && listing.city.toLowerCase().includes("lahore"))
               )
           );
 
@@ -588,11 +717,11 @@ function UserLayout({ children }) {
   }, [activeTab]);
 
   const LISTINGS_DATA = {
-    "2BR Premium": [305055, 309909, 323227, 288688],
-    "3BR": [288686, 305327, 288676, 389366],
-    "1BR": [307143, 306032, 288691, 305069, 288681, 288726, 288679, 288723, 288678, 323258, 400763, 387833, 387834],
-    Studio: [288682, 288690, 323229, 323261, 336255, 383744, 410263, 413218, 392230, 449099],
-    "2BR": [288677, 288684, 288687, 288977, 288685, 288683, 306543, 288724, 378076, 378078, 400779, 400769, 395345, 414090, 421015, 422302],
+    "2BR Premium": [],
+    "3BR": [],
+    "1BR": [387833, 387834, 451414, ],
+    Studio: [392230],
+    "2BR": [441361, 443140, 449910, 452131, 453688, 453690, 454454],
   };
 
   // Fetch data dynamically
@@ -601,7 +730,7 @@ function UserLayout({ children }) {
       setLoading(true);
       setError(null);
 
-      const res = await fetch("https://api.hostaway.com/v1/listings?country=Pakistan", {
+      const res = await fetch("https://api.hostaway.com/v1/listings?country=United Arab Emirates", {
         headers: {
           Authorization: `Bearer ${API_TOKEN}`,
           "Content-Type": "application/json",
@@ -1142,6 +1271,21 @@ function UserLayout({ children }) {
                 <Typography sx={{ color: "#1f2937", fontWeight: 600 }}>
                   {user.name || user.username}
                 </Typography>
+
+                {/* NOTIFICATION ICON — ADD HERE */}
+                <IconButton
+                  ref={anchorRef}
+                  size="small"
+                  sx={{
+                    color: "#4b5563",
+                    "&:hover": { backgroundColor: "#f3f4f6" },
+                  }}
+                  onClick={() => setNotificationsOpen(true)}
+                >
+                  <Badge badgeContent={unreadCount} color="error">
+                    <NotificationsIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
               </Box>
             )}
 
@@ -1170,6 +1314,67 @@ function UserLayout({ children }) {
 
       {/* Main Content */}
       <MDBox>{renderContent()}</MDBox>
+      <Notifications
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        anchorEl={anchorRef.current}
+        onMarkAsRead={() => setUnreadCount(0)}
+      />
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => {
+          setSnackbarOpen(false);
+          setLatestNotification(null);
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        sx={{ mb: 8, mr: 3 }}
+      >
+        <Alert
+          onClose={() => {
+            setSnackbarOpen(false);
+            setLatestNotification(null);
+          }}
+          severity="info"
+          variant="filled"
+          sx={{
+            background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            borderRadius: 2,
+            minWidth: 320,
+          }}
+        >
+          {latestNotification && (
+            <Typography
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                flexWrap: "wrap",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                lineHeight: 1.4,
+                color: "#fff",
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>{latestNotification.author}</span>
+              <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
+                {latestNotification.type}
+              </Typography>
+              <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
+                on
+              </Typography>
+              <Typography component="span" variant="caption" sx={{ color: "#fbbf24", fontWeight: 600 }}>
+                {latestNotification.guestName}
+              </Typography>
+              <Typography component="span" variant="caption" sx={{ color: "#34d399", fontWeight: 600 }}>
+                {latestNotification.apt}
+              </Typography>
+            </Typography>
+          )}
+        </Alert>
+      </Snackbar>
     </MDBox>
   );
 }

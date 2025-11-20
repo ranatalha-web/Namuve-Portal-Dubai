@@ -1,0 +1,89 @@
+/* Google Font - only load if not already loaded */
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap');
+
+/* === SCOPED CONTAINER === */
+.comment-section-wrapper {
+  font-family: 'Source Sans Pro', sans-serif;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-section-wrapper .card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* === Media & Layout === */
+.comment-section-wrapper .media img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+}
+
+.comment-section-wrapper .media-body h5 {
+  font-weight: 600;
+  color: #212529;
+  font-size: 1rem;
+  display: inline;
+  margin: 0;
+}
+
+.comment-section-wrapper .media-body .text-muted {
+  font-size: 0.875rem;
+  color: #6c757d !important;
+}
+
+.comment-section-wrapper .media-body p {
+  margin: 8px 0 0 0;
+  font-size: 0.95rem;
+  color: #495057;
+  line-height: 1.5;
+}
+
+/* === Comment Header === */
+.comment-section-wrapper .comment-header {
+  margin-bottom: 8px;
+}
+
+/* === Reply Link === */
+.comment-section-wrapper .reply-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.comment-section-wrapper .reply-link svg {
+  fill: #007bff;
+  transition: fill 0.2s;
+  margin-right: 5px;
+}
+
+.comment-section-wrapper .reply-link:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+.comment-section-wrapper .reply-link:hover svg {
+  fill: #0056b3;
+}
+
+/* === Nested Replies === */
+.comment-section-wrapper .media .media {
+  margin-left: 3rem;
+  margin-top: 1rem;
+}
+
+.comment-section-wrapper .ml-3 {
+  margin-left: 1rem !important;
+}
