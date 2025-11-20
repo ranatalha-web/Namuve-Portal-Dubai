@@ -464,14 +464,14 @@ async function getDubaiRevenueAndOccupancy() {
         for (const reservation of allReservations) {
           const listingId = Number(reservation.listingMapId);
           
-          // Check reservation status - process active reservations (exclude only cancelled, expired, inquiry)
+          // Check reservation status - only process "new" or "modified" reservations
           const reservationStatus = reservation.status?.toLowerCase();
-          const skipStatuses = ['cancelled', 'expired', 'inquiry', 'declined', 'rejected'];
+          const allowedStatuses = ['new', 'modified'];
           
-          if (skipStatuses.includes(reservationStatus)) {
-            console.log(`❌ FILTERED OUT - Status: Reservation ${reservation.id} with status: ${reservation.status} (Inactive)`);
+          if (!allowedStatuses.includes(reservationStatus)) {
+            console.log(`❌ FILTERED OUT - Status: Reservation ${reservation.id} with status: ${reservation.status} (Not new or modified)`);
             filteredByStatus++;
-            continue; // Skip inactive reservations
+            continue; // Skip non-new/modified reservations
           }
           
           console.log(`\n🔍 STEP 1 - Status Check PASSED: Reservation ${reservation.id} with status: ${reservation.status}`);
@@ -500,21 +500,21 @@ async function getDubaiRevenueAndOccupancy() {
           console.log(`✅ STEP 2 - Dubai Check PASSED: Reservation ${reservation.id} for ${listingName} (${listingCategory})`)
 
           // Check if guest is currently staying (checked in but not checked out)
+          // Also include reservations where departure date matches today
           const today = new Date().toISOString().split('T')[0];
           const arrivalDate = reservation.arrivalDate;
           const departureDate = reservation.departureDate;
           
-          const isCurrentlyStaying = arrivalDate <= today && departureDate > today;
+          const isCurrentlyStaying = arrivalDate <= today && departureDate >= today;
           
-          // TEMPORARILY SHOW ALL DUBAI RESERVATIONS (not just currently staying)
+          // Check if currently staying (including checkout day)
           if (!isCurrentlyStaying) {
-            console.log(`⚠️ NOT CURRENTLY STAYING - But showing anyway: Reservation ${reservation.id}`);
+            console.log(`⚠️ NOT CURRENTLY STAYING - Reservation ${reservation.id}`);
             console.log(`   📅 Arrival: ${arrivalDate}, Departure: ${departureDate}, Today: ${today}`);
-            console.log(`   🔍 Check: ${arrivalDate} <= ${today} = ${arrivalDate <= today}, ${departureDate} > ${today} = ${departureDate > today}`);
-            console.log(`   📝 Status: Will include in results to see all 7 reservations`);
+            console.log(`   🔍 Check: ${arrivalDate} <= ${today} = ${arrivalDate <= today}, ${departureDate} >= ${today} = ${departureDate >= today}`);
             // Don't skip - continue processing to show all Dubai reservations
           } else {
-            console.log(`✅ STEP 3 - Active Stay Check PASSED: Reservation ${reservation.id} - Guest IS currently staying`);
+            console.log(`✅ STEP 3 - Active Stay Check PASSED: Reservation ${reservation.id} - Guest IS currently staying (including checkout day)`);
             console.log(`   📅 Arrival: ${arrivalDate}, Departure: ${departureDate}, Today: ${today}`);
           }
 
@@ -540,10 +540,19 @@ async function getDubaiRevenueAndOccupancy() {
           }
 
           // Determine reservation status based on current stay
+          // Include reservations that are currently staying (including checkout day)
           const isActiveReservation = isCurrentlyStaying && 
                                     reservation.guestName && 
                                     reservation.guestName !== 'Test Guest' && 
                                     !['cancelled', 'expired', 'inquiry', 'declined', 'rejected'].includes(reservation.status?.toLowerCase());
+          
+          // Log the check for debugging
+          if (departureDate === today) {
+            console.log(`🔍 CHECKOUT DAY CHECK - Reservation ${reservation.id}:`);
+            console.log(`   Departure: ${departureDate}, Today: ${today}, Match: ${departureDate === today}`);
+            console.log(`   isCurrentlyStaying: ${isCurrentlyStaying}`);
+            console.log(`   isActiveReservation: ${isActiveReservation}`);
+          }
 
           // Add to appropriate revenue category
           if (isActiveReservation) {
@@ -804,10 +813,10 @@ async function getDubaiRevenueAndOccupancy() {
     console.log('========================================');
     
     if (activeStayReservations.length > 0) {
-      // Filter to show only currently staying guests
+      // Filter to show only currently staying guests (including checkout day)
       const today = new Date().toISOString().split('T')[0];
       const currentlyStayingReservations = activeStayReservations.filter(reservation => {
-        return reservation.arrivalDate <= today && reservation.departureDate > today;
+        return reservation.arrivalDate <= today && reservation.departureDate >= today;
       });
       
       console.log(`\n📊 SHOWING ONLY CURRENTLY STAYING GUESTS (${currentlyStayingReservations.length} out of ${activeStayReservations.length} total):\n`);
@@ -873,9 +882,10 @@ async function getDubaiRevenueAndOccupancy() {
       };
       
       // Filter to currently staying guests and calculate Total Base Rate by category
+      // Include reservations where departure date matches today (checkout day)
       const today = new Date().toISOString().split('T')[0];
       const currentlyStayingReservations = activeStayReservations.filter(reservation => {
-        return reservation.arrivalDate <= today && reservation.departureDate > today;
+        return reservation.arrivalDate <= today && reservation.departureDate >= today;
       });
       
       currentlyStayingReservations.forEach(res => {

@@ -160,18 +160,18 @@ const routes = [
     route: "/revenue",
     component: <Revenue />,
   },
-  // 3. Payments (after Revenue)
+  // 3. Payments (hidden from sidebar)
   {
-    type: "collapse",
+    type: "hidden",
     name: "Payments",
     key: "payments",
     icon: <Icon fontSize="small">payment</Icon>,
     route: "/payments",
     component: <Payments />,
   },
-  // 3. Rooms (Third in sidebar)
+  // 3. Rooms (hidden from sidebar)
   {
-    type: "collapse",
+    type: "hidden",
     name: "Rooms",
     key: "rooms",
     icon: <Icon fontSize="small">meeting_room</Icon>,

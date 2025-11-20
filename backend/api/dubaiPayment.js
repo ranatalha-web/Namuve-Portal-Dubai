@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { syncDubaiReservationsToTeable } = require('./dubaiReservationsTeable');
 
 // Ensure fetch is available (Node.js 18+ has it built-in, older versions need polyfill)
 let fetch;
@@ -91,7 +92,9 @@ async function fetchTodayReservations() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
       
-      const url = `https://api.hostaway.com/v1/reservations?limit=${limit}&offset=${(page - 1) * limit}&modifiedSince=${sevenDaysAgoStr}`;
+      // Request specific fields including dates
+      const fields = 'id,hostawayReservationId,guestName,arrivalDate,departureDate,checkInDate,checkOutDate,startDate,endDate,totalPrice,isPaid,paymentStatus,currency,numberOfGuests,nights,listingMapId,createdAt,modifiedAt';
+      const url = `https://api.hostaway.com/v1/reservations?limit=${limit}&offset=${(page - 1) * limit}&modifiedSince=${sevenDaysAgoStr}&fields=${fields}`;
       
       const response = await fetch(url, {
         headers: {
@@ -157,7 +160,8 @@ async function fetchTodayReservations() {
           // Create categories mapping
           dubaiListings.forEach(listing => {
             listingsWithCategories[listing.id] = {
-              name: listing.name,
+              name: listing.internalListingName || listing.name,
+              address: listing.address || listing.name,
               category: categorizeApartment(listing),
               bedrooms: listing.bedrooms || 0
             };
@@ -179,8 +183,8 @@ async function fetchTodayReservations() {
     
     // Filter reservations for Dubai listings and today's activity
     const filteredReservations = allReservations.filter(reservation => {
-      // Must be for Dubai listings
-      if (!dubaiListingIds.includes(Number(reservation.listingId))) {
+      // Must be for Dubai listings (use listingMapId from Hostaway API)
+      if (!dubaiListingIds.includes(Number(reservation.listingMapId))) {
         return false;
       }
       
@@ -189,21 +193,23 @@ async function fetchTodayReservations() {
         return false;
       }
       
+      // Filter only NEW or MODIFIED reservations
+      const isNewOrModified = reservation.status === 'new' || reservation.status === 'modified';
+      if (!isNewOrModified) {
+        return false;
+      }
+      
       const arrival = new Date(reservation.arrivalDate);
       const departure = new Date(reservation.departureDate);
       const todayDate = new Date(today);
       
-      // TEMPORARILY: Include reservations from last 30 days for testing
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      // Include if: currently staying, checking in today, checking out today, OR within last 30 days
+      // Include if: currently staying, checking in today, or checking out today
+      // EXCLUDE: upcoming stay (future reservations)
       const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
       const isCheckingInToday = arrival.toDateString() === todayDate.toDateString();
       const isCheckingOutToday = departure.toDateString() === todayDate.toDateString();
-      const isRecentReservation = arrival >= thirtyDaysAgo || departure >= thirtyDaysAgo;
       
-      return isWithinStayPeriod || isCheckingInToday || isCheckingOutToday || isRecentReservation;
+      return isWithinStayPeriod || isCheckingInToday || isCheckingOutToday;
     });
     
     console.log(`✅ Filtered to ${filteredReservations.length} Dubai reservations for today`);
@@ -243,8 +249,8 @@ async function fetchTodayReservations() {
       // Log original payment status from Hostaway
       console.log(`📋 Reservation ${reservation.id} - Original Hostaway payment status: "${reservation.paymentStatus}" (isPaid: ${reservation.isPaid})`);
       
-      // Get listing category
-      const listingInfo = listingsWithCategories[reservation.listingId] || {};
+      // Get listing category using listingMapId (the correct field from Hostaway)
+      const listingInfo = listingsWithCategories[reservation.listingMapId] || {};
       
       // Determine payment status and calculate amounts
       let paymentStatus = 'Unpaid';
@@ -354,23 +360,67 @@ async function fetchTodayReservations() {
         listingCategory: listingInfo.category || 'Unknown'
       });
       
+      // Determine reservation status
+      const todayDate = new Date(today);
+      const arrival = new Date(reservation.arrivalDate);
+      const departure = new Date(reservation.departureDate);
+      
+      let reservationStatus = 'Upcoming stay';
+      
+      const isCheckingInToday = arrival.toDateString() === todayDate.toDateString();
+      const isCheckingOutToday = departure.toDateString() === todayDate.toDateString();
+      const isStayingToday = (todayDate >= arrival && todayDate < departure);
+      
+      if (isCheckingInToday) {
+        reservationStatus = 'Check in';
+      } else if (isCheckingOutToday) {
+        reservationStatus = 'Check out';
+      } else if (isStayingToday) {
+        reservationStatus = 'Staying guest';
+      }
+      
+      // Try multiple date field names from Hostaway
+      const arrivalDate = reservation.arrivalDate || reservation.checkInDate || reservation.startDate || 'N/A';
+      const departureDate = reservation.departureDate || reservation.checkOutDate || reservation.endDate || 'N/A';
+      
+      // Log if dates are missing - show ALL available fields for debugging
+      if (!reservation.arrivalDate && !reservation.checkInDate && !reservation.startDate) {
+        console.warn(`⚠️ Reservation ${reservation.id} (${reservation.guestName}): Missing dates!`);
+        console.warn(`   Available date-related fields:`, {
+          arrivalDate: reservation.arrivalDate,
+          checkInDate: reservation.checkInDate,
+          startDate: reservation.startDate,
+          endDate: reservation.endDate,
+          checkOutDate: reservation.checkOutDate,
+          departureDate: reservation.departureDate,
+          createdAt: reservation.createdAt,
+          modifiedAt: reservation.modifiedAt
+        });
+        console.warn(`   ALL reservation fields:`, Object.keys(reservation).sort());
+      }
+      
       return {
-        id: reservation.id,
+        id: reservation.hostawayReservationId || reservation.id,
+        reservationId: reservation.hostawayReservationId || reservation.id,
         guestName: reservation.guestName || 'N/A',
-        listingName: reservation.listingName || listingInfo.name || 'N/A',
+        listingName: listingInfo.name || 'N/A',
         listingCategory: listingInfo.category || 'Unknown',
-        arrivalDate: reservation.arrivalDate,
-        departureDate: reservation.departureDate,
+        arrivalDate: arrivalDate,
+        departureDate: departureDate,
+        checkInDate: arrivalDate,
+        checkOutDate: departureDate,
         nights: reservation.nights || 0,
-        guests: reservation.guests || 0,
+        guests: reservation.numberOfGuests || 0,
         totalAmount: totalAmount,
         paidAmount: paidAmount,
         remainingAmount: remainingAmount,
         paymentStatus: paymentStatus,
+        reservationStatus: reservationStatus,
         currency: reservation.currency || 'AED',
         createdAt: reservation.createdAt,
         modifiedAt: reservation.modifiedAt,
-        listingId: reservation.listingId,
+        listingId: reservation.listingMapId,
+        listingMapId: reservation.listingMapId,
         bedrooms: listingInfo.bedrooms || 0
       };
     }));
@@ -402,13 +452,25 @@ async function fetchTodayReservations() {
 
 /**
  * GET /api/dubai-payment/today-reservations
- * Get today's new/modified Dubai reservations
+ * Get today's new/modified Dubai reservations and sync to Teable
  */
 router.get('/today-reservations', async (req, res) => {
   try {
     console.log('🔄 API call: GET /api/dubai-payment/today-reservations');
     
     const result = await fetchTodayReservations();
+    
+    // Sync reservations to Teable (DELETE old ones, PATCH existing, POST new ones)
+    if (result.success && result.data && Array.isArray(result.data)) {
+      try {
+        console.log(`\n🔄 Syncing ${result.data.length} reservations to Teable...`);
+        await syncDubaiReservationsToTeable(result.data);
+        console.log(`✅ Teable sync completed`);
+      } catch (syncError) {
+        console.warn(`⚠️ Teable sync failed:`, syncError.message);
+        // Don't fail the API call, just log the warning
+      }
+    }
     
     res.json(result);
     

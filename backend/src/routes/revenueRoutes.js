@@ -52,7 +52,9 @@ const cacheMiddleware = (req, res, next) => {
  * @route GET /api/revenue
  * @desc Get current revenue and occupancy data
  * @access Public (with optional API key)
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.get('/', logRequest, authenticateApiKey, async (req, res) => {
   try {
     console.log('🚀 Revenue API called - using enhanced caching...');
@@ -84,12 +86,15 @@ router.get('/', logRequest, authenticateApiKey, async (req, res) => {
     });
   }
 });
+*/
 
 /**
  * @route GET /api/revenue/summary
  * @desc Get summarized revenue data (lighter response)
  * @access Public (with optional API key)
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.get('/summary', logRequest, authenticateApiKey, async (req, res) => {
   try {
     const data = await getRevenueAndOccupancy();
@@ -120,12 +125,15 @@ router.get('/summary', logRequest, authenticateApiKey, async (req, res) => {
     });
   }
 });
+*/
 
 /**
  * @route GET /api/revenue/occupancy
  * @desc Get only occupancy data
  * @access Public (with optional API key)
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.get('/occupancy', logRequest, authenticateApiKey, async (req, res) => {
   try {
     const data = await getRevenueAndOccupancy();
@@ -153,12 +161,15 @@ router.get('/occupancy', logRequest, authenticateApiKey, async (req, res) => {
     });
   }
 });
+*/
 
 /**
  * @route POST /api/revenue/refresh
  * @desc Force refresh of revenue data (clears cache)
  * @access Public (with optional API key)
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.post('/refresh', logRequest, authenticateApiKey, async (req, res) => {
   try {
     console.log('🔄 Force refresh requested...');
@@ -189,12 +200,15 @@ router.post('/refresh', logRequest, authenticateApiKey, async (req, res) => {
     });
   }
 });
+*/
 
 /**
  * @route GET /api/revenue/cache-stats
  * @desc Get cache performance statistics
  * @access Public
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.get('/cache-stats', logRequest, (req, res) => {
   try {
     const stats = cachedRevenueService.getCacheStats();
@@ -214,12 +228,15 @@ router.get('/cache-stats', logRequest, (req, res) => {
     });
   }
 });
+*/
 
 /**
  * @route POST /api/revenue/clear-cache
  * @desc Clear all revenue cache
  * @access Public (with optional API key)
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.post('/clear-cache', logRequest, authenticateApiKey, (req, res) => {
   try {
     cachedRevenueService.clearCache();
@@ -286,7 +303,8 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Route to refresh listings data
+// Route to refresh listings data - COMMENTED OUT
+/*
 router.post('/refresh-listings', logRequest, async (req, res) => {
   try {
     console.log('🔄 Manual listings refresh requested');
@@ -314,8 +332,10 @@ router.post('/refresh-listings', logRequest, async (req, res) => {
     });
   }
 });
+*/
 
-// Route to get current listings data
+// Route to get current listings data - COMMENTED OUT
+/*
 router.get('/listings', logRequest, async (req, res) => {
   try {
     console.log('📋 Listings data requested');
@@ -342,8 +362,10 @@ router.get('/listings', logRequest, async (req, res) => {
     });
   }
 });
+*/
 
-// Route to clear listings data (no cache)
+// Route to clear listings data (no cache) - COMMENTED OUT
+/*
 router.delete('/clear-listings-cache', logRequest, async (req, res) => {
   try {
     console.log('🗑️ Clearing in-memory listings data...');
@@ -363,6 +385,7 @@ router.delete('/clear-listings-cache', logRequest, async (req, res) => {
     });
   }
 });
+*/
 
 /**
  * GET /api/revenue/cron
@@ -370,6 +393,8 @@ router.delete('/clear-listings-cache', logRequest, async (req, res) => {
  */
 router.get('/cron', async (req, res) => {
   try {
+    // PAKISTAN REVENUE CODE - COMMENTED OUT
+    /*
     const now = new Date();
     const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
     
@@ -404,6 +429,14 @@ router.get('/cron', async (req, res) => {
       status: 'Cron job working! Backend is running every hour.',
       note: 'For real revenue data, run your local backend with: node src/server.js'
     });
+    */
+    
+    // Return empty response for now
+    res.json({
+      success: true,
+      message: 'Cron endpoint - Pakistan revenue code commented out',
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error) {
     console.error('❌ Cron job failed:', error.message);
@@ -421,7 +454,9 @@ router.get('/cron', async (req, res) => {
  * @route POST /api/revenue/test-monthly-target
  * @desc Test posting monthly target data at 2pm
  * @access Public
+ * COMMENTED OUT - Pakistan revenue disabled
  */
+/*
 router.post('/test-monthly-target', logRequest, async (req, res) => {
   try {
     console.log('🧪 Testing monthly target posting at 2pm...');
@@ -456,5 +491,6 @@ router.post('/test-monthly-target', logRequest, async (req, res) => {
     });
   }
 });
+*/
 
 module.exports = router;

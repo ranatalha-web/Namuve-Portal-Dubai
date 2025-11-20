@@ -27,9 +27,11 @@ const MONTHLY_TABLE_ID = 'tblgqswZdUmCUeUzgs0'; // Monthly Revenue Actual table
  */
 function getPakistanDateTime() {
   const now = new Date();
+  // Pakistan is UTC+5
   const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
   
-  const year = pakistanTime.getUTCFullYear();
+  // Use getUTC methods since we manually adjusted the time
+  const year = pakistanTime.getUTCFullYear().toString();
   const month = (pakistanTime.getUTCMonth() + 1).toString().padStart(2, '0');
   const day = pakistanTime.getUTCDate().toString().padStart(2, '0');
   const hours = pakistanTime.getUTCHours().toString().padStart(2, '0');
@@ -37,6 +39,8 @@ function getPakistanDateTime() {
   const seconds = pakistanTime.getUTCSeconds().toString().padStart(2, '0');
   
   const dateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  
+  console.log(`🕐 Pakistan DateTime: ${dateTime}`);
   
   return {
     dateTime,
@@ -72,10 +76,10 @@ function getCurrentMonthRange() {
  */
 async function fetchLatestDailyRevenue() {
   try {
-    // Get token
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    // Get token - use monthly token for this table
+    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured');
+      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured');
     }
     
     console.log(`📅 Fetching latest daily revenue record...`);
@@ -85,7 +89,7 @@ async function fetchLatestDailyRevenue() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${finalToken}`,
+        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -156,8 +160,8 @@ async function fetchLatestDailyRevenue() {
  */
 async function checkIfMonthlyDataExists() {
   try {
-    // Get token
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    // Get token - use monthly token for this table
+    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
     if (!finalToken) {
       return false;
     }
@@ -171,7 +175,7 @@ async function checkIfMonthlyDataExists() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${finalToken}`,
+        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -231,12 +235,12 @@ async function postMonthlyRevenue() {
     }
     
     // Verify Teable token
-    console.log('🔍 Debug Monthly - process.env.TEABLE_BEARER_TOKEN:', process.env.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    console.log('🔍 Debug Monthly - config.TEABLE_BEARER_TOKEN:', config.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
+    console.log('🔍 Debug Monthly - process.env.TEABLE_MONTHLY_BEARER_TOKEN:', process.env.TEABLE_MONTHLY_BEARER_TOKEN ? 'SET' : 'NOT_SET');
+    console.log('🔍 Debug Monthly - config.TEABLE_MONTHLY_BEARER_TOKEN:', config.TEABLE_MONTHLY_BEARER_TOKEN ? 'SET' : 'NOT_SET');
     
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured in environment variables');
+      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured in environment variables');
     }
 
     // Step 1: Fetch latest daily revenue record
@@ -276,7 +280,7 @@ async function postMonthlyRevenue() {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${finalToken}`,
+        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(teableRecord)
@@ -333,10 +337,10 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     console.log('📊 Fetching monthly revenue records from Teable...');
     console.log(`📊 Pagination: take=${take}, skip=${skip}`);
     
-    // Get token
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    // Get token - use monthly token for this table
+    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured');
+      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured');
     }
     
     // Add pagination parameters to URL
@@ -345,7 +349,7 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${finalToken}`,
+        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -362,11 +366,14 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     
     console.log(`✅ Fetched ${data.records.length} monthly revenue records`);
     
-    // Log all available record dates
+    // Log all available record dates and field names
     console.log(`📋 Available record dates:`);
     data.records.forEach((record, index) => {
+      console.log(`   Record ${index + 1} fields:`, Object.keys(record.fields));
       const dateTime = record.fields['Date and Time'] || record.fields['Date and Time '];
       const revenue = record.fields['Monthly Revenue Actual'];
+      console.log(`   - DateTime: ${dateTime}`);
+      console.log(`   - Revenue: ${revenue}`);
       if (dateTime && revenue) {
         const recordDate = new Date(dateTime);
         const day = recordDate.getDate();
@@ -393,6 +400,9 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
         autoNumber: record.autoNumber || 0
       }));
     
+    console.log(`✅ After filtering: ${sortedRecords.length} valid records`);
+    console.log(`📋 Sorted records:`, sortedRecords.slice(0, 5).map(r => ({ dateTime: r.dateTime, revenue: r.monthlyRevenue })));
+    
     // Get current month's revenue with 2nd of month logic
     const { monthYear } = getCurrentMonthRange();
     const currentDate = new Date();
@@ -402,36 +412,51 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     
     let currentMonthRevenue = 0;
     
-    // Check if current month is complete (past 2nd of next month)
-    const isCurrentMonthComplete = currentDay >= 2;
+    // Check if we have passed the 2nd of the month (day >= 2 means 2nd or later)
+    const hasPassedSecondOfMonth = currentDay >= 2;
     
-    if (isCurrentMonthComplete) {
-      console.log(`📊 Month logic: Current month is COMPLETE (day >= 2), showing 0 for current month`);
-      currentMonthRevenue = 0;
-    } else {
-      // Find record from 2nd of current month
-      console.log(`🔍 Searching for record from 2nd of month ${monthYear}...`);
+    if (hasPassedSecondOfMonth) {
+      // Sum ALL records from current month (from 2nd onwards)
+      console.log(`🔍 Summing all records from month: ${monthYear}`);
+      console.log(`📋 Looking through ${sortedRecords.length} records...`);
       
-      const currentMonthRecord = sortedRecords.find(record => {
-        if (!record.dateTime) return false;
-        const recordDate = new Date(record.dateTime);
+      const currentMonthRecords = sortedRecords.filter(record => {
+        if (!record.dateTime) {
+          console.log(`   ⚠️ Record has no dateTime`);
+          return false;
+        }
         const recordMonth = record.dateTime.substring(0, 7); // YYYY-MM
+        const recordDate = new Date(record.dateTime);
         const recordDay = recordDate.getDate();
         
-        console.log(`📅 Checking record: ${record.dateTime} (Day ${recordDay}) - Match: ${recordMonth === monthYear && recordDay === 2}`);
+        const isCurrentMonth = recordMonth === monthYear;
+        const isFromSecondOrLater = recordDay >= 2;
+        const isMatch = isCurrentMonth && isFromSecondOrLater;
         
-        return recordMonth === monthYear && recordDay === 2;
+        console.log(`   📅 Record: ${record.dateTime} | Month: ${recordMonth} | Day: ${recordDay} | CurrentMonth: ${isCurrentMonth} | FromSecondOrLater: ${isFromSecondOrLater} | Include: ${isMatch}`);
+        
+        return isMatch;
       });
       
-      currentMonthRevenue = currentMonthRecord ? currentMonthRecord.monthlyRevenue : 0;
+      // Sum all matching records
+      currentMonthRevenue = currentMonthRecords.reduce((sum, record) => sum + record.monthlyRevenue, 0);
       
-      if (currentMonthRecord) {
-        console.log(`✅ Found record from 2nd: ${currentMonthRecord.dateTime} - Revenue: ${currentMonthRevenue} AED`);
-      } else {
-        console.log(`❌ No record found from 2nd of ${monthYear}`);
+      console.log(`✅ Found ${currentMonthRecords.length} records from month ${monthYear}`);
+      console.log(`💰 Total revenue from current month (2nd onwards): ${currentMonthRevenue} AED`);
+      
+      // If no records found, log warning
+      if (currentMonthRecords.length === 0) {
+        console.log(`⚠️ WARNING: No records found in Monthly Revenue table for ${monthYear}`);
+        console.log(`📋 Total records in table: ${sortedRecords.length}`);
+        if (sortedRecords.length > 0) {
+          console.log(`📋 Sample records:`, sortedRecords.slice(0, 3).map(r => ({ dateTime: r.dateTime, revenue: r.monthlyRevenue })));
+        }
       }
       
-      console.log(`📊 Month logic: Current month is IN PROGRESS (day < 2), revenue from 2nd: ${currentMonthRevenue} AED`);
+      console.log(`📊 Month logic: Today is day ${currentDay} (>= 2), showing total revenue from month: ${currentMonthRevenue} AED`);
+    } else {
+      console.log(`📊 Month logic: Today is day ${currentDay} (< 2), showing 0 (2nd hasn't arrived yet)`);
+      currentMonthRevenue = 0;
     }
     
     // Get latest (most recent) revenue
@@ -439,7 +464,7 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     
     console.log(`📅 Current month (${monthYear}): ${currentMonthRevenue} AED`);
     console.log(`📊 Latest record:`, latestRecord ? `${latestRecord.monthlyRevenue} AED (${latestRecord.dateTime})` : 'No data');
-    console.log(`📊 Month complete status: ${isCurrentMonthComplete ? 'COMPLETE' : 'IN PROGRESS'}`);
+    console.log(`📊 Month status: ${hasPassedSecondOfMonth ? 'PASSED 2ND' : 'BEFORE 2ND'}`);
     
     return {
       success: true,
@@ -450,7 +475,7 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
         latestRevenue: latestRecord?.monthlyRevenue || 0,
         latestDateTime: latestRecord?.dateTime || null,
         currentMonth: monthYear,
-        isCurrentMonthComplete: isCurrentMonthComplete,
+        hasPassedSecondOfMonth: hasPassedSecondOfMonth,
         currentDay: currentDay
       },
       timestamp: new Date().toISOString()
@@ -622,23 +647,25 @@ async function calculateQuarterlyRevenue() {
     const currentQuarterKey = `${currentYear}-Q${currentQuarter}`;
     const currentQuarterData = quarterlyData[currentQuarterKey];
     
-    // Calculate current quarter revenue (only if quarter is not complete)
+    // Calculate current quarter revenue (sum of all records in current quarter)
     let currentQuarterRevenue = 0;
     let isCurrentQuarterComplete = false;
     
     if (currentQuarterData) {
       const monthsInCurrentQuarter = currentQuarterData.months.length;
       
+      // Always show the sum of all records in current quarter
+      currentQuarterRevenue = currentQuarterData.totalRevenue;
+      
       // Check if current quarter is complete (has 3 months)
       if (monthsInCurrentQuarter >= 3) {
         isCurrentQuarterComplete = true;
         console.log(`📊 Current quarter Q${currentQuarter} is COMPLETE with ${monthsInCurrentQuarter} months`);
-        // When quarter is complete, start next quarter at 0
-        currentQuarterRevenue = 0;
       } else {
-        currentQuarterRevenue = currentQuarterData.totalRevenue;
         console.log(`📊 Current quarter Q${currentQuarter} is IN PROGRESS with ${monthsInCurrentQuarter} months`);
       }
+      
+      console.log(`💰 Current Quarter Total Revenue: AED ${currentQuarterRevenue.toLocaleString()}`);
     }
     
     // Sort quarters by year and quarter

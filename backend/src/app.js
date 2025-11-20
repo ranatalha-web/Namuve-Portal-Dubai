@@ -178,11 +178,22 @@ app.set('trust proxy', true);
 // Import routes
 const userRoutes = require("./routes/userRoutes");
 const revenueRoutes = require("./routes/revenueRoutes");
+console.log('📍 About to load dubaiRevenueRoutes...');
+let dubaiRevenueRoutes;
+try {
+  dubaiRevenueRoutes = require("./routes/dubaiRevenueRoutes");
+  console.log('✅ dubaiRevenueRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading dubaiRevenueRoutes:', error.message);
+  dubaiRevenueRoutes = null;
+}
 const teableRoutes = require("./routes/teableRoutes");
 const authRoutes = require("./routes/authRoutes");
 const occupancyRoutes = require("./routes/occupancyRoutes");
 const roomRoutes = require("../api/Room");
 const paymentRoutes = require("../api/payment");
+const dubaiPaymentRoutes = require("../api/dubaiPayment");
+const dubaiPaymentDatabaseRoutes = require("./routes/dubaiPaymentDatabaseRoutes");
 const paymentTeableRoutes = require("../api/payment-teable");
 const roomsTeableRoutes = require("../api/rooms-teable");
 const roomAvailabilityTeableRoutes = require("../api/room-availability-teable");
@@ -208,33 +219,36 @@ app.get("/", (req, res) => {
       health: "/api/health",
       hello: "/api/hello",
       users: "/api/users",
-      revenue: "/api/revenue",
-      revenueHealth: "/api/revenue/health",
+    //  revenue: "/api/revenue",
+      //revenueHealth: "/api/revenue/health",
+      dubaiRevenue: "/api/dubai-revenue",
+      dubaiRevenueListings: "/api/dubai-revenue/listings",
+      dubaiRevenueHealth: "/api/dubai-revenue/health",
       teable: "/api/teable",
       teableStatus: "/api/teable/status",
-      monthlyTarget: "/api/monthly-target",
+      //monthlyTarget: "/api/monthly-target",
       auth: "/api/auth",
-      rooms: "/api/rooms",
-      occupancy: "/api/occupancy",
-      revenueTable: "/api/revenue-table",
-      revenueTableData: "/api/revenue-table/revenue-data",
-      revenueTableFastDashboard: "/api/revenue-table/fast-dashboard-data",
-      revenueTablePopulate: "/api/revenue-table/populate-initial",
-      listingRevenue: "/api/listing-revenue",
-      listingRevenueData: "/api/listing-revenue/listing-revenue-data",
-      listingRevenuePopulate: "/api/listing-revenue/populate-listing-initial",
-      roomsTeable: "/api/rooms-teable",
-      roomsTeableData: "/api/rooms-teable/data",
-      roomsTeableSync: "/api/rooms-teable/sync",
-      roomsTeableTest: "/api/rooms-teable/test",
-      roomAvailabilityTeable: "/api/room-availability-teable",
-      roomAvailabilityTeableData: "/api/room-availability-teable/data",
-      roomAvailabilityTeableSync: "/api/room-availability-teable/sync",
-      roomAvailabilityTeableTest: "/api/room-availability-teable/test",
-      roomDetailsTeable: "/api/room-details-teable",
-      roomDetailsTeableData: "/api/room-details-teable/data",
-      roomDetailsTeableSync: "/api/room-details-teable/sync",
-      roomDetailsTeableTest: "/api/room-details-teable/test"
+      //rooms: "/api/rooms",
+      //occupancy: "/api/occupancy",
+      //revenueTable: "/api/revenue-table",
+      //revenueTableData: "/api/revenue-table/revenue-data",
+      //revenueTableFastDashboard: "/api/revenue-table/fast-dashboard-data",
+      //revenueTablePopulate: "/api/revenue-table/populate-initial",
+      //listingRevenue: "/api/listing-revenue",
+      //listingRevenueData: "/api/listing-revenue/listing-revenue-data",
+      //listingRevenuePopulate: "/api/listing-revenue/populate-listing-initial",
+     // roomsTeable: "/api/rooms-teable",
+     // roomsTeableData: "/api/rooms-teable/data",
+     // roomsTeableSync: "/api/rooms-teable/sync",
+      //roomsTeableTest: "/api/rooms-teable/test",
+      //roomAvailabilityTeable: "/api/room-availability-teable",
+      //roomAvailabilityTeableData: "/api/room-availability-teable/data",
+      //roomAvailabilityTeableSync: "/api/room-availability-teable/sync",
+      //roomAvailabilityTeableTest: "/api/room-availability-teable/test",
+      //roomDetailsTeable: "/api/room-details-teable",
+      //roomDetailsTeableData: "/api/room-details-teable/data",
+      //roomDetailsTeableSync: "/api/room-details-teable/sync",
+      //roomDetailsTeableTest: "/api/room-details-teable/test"
     }
   });
 });
@@ -242,24 +256,34 @@ app.get("/", (req, res) => {
 // Use routes
 app.use("/api/users", userRoutes);
 app.use("/api/revenue", revenueRoutes);
+console.log('📍 Registering dubai-revenue routes...');
+if (dubaiRevenueRoutes) {
+  app.use("/api/dubai-revenue", dubaiRevenueRoutes);
+  console.log('✅ dubai-revenue routes registered');
+} else {
+  console.error('❌ dubaiRevenueRoutes is null, not registering');
+}
 app.use("/api/teable", teableRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/occupancy", occupancyRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/dubai-payment", dubaiPaymentRoutes);
+app.use("/api/dubai-payment", dubaiPaymentDatabaseRoutes);
+app.use("/api/dubai-revenue", dubaiPaymentDatabaseRoutes);
 app.use("/api/payment-teable", paymentTeableRoutes);
 app.use("/api/rooms-teable", roomsTeableRoutes);
 app.use("/api/room-availability-teable", roomAvailabilityTeableRoutes);
 app.use("/api/room-details-teable", roomDetailsTeableRoutes);
 
 // RevenueTable API routes
-app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());
+//app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());
 
 // Listing Revenue API routes (same routes, different path)
-app.use("/api/listing-revenue", RevenueTableService.createAPIRoutes());
+//app.use("/api/listing-revenue", RevenueTableService.createAPIRoutes());
 
 // Monthly target route
-app.all("/api/monthly-target", monthlyTargetHandler);
+//app.all("/api/monthly-target", monthlyTargetHandler);
 
 // Teable scheduler control endpoints
 app.get("/api/teable-scheduler/status", (req, res) => {

@@ -962,10 +962,11 @@ async function fetchHostawayListings(listingId = null, includeActualCheckIns = t
   }
 }
 
-/**
- * GET /api/rooms/listings
- * Endpoint to get all listings
- */
+// ALL ROOM ROUTES COMMENTED OUT
+
+/*
+// GET /api/rooms/listings
+// Endpoint to get all listings
 router.get('/listings', async (req, res) => {
   try {
     console.log('🏠 Fetching Hostaway listings...');

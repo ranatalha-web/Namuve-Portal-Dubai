@@ -311,7 +311,7 @@ function AdminPanel() {
     
     setMessage({ 
       type: "success", 
-      text: `Monthly Target set successfully! Daily: ${formatNumber(calculatedTargets.dailyTarget)}, Quarterly: ${formatNumber(calculatedTargets.quarterlyTarget)}` 
+      text: `Monthly Revenue set successfully! Daily: AED ${formatNumber(calculatedTargets.dailyTarget)}, Quarterly: AED ${formatNumber(calculatedTargets.quarterlyTarget)}` 
     });
   };
 
@@ -971,7 +971,7 @@ function AdminPanel() {
                     fontSize: { xs: "0.875rem", sm: "1rem" },
                   }}
                 >
-                  Monthly Target
+                  Monthly Revenue
                 </MDButton>
               )}
             </MDBox>
@@ -1307,8 +1307,8 @@ function AdminPanel() {
                           </MDBox>
                         </MDBox>
 
-                        {/* Rooms Permissions */}
-                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        {/* Rooms Permissions - HIDDEN */}
+                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'none' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#7c3aed">
                             🏠 Rooms Access
                           </MDTypography>
@@ -1373,8 +1373,8 @@ function AdminPanel() {
                           </MDBox>
                         </MDBox>
 
-                        {/* Payment Permissions */}
-                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#fef3f2', borderRadius: '12px', border: '1px solid #ef4444' }}>
+                        {/* Payment Permissions - HIDDEN */}
+                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#fef3f2', borderRadius: '12px', border: '1px solid #ef4444', display: 'none' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#dc2626">
                             💳 Payment Access
                           </MDTypography>
@@ -1444,10 +1444,10 @@ function AdminPanel() {
                           </label>
                         </MDBox>
 
-                        {/* Monthly Target Permissions */}
+                        {/* Monthly Revenue Permissions */}
                         <MDBox mb={2} p={2} sx={{ backgroundColor: '#fef7ff', borderRadius: '12px', border: '1px solid #a855f7' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#9333ea">
-                            🎯 Monthly Target Access
+                            📊 Monthly Revenue Access
                           </MDTypography>
                           <MDBox display="flex" gap={2}>
                             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -1585,10 +1585,10 @@ function AdminPanel() {
                                       />
                                       <MDButton
                                         variant="contained"
-                                        color={editUsername !== originalUsername && editUsername.trim() ? "success" : "secondary"}
+                                        color={editUsername !== originalUsername && editUsername?.trim() ? "success" : "secondary"}
                                         size="small"
                                         onClick={() => handleUpdateUsername(user.username, editUsername)}
-                                        disabled={loading || !editUsername.trim() || editUsername === originalUsername}
+                                        disabled={loading || !editUsername?.trim() || editUsername === originalUsername}
                                         sx={{
                                           borderRadius: "6px",
                                           textTransform: "none",
@@ -2178,8 +2178,8 @@ function AdminPanel() {
                       </MDBox>
                     </Grid>
 
-                    {/* Rooms Permissions */}
-                    <Grid item xs={12} md={6}>
+                    {/* Rooms Permissions - HIDDEN */}
+                    <Grid item xs={12} md={6} sx={{ display: 'none' }}>
                       <MDBox p={3} sx={{ backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                         <MDTypography variant="h6" fontWeight="600" sx={{ color: "#374151", mb: 2 }}>
                           🏠 Rooms
@@ -2209,11 +2209,11 @@ function AdminPanel() {
                       </MDBox>
                     </Grid>
 
-                    {/* Monthly Target Permissions */}
+                    {/* Monthly Revenue Permissions */}
                     <Grid item xs={12} md={6}>
                       <MDBox p={3} sx={{ backgroundColor: "#fefce8", borderRadius: "12px", border: "1px solid #fde047" }}>
                         <MDTypography variant="h6" fontWeight="600" sx={{ color: "#ca8a04", mb: 2 }}>
-                          🎯 Monthly Target
+                          📊 Monthly Revenue
                         </MDTypography>
                         <MDBox display="flex" flexDirection="column">
                           <FormControlLabel
@@ -2240,8 +2240,8 @@ function AdminPanel() {
                       </MDBox>
                     </Grid>
 
-                    {/* Payment Permissions */}
-                    <Grid item xs={12} md={6}>
+                    {/* Payment Permissions - HIDDEN */}
+                    <Grid item xs={12} md={6} sx={{ display: 'none' }}>
                       <MDBox p={3} sx={{ backgroundColor: "#fef3f2", borderRadius: "12px", border: "1px solid #ef4444" }}>
                         <MDTypography variant="h6" fontWeight="600" sx={{ color: "#dc2626", mb: 2 }}>
                           💳 Payment
@@ -2706,13 +2706,13 @@ function AdminPanel() {
                         mb={1}
                         sx={{ color: "#1e293b" }}
                       >
-                        Monthly Target Setup
+                        Monthly Revenue Setup
                       </MDTypography>
                       <MDTypography 
                         variant="body1" 
                         sx={{ color: "#64748b", fontSize: "1rem" }}
                       >
-                        Set monthly target amount and calendar dates to calculate daily and quarterly targets
+                        Set monthly revenue amount and calendar dates to calculate daily and quarterly revenue
                       </MDTypography>
                     </MDBox>
                   </MDBox>
@@ -2744,7 +2744,7 @@ function AdminPanel() {
                                   gap: 1,
                                 }}
                               >
-                                💰 Monthly Target Amount
+                                💰 Monthly Revenue Amount (AED)
                               </MDTypography>
                               <MDInput
                                 type="text"
@@ -2795,7 +2795,7 @@ function AdminPanel() {
                                   gap: 1,
                                 }}
                               >
-                                📅 Target Period
+                                📅 Revenue Period
                               </MDTypography>
                               <Grid container spacing={3}>
                                 <Grid item xs={6}>
@@ -3057,7 +3057,7 @@ function AdminPanel() {
                               mb={3}
                               sx={{ color: "#1f2937" }}
                             >
-                              Calculated Targets
+                              Calculated Revenue
                             </MDTypography>
 
                             {/* Monthly Target Display */}
@@ -3088,11 +3088,11 @@ function AdminPanel() {
                                   🎯
                                 </MDBox>
                                 <MDTypography variant="h6" fontWeight="600" sx={{ color: "#667eea" }}>
-                                  Monthly Target
+                                  Monthly Revenue
                                 </MDTypography>
                               </MDBox>
                               <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                {formatNumber(calculatedTargets.monthlyTarget)}
+                                AED {formatNumber(calculatedTargets.monthlyTarget)}
                               </MDTypography>
                               <MDTypography variant="caption" sx={{ color: "#64748b" }}>
                                 {monthlyTarget.selectedMonth && monthlyTarget.selectedYear ? 
@@ -3130,11 +3130,11 @@ function AdminPanel() {
                                   📅
                                 </MDBox>
                                 <MDTypography variant="h6" fontWeight="600" sx={{ color: "#16a34a" }}>
-                                  Daily Target
+                                  Daily Revenue
                                 </MDTypography>
                               </MDBox>
                               <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                {formatNumber(calculatedTargets.dailyTarget)}
+                                AED {formatNumber(calculatedTargets.dailyTarget)}
                               </MDTypography>
                               <MDTypography variant="caption" sx={{ color: "#64748b" }}>
                                 Based on {calculatedTargets.workingDays} days
@@ -3169,11 +3169,11 @@ function AdminPanel() {
                                   📊
                                 </MDBox>
                                 <MDTypography variant="h6" fontWeight="600" sx={{ color: "#f59e0b" }}>
-                                  Quarterly Target
+                                  Quarterly Revenue
                                 </MDTypography>
                               </MDBox>
                               <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                {formatNumber(calculatedTargets.quarterlyTarget)}
+                                AED {formatNumber(calculatedTargets.quarterlyTarget)}
                               </MDTypography>
                               <MDTypography variant="caption" sx={{ color: "#64748b" }}>
                                 3 months projection
@@ -3199,7 +3199,7 @@ function AdminPanel() {
                           mt: 3,
                         }}
                       >
-                        Set Monthly Target
+                        Set Monthly Revenue
                       </MDButton>
                     </MDBox>
                 </Card>

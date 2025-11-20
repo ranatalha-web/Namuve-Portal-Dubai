@@ -511,4 +511,56 @@ router.post('/replace-with-specific', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/teable/monthly-revenue
+ * Fetch all monthly revenue records from Teable and sum them
+ */
+router.get('/monthly-revenue', async (req, res) => {
+  try {
+    const dubaiMonthlyTeableService = require('../../services/dubaiMonthlyTeable');
+    
+    console.log('📊 API REQUEST: GET /api/teable/monthly-revenue');
+    
+    const result = await dubaiMonthlyTeableService.fetchMonthlyRevenueRecords();
+    
+    res.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching monthly revenue:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/teable/quarterly-revenue
+ * Calculate quarterly revenue from monthly records
+ */
+router.get('/quarterly-revenue', async (req, res) => {
+  try {
+    const dubaiMonthlyTeableService = require('../../services/dubaiMonthlyTeable');
+    
+    console.log('📊 API REQUEST: GET /api/teable/quarterly-revenue');
+    
+    const result = await dubaiMonthlyTeableService.calculateQuarterlyRevenue();
+    
+    res.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('❌ Error calculating quarterly revenue:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

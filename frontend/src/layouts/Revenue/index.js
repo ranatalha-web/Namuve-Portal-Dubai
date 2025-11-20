@@ -58,6 +58,24 @@ import { API_ENDPOINTS } from "config/api";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+// Suppress 404 errors from console
+const originalError = console.error;
+const originalWarn = console.warn;
+console.error = function(...args) {
+  const message = args[0]?.toString() || '';
+  if (message.includes('404') || message.includes('Failed to load resource')) {
+    return; // Suppress 404 errors
+  }
+  originalError.apply(console, args);
+};
+console.warn = function(...args) {
+  const message = args[0]?.toString() || '';
+  if (message.includes('404') || message.includes('Failed to load resource')) {
+    return; // Suppress 404 warnings
+  }
+  originalWarn.apply(console, args);
+};
+
 // Simple Revenue Chart Component
 function SimpleChart({ chartData }) {
   if (!chartData || chartData.length === 0) {
@@ -90,12 +108,12 @@ function SimpleChart({ chartData }) {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <MDTypography variant="h6" sx={{ mb: 3, textAlign: "center", color: "#1e293b" }}>
+    <div style={{ padding: "20px", paddingBottom: "10px" }}>
+      <MDTypography variant="h6" sx={{ mb: 2, textAlign: "center", color: "#1e293b" }}>
         Revenue Analytics
       </MDTypography>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {chartData.map((item, index) => (
           <div key={index} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{ 
@@ -133,9 +151,7 @@ function SimpleChart({ chartData }) {
                   color: "#ffffff",
                   textShadow: "0 1px 2px rgba(0,0,0,0.5)"
                 }}>
-                  Rs{item.value >= 1000000 ? `${(item.value/1000000).toFixed(1)}M` : 
-                      item.value >= 1000 ? `${Math.round(item.value/1000)}K` : 
-                      Math.round(item.value)}
+                  AED {item.value.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 })}
                 </span>
               </div>
             </div>
@@ -523,7 +539,10 @@ RevenueChartComponent.propTypes = {
 };
 
 // New Improved Listing Revenue Component
-function ImprovedListingRevenue({ revenueData, formatCurrency }) {
+function ImprovedListingRevenue({ revenueData, formatCurrency, formatCurrencyComplete }) {
+  console.log('🏠 ImprovedListingRevenue received revenueData:', revenueData);
+  console.log('🏠 categoryRevenue:', revenueData?.categoryRevenue);
+  
   const categories = revenueData?.categoryRevenue || {
     Studio: 0,
     "1BR": 0,
@@ -532,13 +551,15 @@ function ImprovedListingRevenue({ revenueData, formatCurrency }) {
     "3BR": 0,
   };
 
+  console.log('🏠 Final categories object:', categories);
+
   const categoryData = [
     { name: "Studio", value: categories.Studio || 0, color: "#3b82f6", icon: "🏠" },
     { name: "1BR", value: categories["1BR"] || 0, color: "#8b5cf6", icon: "🏠" },
     { name: "2BR", value: categories["2BR"] || 0, color: "#06d6a0", icon: "🏠" },
-    { name: "2BR Premium", value: categories["2BR Premium"] || 0, color: "#f59e0b", icon: "⭐" },
-    { name: "3BR", value: categories["3BR"] || 0, color: "#ef4444", icon: "🏠" },
   ];
+
+  console.log('🏠 categoryData:', categoryData);
 
   const totalRevenue = Object.values(categories).reduce(
     (sum, val) => sum + (parseFloat(val) || 0),
@@ -620,7 +641,7 @@ function ImprovedListingRevenue({ revenueData, formatCurrency }) {
                 },
               }}
             >
-              Category-wise revenue breakdown • Total: {formatCurrency(totalRevenue)}
+              Category-wise revenue breakdown • Total: {formatCurrencyComplete(totalRevenue)}
             </MDTypography>
           </MDBox>
           <MDBox
@@ -660,8 +681,8 @@ function ImprovedListingRevenue({ revenueData, formatCurrency }) {
           display="grid"
           gap={1.5}
           sx={{
-            // Desktop: 5 columns in one row
-            gridTemplateColumns: "repeat(5, 1fr)",
+            // Desktop: 3 columns in one row (fill space with 3 cards)
+            gridTemplateColumns: "repeat(3, 1fr)",
 
             // Tablet: 3 columns, 2 rows
             "@media (max-width: 900px)": {
@@ -801,7 +822,7 @@ function ImprovedListingRevenue({ revenueData, formatCurrency }) {
                     },
                   }}
                 >
-                  {formatCurrency(parseFloat(category.value) || 0)}
+                  {formatCurrencyComplete(parseFloat(category.value) || 0)}
                 </MDTypography>
               </MDBox>
             </MDBox>
@@ -817,6 +838,7 @@ function ImprovedListingRevenue({ revenueData, formatCurrency }) {
 ImprovedListingRevenue.propTypes = {
   revenueData: PropTypes.object,
   formatCurrency: PropTypes.func.isRequired,
+  formatCurrencyComplete: PropTypes.func.isRequired,
 };
 
 // Mobile Responsive Payment Details Card Component
@@ -978,36 +1000,6 @@ function MobilePaymentCard({ reservation, index }) {
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
             {new Date(reservation.checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </MDTypography>
-        </MDBox>
-        <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Actual Check-in Time
-          </MDTypography>
-          <MDTypography 
-            variant="body2" 
-            fontWeight="medium"
-            sx={{
-              color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#374151',
-              fontStyle: reservation.actualCheckInTime === 'N/A' ? 'italic' : 'normal'
-            }}
-          >
-            {reservation.actualCheckInTime}
-          </MDTypography>
-        </MDBox>
-        <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Actual Check-out Time
-          </MDTypography>
-          <MDTypography 
-            variant="body2" 
-            fontWeight="medium"
-            sx={{
-              color: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? '#9ca3af' : '#374151',
-              fontStyle: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? 'italic' : 'normal'
-            }}
-          >
-            {reservation.actualCheckOutTime || 'N/A'}
           </MDTypography>
         </MDBox>
         <MDBox>
@@ -1300,85 +1292,6 @@ function PaymentKanbanView({ reservations }) {
                         </MDTypography>
                       </MDBox>
                     </MDBox>
-                    
-                    {/* Check-in/out Times */}
-                    <MDBox 
-                      display="grid" 
-                      gridTemplateColumns="1fr 1fr" 
-                      gap={2}
-                      mb={2}
-                    >
-                      <MDBox 
-                        sx={{
-                          backgroundColor: '#dcfce7',
-                          borderRadius: '8px',
-                          p: 1.5,
-                          border: '1px solid #bbf7d0'
-                        }}
-                      >
-                        <MDTypography 
-                          variant="caption" 
-                          sx={{ 
-                            display: 'block',
-                            color: '#166534',
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            mb: 0.5
-                          }}
-                        >
-                          ⏰ Check-in Time
-                        </MDTypography>
-                        <MDTypography 
-                          variant="body2" 
-                          sx={{
-                            display: 'block',
-                            fontWeight: 600,
-                            color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#1e293b',
-                            fontSize: '0.7rem',
-                            fontStyle: reservation.actualCheckInTime === 'N/A' ? 'italic' : 'normal'
-                          }}
-                        >
-                          {reservation.actualCheckInTime || 'N/A'}
-                        </MDTypography>
-                      </MDBox>
-                      <MDBox 
-                        sx={{
-                          backgroundColor: '#fef3c7',
-                          borderRadius: '8px',
-                          p: 1.5,
-                          border: '1px solid #fde68a'
-                        }}
-                      >
-                        <MDTypography 
-                          variant="caption" 
-                          sx={{ 
-                            display: 'block',
-                            color: '#92400e',
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            mb: 0.5
-                          }}
-                        >
-                          ⏰ Check-out Time
-                        </MDTypography>
-                        <MDTypography 
-                          variant="body2" 
-                          sx={{
-                            display: 'block',
-                            fontWeight: 600,
-                            color: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? '#9ca3af' : '#1e293b',
-                            fontSize: '0.7rem',
-                            fontStyle: (reservation.actualCheckOutTime === 'N/A' || !reservation.actualCheckOutTime) ? 'italic' : 'normal'
-                          }}
-                        >
-                          {reservation.actualCheckOutTime || 'N/A'}
-                        </MDTypography>
-                      </MDBox>
-                    </MDBox>
 
                     {/* Payment Information */}
                     <MDBox 
@@ -1532,6 +1445,7 @@ function Revenue() {
   const [reservations, setReservations] = useState([]);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [reservationError, setReservationError] = useState(null);
+  const [allDataReady, setAllDataReady] = useState(false); // Starts false, set to true only when Dubai data loads
   
   // View toggle state for Payment Details
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'kanban'
@@ -1564,72 +1478,122 @@ function Revenue() {
         console.log('⚡ Starting ultra-fast data fetch...');
         const startTime = Date.now();
         
-        // Use the new ultra-fast endpoint that gets all data in one call
-        const [dashboardResponse, monthlyResponse] = await Promise.all([
-          fetch(API_ENDPOINTS.REVENUE_TABLE_FAST_DASHBOARD),
-          fetch(API_ENDPOINTS.MONTHLY_TARGET)
+        // Fetch all data in parallel with timeouts
+        const fetchWithTimeout = (url, timeout = 5000) => {
+          return Promise.race([
+            fetch(url).catch(() => null),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout: ${url}`)), timeout)
+            )
+          ]).catch(() => null);
+        };
+        
+        console.log('📡 Fetching all data...');
+        const [dubaiResponse, monthlyRevenueResponse, quarterlyRevenueResponse] = await Promise.all([
+          fetchWithTimeout(API_ENDPOINTS.DUBAI_REVENUE, 5000),
+          fetchWithTimeout(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE, 3000),
+          fetchWithTimeout(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE, 3000)
         ]);
+        
+        // Skip dashboard and monthly endpoints that don't exist
+        const dashboardResponse = null;
+        const monthlyResponse = null;
 
-        const [dashboardResult, monthlyResult] = await Promise.all([
-          dashboardResponse.json(),
-          monthlyResponse.json()
-        ]);
+        // Parse responses
+        let dashboardResult = { success: false };
+        let monthlyResult = { success: false };
+        let dubaiResult = { success: false };
+        let monthlyRevenueResult = { success: false };
+        let quarterlyRevenueResult = { success: false };
+        
+        if (dashboardResponse) {
+          try { dashboardResult = await dashboardResponse.json(); } catch (e) { console.warn('Dashboard parse error'); }
+        }
+        if (monthlyResponse) {
+          try { monthlyResult = await monthlyResponse.json(); } catch (e) { console.warn('Monthly parse error'); }
+        }
+        if (dubaiResponse) {
+          try { dubaiResult = await dubaiResponse.json(); } catch (e) { console.warn('Dubai parse error'); }
+        }
+        if (monthlyRevenueResponse) {
+          try { monthlyRevenueResult = await monthlyRevenueResponse.json(); } catch (e) { console.warn('Monthly revenue parse error'); }
+        }
+        if (quarterlyRevenueResponse) {
+          try { quarterlyRevenueResult = await quarterlyRevenueResponse.json(); } catch (e) { console.warn('Quarterly revenue parse error'); }
+        }
 
         console.log(`⚡ Dashboard data loaded in: ${Date.now() - startTime}ms`);
         console.log('📊 Dashboard result:', dashboardResult);
+        console.log('🏙️ Dubai revenue result:', dubaiResult);
+        console.log('📅 Monthly revenue result:', monthlyRevenueResult);
+        console.log('📊 Quarterly revenue result:', quarterlyRevenueResult);
 
-        if (dashboardResult.success && dashboardResult.data) {
-          // Set revenue data from the ultra-fast endpoint
-          if (dashboardResult.data.revenue) {
-            // Transform data to match expected frontend format
-            const revenueWithCategories = {
-              ...dashboardResult.data.revenue,
-              categoryRevenue: {},
-              // Map backend field names to frontend expected names
-              quarterlyAchievedRevenue: dashboardResult.data.revenue.quarterlyTargetAchieved,
-              monthlyAchievedRevenue: dashboardResult.data.revenue.monthlyTargetAchieved,
-              dailyAchievedRevenue: dashboardResult.data.revenue.dailyTargetAchieved
-            };
-            
-            // Add listing revenue data if available
-            if (dashboardResult.data.listingRevenue) {
-              const listing = dashboardResult.data.listingRevenue;
-              revenueWithCategories.categoryRevenue = {
-                "Studio": parseFloat(listing.studio || 0),
-                "1BR": parseFloat(listing.oneBR || 0),
-                "2BR": parseFloat(listing.twoBR || 0),
-                "2BR Premium": parseFloat(listing.twoBRPremium || 0),
-                "3BR": parseFloat(listing.threeBR || 0)
-              };
-              console.log('🏠 Listing revenue data processed:', revenueWithCategories.categoryRevenue);
-            }
-            
-            console.log('🎯 Quarterly data mapped:', {
-              backend: dashboardResult.data.revenue.quarterlyTargetAchieved,
-              frontend: revenueWithCategories.quarterlyAchievedRevenue
-            });
-            
-            setRevenueData(revenueWithCategories);
-          }
+        // Always proceed even if dashboard fails - use Dubai data instead
+        if (dubaiResult.success && dubaiResult.data) {
+          console.log('✅ Using Dubai revenue data');
+          // Transform data to match expected frontend format
+          const revenueWithCategories = {
+            categoryRevenue: dubaiResult.data.categoryRevenue || {},
+            dubaiRevenue: {
+              actualRevenue: dubaiResult.data.actualRevenue || 0,
+              categoryRevenue: dubaiResult.data.categoryRevenue || {}
+            },
+            quarterlyAchievedRevenue: quarterlyRevenueResult?.data?.currentQuarterRevenue || 0,
+            monthlyAchievedRevenue: monthlyRevenueResult?.data?.currentMonthRevenue || 0,
+            dailyAchievedRevenue: dubaiResult.data.actualRevenue || 0
+          };
           
-          // Log the load time from backend
-          if (dashboardResult.loadTime) {
-            console.log(`🚀 Backend processed data in: ${dashboardResult.loadTime}`);
-          }
+          setRevenueData(revenueWithCategories);
+          console.log('✅ Revenue data set from Dubai endpoint');
         } else {
-          // Fallback to old endpoint if ultra-fast fails
-          console.log('⚠️ Ultra-fast endpoint failed, falling back to old endpoint...');
-          const revenueResponse = await fetch(API_ENDPOINTS.REVENUE);
-          const revenueResult = await revenueResponse.json();
-          
-          if (revenueResult.success) {
-            setRevenueData(revenueResult.data);
-          }
+          // Dubai endpoint failed, use default empty data
+          console.log('⚠️ Dubai revenue endpoint failed, using default data');
         }
 
         if (monthlyResult.success) {
           setMonthlyData(monthlyResult.data);
         }
+        
+        // Combine monthly and quarterly revenue data into single state update
+        let combinedMonthlyData = { ...monthlyResult.data };
+        
+        // Add monthly revenue data from Teable if available
+        if (monthlyRevenueResult.success && monthlyRevenueResult.data) {
+          console.log('📅 Monthly revenue data from Teable:', monthlyRevenueResult.data);
+          console.log('📅 Current month revenue:', monthlyRevenueResult.data.currentMonthRevenue);
+          console.log('📅 Is current month complete:', monthlyRevenueResult.data.isCurrentMonthComplete);
+          console.log('📅 Current day:', monthlyRevenueResult.data.currentDay);
+          console.log('📅 All records:', monthlyRevenueResult.data.records);
+          // Merge monthly revenue data
+          combinedMonthlyData = {
+            ...combinedMonthlyData,
+            ...monthlyRevenueResult.data
+          };
+        }
+        
+        // Add quarterly revenue data from Teable if available
+        if (quarterlyRevenueResult.success && quarterlyRevenueResult.data && quarterlyRevenueResult.data.data) {
+          const quarterlyData = quarterlyRevenueResult.data.data;
+          console.log('📊 Quarterly revenue data from Teable:', quarterlyData);
+          console.log('📊 Current quarter revenue:', quarterlyData.currentQuarterRevenue);
+          console.log('📊 Current quarter:', quarterlyData.currentQuarter);
+          console.log('📊 Current year:', quarterlyData.currentYear);
+          console.log('📊 Is current quarter complete:', quarterlyData.isCurrentQuarterComplete);
+          console.log('📊 Quarter breakdown:', quarterlyData.quarterlyBreakdown);
+          
+          // Add quarterly revenue data to combined data
+          combinedMonthlyData = {
+            ...combinedMonthlyData,
+            quarterlyRevenue: quarterlyData.currentQuarterRevenue,
+            currentQuarter: quarterlyData.currentQuarter,
+            currentYear: quarterlyData.currentYear,
+            isCurrentQuarterComplete: quarterlyData.isCurrentQuarterComplete,
+            quarterlyBreakdown: quarterlyData.quarterlyBreakdown
+          };
+        }
+        
+        // Set all monthly data at once
+        setMonthlyData(combinedMonthlyData);
 
         setError(null);
       } catch (err) {
@@ -1643,43 +1607,151 @@ function Revenue() {
     fetchData();
   }, []);
 
-  // Fetch today's reservations - FAST with Teable cache
+  // Fetch today's reservations - Dubai (UAE) listing revenue
   const fetchTodayReservations = async () => {
     try {
       setReservationLoading(true);
       setReservationError(null);
       
-      console.log('⚡ Fetching payment data from Teable cache...');
+      console.log('🇦🇪 Loading Dubai data from database (FAST)...');
       const startTime = Date.now();
       
-      // Use fast endpoint that returns cached data immediately
-      const response = await fetch(API_ENDPOINTS.PAYMENT_TEABLE_FAST);
-      const data = await response.json();
+      // Step 1: Trigger sync in BACKGROUND (fire-and-forget, don't wait)
+      console.log('🔄 Triggering sync in background...');
+      fetch(API_ENDPOINTS.DUBAI_PAYMENT_TODAY_RESERVATIONS).catch(() => null);
+      
+      // Step 2: Load ONLY database endpoints (skip monthly/quarterly for speed)
+      console.log('📊 Fetching from database endpoints...');
+      const [paymentResponse, achievedRevenueResponse, listingRevenueResponse] = await Promise.all([
+        fetch(API_ENDPOINTS.DUBAI_PAYMENT_DATABASE_DETAILS),
+        fetch(API_ENDPOINTS.DUBAI_REVENUE_DATABASE_ACHIEVED),
+        fetch(API_ENDPOINTS.DUBAI_REVENUE_DATABASE_LISTING)
+      ]);
+      
+      // Step 3: Load monthly/quarterly with timeout (non-blocking)
+      let monthlyRevenueResponse, quarterlyRevenueResponse;
+      try {
+        const monthlyPromise = fetch(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE).catch(() => null);
+        const quarterlyPromise = fetch(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE).catch(() => null);
+        
+        // Use Promise.race with timeout
+        monthlyRevenueResponse = await Promise.race([
+          monthlyPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+        ]).catch(() => new Response(JSON.stringify({ success: false, data: { currentMonthRevenue: 0 } })));
+        
+        quarterlyRevenueResponse = await Promise.race([
+          quarterlyPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+        ]).catch(() => new Response(JSON.stringify({ success: false, data: { currentQuarterRevenue: 0 } })));
+      } catch (err) {
+        // Silently ignore errors
+        monthlyRevenueResponse = new Response(JSON.stringify({ success: false, data: { currentMonthRevenue: 0 } }));
+        quarterlyRevenueResponse = new Response(JSON.stringify({ success: false, data: { currentQuarterRevenue: 0 } }));
+      }
+      
+      const paymentData = await paymentResponse.json();
+      const achievedRevenueData = await achievedRevenueResponse.json();
+      const listingRevenueData = await listingRevenueResponse.json();
+      const monthlyRevenueData = await monthlyRevenueResponse.json();
+      const quarterlyRevenueData = await quarterlyRevenueResponse.json();
       
       const loadTime = Date.now() - startTime;
       
-      if (data.success) {
-        setReservations(data.data);
-        console.log(`⚡ Loaded ${data.data.length} reservations in ${loadTime}ms from ${data.source}`);
-        console.log(`📝 ${data.message || 'Data loaded successfully'}`);
+      // Check if requests were successful
+      if (paymentData.success && achievedRevenueData.success && listingRevenueData.success) {
+        console.log(`✅ Loaded all Dubai data from DATABASE in ${loadTime}ms`);
+        console.log(`💰 Listing Revenue Breakdown:`, listingRevenueData.data);
+        console.log(`💰 Achieved Revenue:`, achievedRevenueData.data);
+        console.log(`✅ Loaded ${paymentData.data.length} Dubai payment reservations`);
+        
+        // Update revenueData with category breakdown from database
+        const categoryBreakdown = {
+          'Studio': listingRevenueData.data?.studio || 0,
+          '1BR': listingRevenueData.data?.oneBR || 0,
+          '2BR': listingRevenueData.data?.twoBR || 0
+        };
+        
+        const totalRevenue = listingRevenueData.data?.total || 0;
+        
+        console.log('🔍 Setting categoryRevenue:', categoryBreakdown);
+        
+        setRevenueData(prev => {
+          const updated = {
+            ...(prev || {}),
+            categoryRevenue: categoryBreakdown,
+            dubaiRevenue: {
+              actualRevenue: totalRevenue,
+              categoryRevenue: categoryBreakdown
+            },
+            data: {
+              categoryRevenue: categoryBreakdown,
+              totalRevenue: totalRevenue,
+              actualRevenue: totalRevenue
+            }
+          };
+          console.log('📊 Updated revenueData:', updated);
+          return updated;
+        });
+        
+        // Set reservations from Dubai payment API
+        setReservations(paymentData.data);
+        console.log(`📝 Dubai data loaded successfully`);
+        
+        // Mark all data as ready
+        setAllDataReady(true);
+        
+        console.log(`✅ Frontend loaded successfully in ${loadTime}ms`);
+        
+        // Store to Teable in BACKGROUND (don't wait for it)
+        console.log(`🔄 Background: Storing achieved revenue to database...`);
+        
+        const dailyAchieved = achievedRevenueData.data?.dailyAchieved || 0;
+        const monthlyAchieved = achievedRevenueData.data?.monthlyAchieved || 0;
+        const quarterlyAchieved = achievedRevenueData.data?.quarterlyAchieved || 0;
+        
+        const storePayload = {
+          dailyAchieved: Math.round(parseFloat(dailyAchieved) * 100) / 100 || 0,
+          monthlyAchieved: Math.round(parseFloat(monthlyAchieved) * 100) / 100 || 0,
+          quarterlyAchieved: Math.round(parseFloat(quarterlyAchieved) * 100) / 100 || 0,
+          studio: Math.round(parseFloat(listingRevenueData.data?.studio || 0) * 100) / 100 || 0,
+          oneBR: Math.round(parseFloat(listingRevenueData.data?.oneBR || 0) * 100) / 100 || 0,
+          twoBR: Math.round(parseFloat(listingRevenueData.data?.twoBR || 0) * 100) / 100 || 0,
+          total: Math.round(parseFloat(listingRevenueData.data?.total || 0) * 100) / 100 || 0
+        };
+        
+        // Fire and forget - don't await
+        fetch(API_ENDPOINTS.DUBAI_REVENUE_STORE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(storePayload)
+        }).catch(err => {
+          console.warn(`⚠️ Background store error:`, err.message);
+        });
       } else {
-        setReservationError(data.message || 'Failed to fetch reservations');
-        console.error('❌ Failed to fetch reservations:', data.error);
+        const errorMsg = !revenueData.success 
+          ? revenueData.message || 'Failed to fetch Dubai revenue data'
+          : paymentData.message || 'Failed to fetch Dubai payment data';
+        setReservationError(errorMsg);
+        console.error('❌ Failed to fetch Dubai data:', errorMsg);
+        setAllDataReady(false);
       }
     } catch (err) {
       setReservationError(`Unable to connect to server: ${err.message}`);
-      console.error('❌ Reservation fetch error:', err);
+      console.error('❌ Dubai data fetch error:', err);
+      setAllDataReady(false);
     } finally {
       setReservationLoading(false);
     }
   };
 
-  // Load reservations after main data loads (non-blocking)
+  // Load reservations after main data loads - no delay, load immediately
   useEffect(() => {
     if (!loading && isAuthenticated && (isAdmin() || (isCustom() && (hasPermission('revenue', 'view') || hasPermission('revenue', 'complete'))))) {
-      setTimeout(() => fetchTodayReservations(), 100);
+      fetchTodayReservations();
     }
   }, [loading, isAuthenticated, isAdmin, isCustom, hasPermission]);
+
 
   // Show loading while checking authentication
   if (authLoading) {
@@ -1738,108 +1810,48 @@ function Revenue() {
     }
   };
 
-  // FULLY DYNAMIC CHART DATA - NO HARDCODED VALUES
-  const getChartData = () => {
-    // ABSOLUTE CHECK: Return empty if no backend connection
-    // console.log("🔍 Backend Connection Check:");
-    // console.log("- revenueData exists:", !!revenueData);
-    // console.log("- monthlyData exists:", !!monthlyData);
-    // console.log("- Raw actualRevenue from backend:", revenueData?.actualRevenue);
-    // console.log("- Raw actualRevenue type:", typeof revenueData?.actualRevenue);
-
-    if (!revenueData && !monthlyData) {
-      // console.log("❌ NO BACKEND CONNECTION AT ALL - RETURNING EMPTY");
-      return [];
-    }
-
-    // Get values ONLY if they exist and are valid numbers
-    const actualRevenue =
-      revenueData?.actualRevenue && !isNaN(parseFloat(revenueData.actualRevenue))
-        ? parseFloat(revenueData.actualRevenue)
-        : null;
-    const expectedRevenue =
-      revenueData?.expectedRevenue &&
-      !isNaN(parseFloat(revenueData.expectedRevenue)) &&
-      parseFloat(revenueData.expectedRevenue) > 0
-        ? parseFloat(revenueData.expectedRevenue)
-        : null;
-    const monthlyAchieved =
-      monthlyData?.totalMonthlyAchieved &&
-      !isNaN(monthlyData.totalMonthlyAchieved) &&
-      monthlyData.totalMonthlyAchieved > 0
-        ? monthlyData.totalMonthlyAchieved
-        : null;
-    const quarterlyAchievedRevenue =
-      revenueData?.quarterlyAchievedRevenue &&
-      !isNaN(parseFloat(revenueData.quarterlyAchievedRevenue)) &&
-      parseFloat(revenueData.quarterlyAchievedRevenue) > 0
-        ? parseFloat(revenueData.quarterlyAchievedRevenue)
-        : null;
-
-    // console.log("🔥 EXTRACTED REAL VALUES:");
-    // console.log("- Actual Revenue:", actualRevenue);
-    // console.log("- Expected Revenue:", expectedRevenue);
-    // console.log("- Monthly Achieved:", monthlyAchieved);
-    // console.log("- Quarterly Achieved:", quarterlyAchievedRevenue);
-
-    // Build array ONLY with real values
-    const validBars = [];
-
-    if (actualRevenue !== null) {
-      validBars.push({
-        label: "Actual Revenue",
-        value: actualRevenue,
-        displayValue: actualRevenue,
-        color: "#A67C8A",
-      });
-    }
-    if (expectedRevenue !== null) {
-      validBars.push({
-        label: "Expected Revenue",
-        value: expectedRevenue,
-        displayValue: expectedRevenue,
-        color: "#45B7D1",
-      });
-      validBars.push({
-        label: "Achieve Target",
-        value: expectedRevenue,
-        displayValue: expectedRevenue,
-        color: "#E85A4F",
-      });
-    }
-    if (monthlyAchieved !== null) {
-      validBars.push({
-        label: "Monthly Achieved",
-        value: monthlyAchieved,
-        displayValue: monthlyAchieved,
-        color: "#4ECDC4",
-      });
-    }
-    if (quarterlyAchievedRevenue !== null) {
-      validBars.push({
-        label: "Quarterly Achieved",
-        value: quarterlyAchievedRevenue,
-        displayValue: quarterlyAchievedRevenue,
-        color: "#6B73B8",
-      });
-    }
-
-    if (validBars.length === 0) {
-      // console.log("❌ NO VALID BARS - ALL VALUES ARE NULL/ZERO");
-      return [];
-    }
-
-    // console.log("✅ RETURNING", validBars.length, "VALID BARS");
-    return validBars;
+  // Format currency with complete value (no rounding to K/M)
+  const formatCurrencyComplete = (value) => {
+    const numValue = parseFloat(value) || 0;
+    return `AED ${numValue.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 })}`;
   };
 
-  const chartData = getChartData();
-  // console.log(
-  //   "🔍 Chart Data Values:",
-  //   chartData.map((item) => ({ label: item.label, value: item.value }))
-  // );
-  const maxValue = Math.max(...chartData.map((item) => item.value), 1);
-  // console.log("📊 Max Value:", maxValue);
+  // FULLY DYNAMIC CHART DATA - NO HARDCODED VALUES
+  const getChartData = () => {
+    // Get target values for the 3 bars: Daily Target, Monthly Target, Quarterly Target
+    if (!revenueData && !monthlyData) {
+      return [];
+    }
+
+    // Get target values
+    const dailyTarget = targetRevenue || 0; // Daily target
+    const monthlyTargetValue = monthlyData?.monthlyTarget || 0; // Monthly target
+    const quarterlyTargetValue = quarterlyTarget || 0; // Quarterly target
+
+    // Build array with 3 bars: Daily, Monthly, Quarterly targets
+    const validBars = [
+      {
+        label: "Daily Target",
+        value: dailyTarget,
+        displayValue: dailyTarget,
+        color: "#A67C8A", // Color 1
+      },
+      {
+        label: "Monthly Target",
+        value: monthlyTargetValue,
+        displayValue: monthlyTargetValue,
+        color: "#45B7D1", // Color 2
+      },
+      {
+        label: "Quarterly Target",
+        value: quarterlyTargetValue,
+        displayValue: quarterlyTargetValue,
+        color: "#6B73B8", // Color 5
+      },
+    ];
+
+    return validBars;
+  };
 
   // Revenue cards data based on backend response - Updated
   const getRevenueCards = () => {
@@ -1863,27 +1875,27 @@ function Revenue() {
     const dynamicQuarterlyTarget = adminMonthlyTarget ? adminMonthlyTarget * 3 : null;
     
     // Use dynamic targets if available, otherwise fallback to backend/default values
-    const targetRevenue = dynamicDailyTarget || (revenueData ? parseFloat(revenueData.targetRevenue) || 583000 : 583000);
-    const quarterlyTarget = dynamicQuarterlyTarget || (revenueData ? parseFloat(revenueData.quarterlyTarget) || 70000000 : 70000000);
+    const targetRevenue = dynamicDailyTarget || (revenueData ? parseFloat(revenueData.targetRevenue) || 0 : 0);
+    const quarterlyTarget = dynamicQuarterlyTarget || (revenueData ? parseFloat(revenueData.quarterlyTarget) || 0 : 0);
     // API actual revenue from backend
     const actualRevenue = revenueData ? parseFloat(revenueData.actualRevenue) || 0 : 0; // Rs175K (API actual)
     // Expected revenue from backend
     const expectedRevenue = revenueData ? parseFloat(revenueData.expectedRevenue) || 0 : 0; // Rs100K (expected)
     const totalRevenue = revenueData ? parseFloat(revenueData.totalRevenue) || 0 : 0;
-    const monthlyAchievedRevenue = monthlyData 
-      ? monthlyData.totalMonthlyAchieved || monthlyData.monthlyAchieved || actualRevenue || 0 
-      : actualRevenue || 0;
+    // Use monthly revenue from Teable (sum of all records from 2nd of month)
+    const currentMonthRevenueValue = monthlyData?.currentMonthRevenue || monthlyData?.data?.currentMonthRevenue || revenueData?.monthlyAchievedRevenue;
+    const teableMonthlyRevenue = currentMonthRevenueValue ? parseFloat(currentMonthRevenueValue) : 0;
+    const monthlyAchievedRevenue = teableMonthlyRevenue > 0 ? teableMonthlyRevenue : 0;
     
-    // Debug logging for monthly data and dynamic targets
-    // console.log("🔍 Monthly Data Debug:", {
-    //   monthlyData,
-    //   totalMonthlyAchieved: monthlyData?.totalMonthlyAchieved,
-    //   monthlyAchieved: monthlyData?.monthlyAchieved,
-    //   calculatedMonthlyAchieved: monthlyAchievedRevenue,
-    //   actualRevenue
-    // });
+    // Debug logging for monthly achieved revenue
+    console.log('📊 Monthly Achieved Revenue Debug:', {
+      monthlyData,
+      currentMonthRevenueValue,
+      teableMonthlyRevenue,
+      monthlyAchievedRevenue
+    });
     
-    const monthlyTarget = adminMonthlyTarget || (monthlyData ? monthlyData.monthlyTarget || 17500000 : 17500000); // Use admin form value first
+    const monthlyTarget = adminMonthlyTarget || (monthlyData ? monthlyData.monthlyTarget || 0 : 0); // Use admin form value first
     
     // console.log("🎯 Dynamic Targets Debug:", {
     //   monthlyTargetData,
@@ -1895,9 +1907,10 @@ function Revenue() {
     //   finalMonthlyTarget: monthlyTarget,
     //   finalQuarterlyTarget: quarterlyTarget
     // });
-    const quarterlyAchievedRevenue = revenueData
-      ? parseFloat(revenueData.quarterlyAchievedRevenue) || 0
-      : 0;
+    // Use quarterly revenue from Teable (sum of last 3 months)
+    const quarterlyAchievedRevenue = (monthlyData?.quarterlyRevenue 
+      ? parseFloat(monthlyData.quarterlyRevenue) 
+      : (revenueData ? parseFloat(revenueData.quarterlyAchievedRevenue) || 0 : 0)) || 0;
     const occupancyRate = revenueData ? parseFloat(revenueData.occupancyRate) || 0 : 0;
 
     // Calculate individual achievement percentages for each card
@@ -1936,40 +1949,81 @@ function Revenue() {
     //   quarterlyProgress
     // });
 
-    return [
+    // Get Dubai revenue data if available
+    const dubaiActualRevenue = revenueData?.dubaiRevenue?.actualRevenue ? parseFloat(revenueData.dubaiRevenue.actualRevenue) : 0;
+    
+    // Debug logging
+    console.log('🔍 Dubai Revenue Debug:', {
+      dubaiRevenue: revenueData?.dubaiRevenue,
+      actualRevenue: revenueData?.dubaiRevenue?.actualRevenue,
+      dubaiActualRevenue
+    });
+    
+    // Debug logging for quarterly revenue
+    console.log('📊 Quarterly Revenue Debug:', {
+      monthlyData: monthlyData,
+      monthlyDataQuarterlyRevenue: monthlyData?.quarterlyRevenue,
+      quarterlyAchievedRevenue,
+      quarterlyTarget,
+      quarterlyProgress,
+      currentQuarter: monthlyData?.currentQuarter,
+      currentYear: monthlyData?.currentYear,
+      isCurrentQuarterComplete: monthlyData?.isCurrentQuarterComplete,
+      quarterlyBreakdown: monthlyData?.quarterlyBreakdown
+    });
+    
+    console.log('📊 QUARTERLY CARD VALUES:', {
+      title: 'QUARTERLY REVENUE',
+      actual: `Target: ${formatCurrency(quarterlyTarget)}`,
+      achieved: `Achieved: ${formatCurrencyComplete(quarterlyAchievedRevenue)}`,
+      progress: `${quarterlyProgress}%`
+    });
+    
+    // Build chart data inside this function so we have access to achieved values
+    const chartDataArray = [
       {
-        title: "REVENUE",
-        amount: {
-          type: "revenue_combined",
-          actual: formatCurrency(actualRevenue), // API Actual Revenue: 175480.55 PKR
-          expected: formatCurrency(expectedRevenue), // Dynamic Expected Revenue from backend
-        },
-        progress: expectedRevenue > 0 ? Math.min((actualRevenue / expectedRevenue) * 100, 100) : 0, // Actual/Expected percentage
-        color: "success",
-        icon: "trending_up",
-        gradient: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-        target: formatCurrency(targetRevenue),
-        description: expectedRevenue > 0 ? `${((actualRevenue / expectedRevenue) * 100).toFixed(2)}% of actual and expected revenue` : "0% of actual and expected revenue",
+        label: "Daily Revenue",
+        value: dubaiActualRevenue,
+        displayValue: dubaiActualRevenue,
+        color: "#A67C8A", // Color 1
       },
       {
-        title: "Daily Target",
+        label: "Monthly Revenue",
+        value: monthlyAchievedRevenue,
+        displayValue: monthlyAchievedRevenue,
+        color: "#45B7D1", // Color 2
+      },
+      {
+        label: "Quarterly Revenue",
+        value: quarterlyAchievedRevenue,
+        displayValue: quarterlyAchievedRevenue,
+        color: "#6B73B8", // Color 5
+      },
+    ];
+    
+    // Store chart data in a way that can be accessed outside this function
+    window.__chartData = chartDataArray;
+    
+    return [
+      {
+        title: "Daily Revenue",
         amount: {
           type: "custom",
-          actual: formatCurrency(targetRevenue), // Dynamic target value
-          achieved: formatCurrency(expectedRevenue),
+          actual: formatCurrencyComplete(targetRevenue), // Dynamic target value in AED
+          achieved: formatCurrencyComplete(dubaiActualRevenue), // Dubai actual revenue achieved - complete value
         },
-        progress: targetRevenue > 0 ? Math.min((expectedRevenue / targetRevenue) * 100, 100) : 0, // Achieved/Actual percentage
+        progress: targetRevenue > 0 ? Math.min((dubaiActualRevenue / targetRevenue) * 100, 100) : 0, // Achieved/Actual percentage
         color: "primary",
         icon: "flag",
         gradient: "linear-gradient(135deg, #06d6a0 0%, #059669 100%)",
-        description: targetRevenue > 0 ? `${((expectedRevenue / targetRevenue) * 100).toFixed(2)}% of daily target completed` : "0% of daily target completed",
+        description: targetRevenue > 0 ? `${((dubaiActualRevenue / targetRevenue) * 100).toFixed(2)}% of daily target completed` : "0% of daily target completed",
       },
       {
-        title: "MONTHLY TARGET",
+        title: "MONTHLY REVENUE",
         amount: {
           type: "custom",
-          actual: formatCurrency(monthlyTarget), // Monthly target from API
-          achieved: formatCurrency(monthlyAchievedRevenue), // Monthly achieved revenue from Teable
+          actual: formatCurrencyComplete(monthlyTarget), // Monthly target from API in AED
+          achieved: formatCurrencyComplete(monthlyAchievedRevenue), // Monthly achieved revenue from Teable - complete value in AED
         },
         progress: monthlyTarget > 0 ? Math.min((monthlyAchievedRevenue / monthlyTarget) * 100, 100) : 0, // Achieved/Actual percentage
         color: "warning",
@@ -1978,25 +2032,30 @@ function Revenue() {
         description: monthlyTarget > 0 ? `${((monthlyAchievedRevenue / monthlyTarget) * 100).toFixed(2)}% of monthly target achieved` : "0% of monthly target achieved",
       },
       {
-        title: "QUARTERLY TARGET",
+        title: "QUARTERLY REVENUE",
         amount: {
           type: "custom",
-          actual: formatCurrency(quarterlyTarget), // Dynamic quarterly target value
-          achieved: formatCurrency(quarterlyAchievedRevenue), // Dynamic quarterly achieved revenue from Teable
+          actual: formatCurrencyComplete(quarterlyTarget), // Dynamic quarterly target value in AED
+          achieved: formatCurrencyComplete(quarterlyAchievedRevenue), // Quarterly achieved revenue from Teable - complete value in AED
         },
-        progress: quarterlyProgress || 55, // Test with 55% if no data
+        progress: quarterlyProgress, // Quarterly achievement percentage
         color: "error",
         icon: "flag",
         gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-        description: `${(quarterlyProgress || 55).toFixed(2)}% of quarterly target achieved`,
+        description: quarterlyTarget > 0 ? `${quarterlyProgress.toFixed(2)}% of quarterly target achieved` : "0% of quarterly target achieved",
       },
     ];
   };
 
   const revenueCards = getRevenueCards();
+  
+  // Get chart data from window variable (set inside getRevenueCards)
+  const chartData = window.__chartData || [];
+  const maxValue = chartData.length > 0 ? Math.max(...chartData.map((item) => item.value), 1) : 1;
 
   // Loading state - show "Loading Please wait" while fetching data
-  if (loading) {
+  // Wait for BOTH main page data AND Dubai payment data
+  if (loading || !allDataReady) {
     return (
       <DashboardLayout>
         <DashboardNavbar absolute />
@@ -2152,11 +2211,11 @@ function Revenue() {
               </Alert>
             )}
             
-            {reservationLoading ? (
+            {!allDataReady ? (
               <MDBox display="flex" justifyContent="center" alignItems="center" minHeight="200px">
                 <CircularProgress />
                 <MDTypography variant="body2" color="text.secondary" ml={2}>
-                  Loading reservations...
+                  Loading complete data...
                 </MDTypography>
               </MDBox>
             ) : reservations.length > 0 ? (
@@ -2250,12 +2309,6 @@ function Revenue() {
                               <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Departure Date
                               </th>
-                              <th style={{ width: '110px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Actual Check-in Time
-                              </th>
-                              <th style={{ width: '110px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Actual Check-out Time
-                              </th>
                               <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Total Amount
                               </th>
@@ -2267,6 +2320,9 @@ function Revenue() {
                               </th>
                               <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Payment Status
+                              </th>
+                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderLeft: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Reservation Status
                               </th>
                             </tr>
                           </thead>
@@ -2315,25 +2371,23 @@ function Revenue() {
                                 
                                 <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                                    {new Date(reservation.checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    {(() => {
+                                      const date = reservation.arrivalDate || reservation.checkInDate;
+                                      return date && date !== 'N/A' 
+                                        ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                        : 'N/A';
+                                    })()}
                                   </span>
                                 </td>
                                 
                                 <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                                    {new Date(reservation.checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '110px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', color: reservation.actualCheckInTime === 'N/A' ? '#9ca3af' : '#374151' }}>
-                                    {reservation.actualCheckInTime}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '110px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', color: reservation.actualCheckOutTime === 'N/A' ? '#9ca3af' : '#374151' }}>
-                                    {reservation.actualCheckOutTime || 'N/A'}
+                                    {(() => {
+                                      const date = reservation.departureDate || reservation.checkOutDate;
+                                      return date && date !== 'N/A'
+                                        ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                        : 'N/A';
+                                    })()}
                                   </span>
                                 </td>
                                 
@@ -2371,6 +2425,21 @@ function Revenue() {
                                     }
                                     size="small"
                                     sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '50px' }}
+                                  />
+                                </td>
+                                
+                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <Chip 
+                                    label={reservation.reservationStatus || 'Unknown'}
+                                    color={
+                                      reservation.reservationStatus === 'Check in' ? 'success' :
+                                      reservation.reservationStatus === 'Check out' ? 'warning' :
+                                      reservation.reservationStatus === 'Staying guest' ? 'info' :
+                                      reservation.reservationStatus === 'Upcoming stay' ? 'primary' :
+                                      'default'
+                                    }
+                                    size="small"
+                                    sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '70px' }}
                                   />
                                 </td>
                               </tr>
@@ -2610,18 +2679,18 @@ function Revenue() {
             display: "grid",
             gap: 4,
 
-            // Default: 4 columns for large screens (better space utilization)
-            gridTemplateColumns: "repeat(4, 1fr)",
+            // Default: 3 columns for large screens (fill space with 3 cards)
+            gridTemplateColumns: "repeat(3, 1fr)",
 
-            // Large laptops and desktops: 4 columns (better card size)
+            // Large laptops and desktops: 3 columns (fill space with 3 cards)
             "@media (min-width: 1200px)": {
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: 4,
             },
 
-            // Standard laptops: 4 columns with proper spacing
+            // Standard laptops: 3 columns with proper spacing
             "@media (max-width: 1199px) and (min-width: 1024px)": {
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: 3,
             },
 
@@ -3677,7 +3746,7 @@ function Revenue() {
 
         {/* New Improved Listing Revenue Section */}
         <MDBox mt={4}>
-          <ImprovedListingRevenue revenueData={revenueData} formatCurrency={formatCurrency} />
+          <ImprovedListingRevenue revenueData={revenueData} formatCurrency={formatCurrency} formatCurrencyComplete={formatCurrencyComplete} />
         </MDBox>
 
         {/* Revenue Analytics Chart - Hidden on Mobile */}
@@ -3746,7 +3815,7 @@ function Revenue() {
                 </MDBox>
                 <MDBox
                   sx={{
-                    minHeight: "400px",
+                    minHeight: "auto",
                     position: "relative",
                     zIndex: 2,
                   }}

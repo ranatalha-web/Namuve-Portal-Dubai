@@ -57,6 +57,18 @@ export const API_ENDPOINTS = {
   REVENUE_TABLE_DATA: `${API_BASE_URL}/api/revenue-table/revenue-data`,
   REVENUE_TABLE_LISTING_DATA: `${API_BASE_URL}/api/revenue-table/listing-revenue-data`,
 
+  // Dubai Revenue endpoints
+  DUBAI_REVENUE: `${API_BASE_URL}/api/dubai-revenue`,
+  DUBAI_REVENUE_TODAY: `${API_BASE_URL}/api/dubai-revenue/today`,
+  DUBAI_REVENUE_STORE: `${API_BASE_URL}/api/dubai-revenue/store`,
+  DUBAI_REVENUE_LISTINGS: `${API_BASE_URL}/api/dubai-revenue/listings`,
+  DUBAI_REVENUE_HEALTH: `${API_BASE_URL}/api/dubai-revenue/health`,
+  
+  // Dubai Database endpoints (FAST - from Teable, no Hostaway)
+  DUBAI_PAYMENT_DATABASE_DETAILS: `${API_BASE_URL}/api/dubai-payment/database/details`,
+  DUBAI_REVENUE_DATABASE_ACHIEVED: `${API_BASE_URL}/api/dubai-revenue/database/achieved`,
+  DUBAI_REVENUE_DATABASE_LISTING: `${API_BASE_URL}/api/dubai-revenue/database/listing`,
+
   // Teable endpoints
   TEABLE_STATUS: `${API_BASE_URL}/api/teable/status`,
   TEABLE_START: `${API_BASE_URL}/api/teable/start`,
@@ -67,6 +79,8 @@ export const API_ENDPOINTS = {
   TEABLE_MANUAL_POST: `${API_BASE_URL}/api/teable/manual-post`,
   TEABLE_POST_SPECIFIC: `${API_BASE_URL}/api/teable/post-specific`,
   TEABLE_DEBUG_HOUR_CHECK: `${API_BASE_URL}/api/teable/debug-hour-check`,
+  TEABLE_MONTHLY_REVENUE: `${API_BASE_URL}/api/teable/monthly-revenue`,
+  TEABLE_QUARTERLY_REVENUE: `${API_BASE_URL}/api/teable/quarterly-revenue`,
 
   // Monthly target
   MONTHLY_TARGET: `${API_BASE_URL}/api/monthly-target`,
@@ -104,10 +118,15 @@ export const API_ENDPOINTS = {
   ROOM_DETAILS_TEABLE_DATA: `${API_BASE_URL}/api/room-details-teable/data`,
   ROOM_DETAILS_TEABLE_TEST: `${API_BASE_URL}/api/room-details-teable/test`,
 
-  // Payment endpoints
+  // Payment endpoints (Pakistan)
   PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/payment/today-reservations`,
   PAYMENT_RESERVATION_BY_ID: `${API_BASE_URL}/api/payment/reservation`, // + /:id
   PAYMENT_HEALTH: `${API_BASE_URL}/api/payment/health`,
+  
+  // Dubai Payment endpoints (UAE)
+  DUBAI_PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/dubai-payment/today-reservations`,
+  DUBAI_PAYMENT_RESERVATION_BY_ID: `${API_BASE_URL}/api/dubai-payment/reservation`, // + /:id
+  DUBAI_PAYMENT_HEALTH: `${API_BASE_URL}/api/dubai-payment/health`,
   
   // Payment Teable endpoints (fast loading with cache)
   PAYMENT_TEABLE_FAST: `${API_BASE_URL}/api/payment-teable/fast`,
@@ -116,6 +135,7 @@ export const API_ENDPOINTS = {
   
   // Payment helper functions
   PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/payment/reservation/${id}`,
+  DUBAI_PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/dubai-payment/reservation/${id}`,
 
   // Portal URLs
   PORTAL_AUTH_URL: 'https://portal.namuve.com/authentication/sign-in',

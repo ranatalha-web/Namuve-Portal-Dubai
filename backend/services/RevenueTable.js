@@ -324,13 +324,22 @@ class RevenueTableService {
 
     const fields = record.fields;
     
+    // Helper to parse numeric values (handles strings and numbers)
+    const parseValue = (val) => {
+      if (val === null || val === undefined || val === '') return 0;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    
+    // Try to read from the new field names first (what we're storing now)
+    // Fall back to old field names for backward compatibility
     return {
       id: record.id,
-      actualRevenue: fields["Actual Revenue"] || 0,
-      expectedRevenue: fields["Expected Revenue "] || 0,
-      monthlyTargetAchieved: fields["MONTHLY TARGET Achieved"] || 0,
-      quarterlyTargetAchieved: fields["QUARTERLY TARGET Achieved"] || 0,
-      dailyTargetAchieved: fields["DAILY TARGET Achieved"] || 0,
+      actualRevenue: parseValue(fields["Actual Revenue"] || fields["Daily Actual Revenue"]),
+      expectedRevenue: parseValue(fields["Expected Revenue "]),
+      monthlyTargetAchieved: parseValue(fields["MONTHLY TARGET Achieved"] || fields["MONTHLY Actual Revenue"]),
+      quarterlyTargetAchieved: parseValue(fields["QUARTERLY TARGET Achieved"] || fields["QUARTERLY Achieved Revenue"]),
+      dailyTargetAchieved: parseValue(fields["DAILY TARGET Achieved"] || fields["Daily Actual Revenue"]),
       createdTime: record.createdTime,
       lastModifiedTime: record.lastModifiedTime
     };

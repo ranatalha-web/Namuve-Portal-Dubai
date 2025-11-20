@@ -10,7 +10,8 @@ class AuthService {
     this.LOGIN_ATTEMPTS_TABLE_URL = process.env.LOGIN_ATTEMPTS_TABLE_URL;
     this.RESET_PASSWORD_TABLE_URL = process.env.RESET_PASSWORD_TABLE_URL;
     
-    this.BEARER_TOKEN = process.env.TEABLE_BEARER_TOKEN;
+    // Use the Dubai reservations token which has access to the User table
+    this.BEARER_TOKEN = process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN;
     this.JWT_SECRET = process.env.JWT_SECRET;
     
     // Admin verification - no permanent storage, password entered each time
@@ -26,7 +27,7 @@ class AuthService {
       'USERS_TABLE_URL',
       'LOGIN_ATTEMPTS_TABLE_URL',
       'RESET_PASSWORD_TABLE_URL',
-      'TEABLE_BEARER_TOKEN',
+      'TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN',
       'JWT_SECRET'
       // ADMIN_PASSWORD removed - using temporary memory verification
     ];
@@ -54,9 +55,14 @@ class AuthService {
   // Helper method to make Teable API requests using axios (same as working services)
   async makeTeableRequest(url, method = 'GET', data = null) {
     try {
+      // Handle Bearer token - check if it already has "Bearer " prefix
+      const authHeader = this.BEARER_TOKEN.startsWith('Bearer ') 
+        ? this.BEARER_TOKEN 
+        : `Bearer ${this.BEARER_TOKEN}`;
+      
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.BEARER_TOKEN}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
         timeout: 30000

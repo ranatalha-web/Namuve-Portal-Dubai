@@ -13,6 +13,8 @@ export default async function handler(req, res) {
   
   try {
     console.log('⏰ Cron job endpoint called');
+    // PAKISTAN REVENUE CODE - COMMENTED OUT
+    /*
     // Get Pakistan time
     const now = new Date();
     const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
@@ -31,6 +33,7 @@ export default async function handler(req, res) {
     console.log('- NODE_ENV:', process.env.NODE_ENV);
     console.log('- TEABLE_BASE_URL present:', !!process.env.TEABLE_BASE_URL);
     console.log('- TEABLE_BEARER_TOKEN present:', !!process.env.TEABLE_BEARER_TOKEN);
+    */
     
     // Call the actual revenue service to get real data
     let actualRevenue = 0;
