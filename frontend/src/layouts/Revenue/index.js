@@ -988,18 +988,28 @@ function MobilePaymentCard({ reservation, index }) {
       >
         <MDBox>
           <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Check In Date
+            Arrival Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
-            {new Date(reservation.checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {(() => {
+              const date = reservation.arrivalDate || reservation.checkInDate;
+              return date && date !== 'N/A' 
+                ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : 'N/A';
+            })()}
           </MDTypography>
         </MDBox>
         <MDBox>
           <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
-            Check Out Date
+            Departure Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
-            {new Date(reservation.checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {(() => {
+              const date = reservation.departureDate || reservation.checkOutDate;
+              return date && date !== 'N/A'
+                ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : 'N/A';
+            })()}
           </MDTypography>
         </MDBox>
         <MDBox>
@@ -1254,7 +1264,12 @@ function PaymentKanbanView({ reservations }) {
                             fontSize: '0.85rem'
                           }}
                         >
-                          {reservation.checkInDate}
+                          {(() => {
+                            const date = reservation.arrivalDate || reservation.checkInDate;
+                            return date && date !== 'N/A' 
+                              ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                              : 'N/A';
+                          })()}
                         </MDTypography>
                       </MDBox>
                       <MDBox 
@@ -1288,7 +1303,12 @@ function PaymentKanbanView({ reservations }) {
                             fontSize: '0.85rem'
                           }}
                         >
-                          {reservation.checkOutDate}
+                          {(() => {
+                            const date = reservation.departureDate || reservation.checkOutDate;
+                            return date && date !== 'N/A'
+                              ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                              : 'N/A';
+                          })()}
                         </MDTypography>
                       </MDBox>
                     </MDBox>
@@ -2219,11 +2239,11 @@ function Revenue() {
               </Alert>
             )}
             
-            {!allDataReady ? (
+            {reservationLoading && reservations.length === 0 ? (
               <MDBox display="flex" justifyContent="center" alignItems="center" minHeight="200px">
                 <CircularProgress />
                 <MDTypography variant="body2" color="text.secondary" ml={2}>
-                  Loading complete data...
+                  Loading reservations...
                 </MDTypography>
               </MDBox>
             ) : reservations.length > 0 ? (
@@ -2265,43 +2285,43 @@ function Revenue() {
                   {viewMode === 'kanban' ? (
                     <PaymentKanbanView reservations={reservations} />
                   ) : (
-                  <>
-                    {/* Desktop Table View */}
-                    <MDBox 
-                      sx={{
-                        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                        borderRadius: 4,
-                        p: 3,
-                        mb: 4,
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
-                      }}
-                    >
-                      <MDTypography 
-                        variant="h5" 
-                        fontWeight="bold" 
-                        mb={3}
-                        sx={{
-                          color: '#1e293b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2
-                        }}
-                      >
-                        📅 Today's Reservations ({reservations.length})
-                      </MDTypography>
-                      
+                    <>
+                      {/* Desktop Table View */}
                       <MDBox 
-                        sx={{ 
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
-                          borderRadius: 3,
-                          maxHeight: '600px',
-                          overflow: 'auto',
-                          backgroundColor: 'white'
+                        sx={{
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                          borderRadius: 4,
+                          p: 3,
+                          mb: 4,
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
                         }}
                       >
-                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                          <thead>
-                            <tr style={{ backgroundColor: 'white', borderBottom: '2px solid #e2e8f0' }}>
+                        <MDTypography 
+                          variant="h5" 
+                          fontWeight="bold" 
+                          mb={3}
+                          sx={{
+                            color: '#1e293b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2
+                          }}
+                        >
+                          📅 Today's Reservations ({reservations.length})
+                        </MDTypography>
+                        
+                        <MDBox 
+                          sx={{ 
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
+                            borderRadius: 3,
+                            maxHeight: '600px',
+                            overflow: 'auto',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: 'white', borderBottom: '2px solid #e2e8f0' }}>
                               <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Reservation ID
                               </th>

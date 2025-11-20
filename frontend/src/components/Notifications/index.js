@@ -52,12 +52,19 @@ export default function Notifications({ open, onClose, anchorEl }) {
       setNotifications([]);
 
       try {
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
         const res = await fetch(NOTIFICATION_API, {
           headers: {
             Authorization: `Bearer ${TEABLE_TOKEN}`,
             "X-Teable-Field-Names": "true",
           },
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error("Failed to fetch");
 
@@ -79,7 +86,16 @@ export default function Notifications({ open, onClose, anchorEl }) {
 
         setNotifications(notifs);
       } catch (err) {
-        console.error("Failed to load notifications:", err);
+        // Silently ignore timeout and network errors
+        if (err.name === 'AbortError') {
+          console.warn("⏱️ Notification fetch timed out - Teable server may be unreachable");
+        } else if (err.message?.includes('Failed to fetch')) {
+          console.warn("🌐 Cannot reach Teable server - check network connectivity");
+        } else {
+          console.warn("⚠️ Failed to load notifications:", err.message);
+        }
+        // Set empty notifications instead of showing error
+        setNotifications([]);
       } finally {
         setLoading(false);
       }

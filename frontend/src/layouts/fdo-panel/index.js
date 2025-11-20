@@ -2435,6 +2435,8 @@ function KanbanView() {
       let allRecords = [];
       let skip = 0;
       const take = 500;
+      let retryCount = 0;
+      const maxRetries = 2;
 
       while (true) {
         const url = new URL(API_ENDPOINT);
@@ -2443,28 +2445,51 @@ function KanbanView() {
         url.searchParams.append("skip", skip);
         url.searchParams.append("user_field_names", "true");
 
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${API_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        });
+        // Add timeout to prevent hanging - increased to 30 seconds
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout per request
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${API_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          const records = data.records || [];
+
+          if (records.length === 0) break;
+
+          allRecords = allRecords.concat(records);
+          skip += take;
+          retryCount = 0; // Reset retry count on success
+
+          // Optional: safety cap
+          if (records.length < take) break;
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (err.name === 'AbortError') {
+            // Retry on timeout
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`⏳ Timeout - retrying (${retryCount}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+              continue;
+            }
+            throw new Error('Request timed out after multiple attempts. The server may be overloaded. Please try again later.');
+          }
+          throw err;
         }
-
-        const data = await response.json();
-        const records = data.records || [];
-
-        if (records.length === 0) break;
-
-        allRecords = allRecords.concat(records);
-        skip += take;
-
-        // Optional: safety cap
-        if (records.length < take) break;
       }
 
       // Map records exactly like before
@@ -2515,7 +2540,19 @@ function KanbanView() {
       */}
     } catch (err) {
       console.error("Fetch failed:", err);
-      setError("Failed to load reservations: " + err.message);
+      let errorMessage = "Failed to load reservations. ";
+      
+      if (err.message.includes('timed out')) {
+        errorMessage += "The Teable server is not responding. This could be a network issue or the server may be down. Please check your internet connection and try again.";
+      } else if (err.message.includes('API Error')) {
+        errorMessage += "There was an issue with the server. Please try again.";
+      } else if (err.message.includes('Failed to fetch')) {
+        errorMessage += "Cannot reach the server. Please check your internet connection.";
+      } else {
+        errorMessage += err.message || "Unknown error occurred.";
+      }
+      
+      setError(errorMessage);
       setReservations([]);
     } finally {
       setLoading(false);
