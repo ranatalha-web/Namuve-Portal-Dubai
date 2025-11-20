@@ -1823,10 +1823,18 @@ function Revenue() {
       return [];
     }
 
+    // Calculate target values from admin data
+    const monthlyTargetData = adminTargetData;
+    const adminMonthlyTarget = monthlyTargetData.amount ? parseFloat(String(monthlyTargetData.amount).replace(/,/g, '')) : null;
+    const adminDaysInMonth = monthlyTargetData.days ? parseInt(monthlyTargetData.days) : 30;
+    
+    const dynamicDailyTarget = adminMonthlyTarget ? adminMonthlyTarget / adminDaysInMonth : null;
+    const dynamicQuarterlyTarget = adminMonthlyTarget ? adminMonthlyTarget * 3 : null;
+
     // Get target values
-    const dailyTarget = targetRevenue || 0; // Daily target
-    const monthlyTargetValue = monthlyData?.monthlyTarget || 0; // Monthly target
-    const quarterlyTargetValue = quarterlyTarget || 0; // Quarterly target
+    const dailyTarget = dynamicDailyTarget || (revenueData ? parseFloat(revenueData.targetRevenue) || 0 : 0); // Daily target
+    const monthlyTargetValue = adminMonthlyTarget || (monthlyData ? monthlyData.monthlyTarget || 0 : 0); // Monthly target
+    const quarterlyTargetValue = dynamicQuarterlyTarget || (revenueData ? parseFloat(revenueData.quarterlyTarget) || 0 : 0); // Quarterly target
 
     // Build array with 3 bars: Daily, Monthly, Quarterly targets
     const validBars = [
