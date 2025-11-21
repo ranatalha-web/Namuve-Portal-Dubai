@@ -719,7 +719,7 @@ function UserLayout({ children }) {
   const LISTINGS_DATA = {
     "2BR Premium": [],
     "3BR": [],
-    "1BR": [387833, 387834, 451414, ],
+    "1BR": [387833, 387834, 451414,],
     Studio: [392230],
     "2BR": [441361, 443140, 449910, 452131, 453688, 453690, 454454],
   };
@@ -1203,7 +1203,7 @@ function UserLayout({ children }) {
             <Logo width="80px" height="80px" />
             <Box>
               <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
-                FDO Panel
+                Reservation Panel
               </Typography>
               <Typography
                 variant="body2"

@@ -37,6 +37,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import EventIcon from "@mui/icons-material/Event";
 import CommentIcon from "@mui/icons-material/Comment";
 import CommentSection from "components/CommentSection/CommentSection";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 // Authentication context
 import { useAuth } from "context/AuthContext";
@@ -62,12 +63,17 @@ import {
   Box,
   Typography,
   Badge,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import PersonIcon from "@mui/icons-material/Person";
+import PeopleIcon from "@mui/icons-material/People";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import Divider from '@mui/material/Divider';
@@ -108,6 +114,9 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   const [canPrintCheckOut, setCanPrintCheckOut] = useState(false);
   const { user } = useAuth(); // ✅ get logged-in user
   const [bookingDate, setBookingDate] = useState(null);
+  const [numberOfGuests, setNumberOfGuests] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(guest?.agent || "");
+  const [agents, setAgents] = useState([]);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [latestComment, setLatestComment] = useState(null);
@@ -126,14 +135,15 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   const TEABLE_API_URL = "https://teable.namuve.com/api/table/tblp5m9nSIoBg97I32a/record";
   const TEABLE_API_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg="; // 🔐 replace this
 
-  const TEABLE_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
   const TABLE_URL = "https://teable.namuve.com/api/table/tblSeofkNz53TgqghsR/record";
+  const TEABLE_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
 
   const NOTIFICATION_API = "https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record";
 
   const API_ENDPOINT = "https://teable.namuve.com/api/table/tbliOdo8ldmMO8rrYyN/record";
   const API_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
 
+  const AGENTS_API_URL = "https://teable.namuve.com/api/table/tblrZebi3EcSv89BoAr/record";
   const searchUrl = `https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record?search=${guest.reservationId}&search=Reservation+ID&search=true`;
 
   const handleSendNotification = async (commentText, type = "comment") => {
@@ -1006,7 +1016,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
     }
   };
 
-  const fetchBookingDate = async (reservationId) => {
+  const fetchReservationExtras = async (reservationId) => {
     try {
       const response = await fetch(`${HOSTAWAY_API}/${reservationId}`, {
         method: "GET",
@@ -1015,11 +1025,12 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         },
       });
 
-      if (!response.ok) throw new Error("Failed to fetch booking date");
+      if (!response.ok) throw new Error("Failed to fetch reservation extras");
 
       const data = await response.json();
-      const date = data?.result?.reservationDate;
 
+      // Booking Date
+      const date = data?.result?.reservationDate;
       if (date) {
         setBookingDate(date);
         console.log("📅 Booking Date fetched:", date);
@@ -1027,12 +1038,106 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         console.warn("⚠️ Booking date not found in reservation data");
         setBookingDate(null);
       }
+
+      // Number of Guests
+      const guests = data?.result?.numberOfGuests;
+      if (guests !== undefined && guests !== null) {
+        setNumberOfGuests(guests);
+        console.log("👥 Number of Guests fetched:", guests);
+      } else {
+        console.warn("⚠️ Number of guests not found in reservation data");
+        setNumberOfGuests(null);
+      }
+
     } catch (error) {
-      console.error("❌ Error fetching booking date:", error);
+      console.error("❌ Error fetching reservation extras:", error);
       setBookingDate(null);
+      setNumberOfGuests(null);
     }
   };
 
+
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch(AGENTS_API_URL, {
+        headers: {
+          Authorization: `Bearer ${TEABLE_TOKEN}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch agents");
+      const data = await res.json();
+      const agentList = data.records
+        ?.map((r) => r.fields.Agents)
+        .filter((name) => name); // Filter out empty/null names
+      setAgents(agentList || []);
+    } catch (err) {
+      console.error("❌ Error fetching agents:", err);
+    }
+  };
+
+  const updateAgentInTeable = async (newAgent) => {
+    try {
+      // 1. Search for the record ID using reservationId
+      const searchRes = await fetch(searchUrl, {
+        headers: {
+          Authorization: `Bearer ${TEABLE_TOKEN}`,
+        },
+      });
+
+      if (!searchRes.ok) throw new Error("Failed to search for reservation record");
+
+      const searchData = await searchRes.json();
+      const recordId = searchData.records?.[0]?.id;
+
+      if (!recordId) {
+        console.error("❌ Record not found for reservation ID:", guest.reservationId);
+        return;
+      }
+
+      // 2. Patch the record with the new agent
+      const patchUrl = "https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record";
+      const patchRes = await fetch(patchUrl, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${TEABLE_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              id: recordId,
+              fields: {
+                "Agent": newAgent,
+              },
+            },
+          ],
+        }),
+      });
+
+      if (!patchRes.ok) throw new Error("Failed to update agent");
+
+      console.log("✅ Agent updated successfully:", newAgent);
+      setSnackbar({
+        open: true,
+        message: "Agent updated successfully",
+        severity: "success",
+      });
+
+    } catch (error) {
+      console.error("❌ Error updating agent:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update agent",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleAgentChange = (event) => {
+    const newAgent = event.target.value;
+    setSelectedUser(newAgent);
+    updateAgentInTeable(newAgent);
+  };
 
   // Fetch when component mounts or guest changes
   useEffect(() => {
@@ -1040,7 +1145,11 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       fetchPrintButtonStatus(guest.reservationId);
     }
     if (guest?.reservationId) {
-      fetchBookingDate(guest.reservationId);
+      fetchReservationExtras(guest.reservationId);
+    }
+    fetchAgents(); // Fetch agents on mount
+    if (guest?.agent) {
+      setSelectedUser(guest.agent);
     }
   }, [guest]);
 
@@ -1167,6 +1276,14 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           )}
         </MDBox>
 
+        {/* Number of Guests */}
+        <MDBox display="flex" alignItems="center" mt={1} mb={1}>
+          <PeopleIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+          <MDTypography variant="body2" sx={{ fontSize: "0.85rem" }}>
+            Number of Guests: {numberOfGuests !== null ? numberOfGuests : "N/A"}
+          </MDTypography>
+        </MDBox>
+
         {/* Tags + Comment Icon */}
         {guest.tags?.length > 0 && (
           <MDBox display="flex" mt={1}>
@@ -1204,6 +1321,49 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
             </MDBox>
           </MDBox>
         )}
+
+        {/* User Selection Dropdown */}
+        <MDBox mt={1} mb={1}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="user-select-label">Select Agent</InputLabel>
+            <Select
+              labelId="user-select-label"
+              id="user-select"
+              value={selectedUser}
+              label="Select Agent"
+              onChange={handleAgentChange}
+              sx={{
+                height: 32,
+                borderRadius: "20px",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderRadius: "20px",
+                }
+              }}
+              IconComponent={(props) => (
+                <KeyboardArrowDownIcon
+                  {...props}
+                  sx={{
+                    color: "#000000 !important",
+                    opacity: "1 !important",
+                    display: "block !important",
+                    right: "7px !important",
+                    position: "absolute !important",
+                    pointerEvents: "none !important",
+                  }}
+                />
+              )}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {agents.map((agent, index) => (
+                <MenuItem key={index} value={agent}>
+                  {agent}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </MDBox>
 
         {/* === INPUT + CONDITIONAL COMMENT ICON === */}
         <MDBox display="flex" justifyContent="space-between" alignItems="center" mt={1} gap={1}>
@@ -1757,7 +1917,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                         </td>
                         <td>{guest.reservationId}</td>
                       </tr>
-                      <tr>
+                      {/*<tr>
                         <td>
                           <strong>CNIC</strong>
                         </td>
@@ -1766,7 +1926,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                             (field) => field.customField?.name === "ID card Number/ Passport number"
                           )?.value || "Not provided"}
                         </td>
-                      </tr>
+                      </tr>*/}
                       <tr>
                         <td>
                           <strong>Unit</strong>
@@ -1786,6 +1946,18 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                         <td>{reservationDetails?.nights || "N/A"}</td>
                       </tr>
                       <tr>
+                        <td>
+                          <strong>Check-in Date</strong>
+                        </td>
+                        <td>{reservationDetails?.arrivalDate || "N/A"}</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <strong>Check-out Date</strong>
+                        </td>
+                        <td>{reservationDetails?.departureDate || "N/A"}</td>
+                      </tr>
+                      {/*<tr>
                         <td>
                           <strong>Total Amount</strong>
                         </td>
@@ -1830,7 +2002,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                           {reservationDetails?.currency || ""}
                         </td>
                       </tr>
-                      <tr>
+                      {<tr>
                         <td>
                           <strong>Price/Night</strong>
                         </td>
@@ -1852,7 +2024,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                             guest.vehicleNo ||
                             "Not provided"}
                         </td>
-                      </tr>
+                      </tr>*/}
                     </tbody>
                   </Table>
                 </Col>
@@ -1887,6 +2059,30 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                       </tr>
                       <tr>
                         <td>
+                          <strong>Check-in Time</strong>
+                        </td>
+                        <td>
+                          {reservationDetails?.checkInTime
+                            ? formatTime(reservationDetails.checkInTime)
+                            : guest.checkinTime
+                              ? formatTime(guest.checkinTime)
+                              : "N/A"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <strong>Check-out Time</strong>
+                        </td>
+                        <td>
+                          {reservationDetails?.checkOutTime
+                            ? formatTime(reservationDetails.checkOutTime)
+                            : guest.checkoutTime
+                              ? formatTime(guest.checkoutTime)
+                              : "N/A"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
                           <strong>Payment Status</strong>
                         </td>
                         <td
@@ -1915,43 +2111,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                             : reservationDetails?.paymentStatus || "N/A"}
                         </td>
                       </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-in Date</strong>
-                        </td>
-                        <td>{reservationDetails?.arrivalDate || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-in Time</strong>
-                        </td>
-                        <td>
-                          {reservationDetails?.checkInTime
-                            ? formatTime(reservationDetails.checkInTime)
-                            : guest.checkinTime
-                              ? formatTime(guest.checkinTime)
-                              : "N/A"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-out Date</strong>
-                        </td>
-                        <td>{reservationDetails?.departureDate || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-out Time</strong>
-                        </td>
-                        <td>
-                          {reservationDetails?.checkOutTime
-                            ? formatTime(reservationDetails.checkOutTime)
-                            : guest.checkoutTime
-                              ? formatTime(guest.checkoutTime)
-                              : "N/A"}
-                        </td>
-                      </tr>
-                      <tr>
+                      {/*<tr>
                         <td>
                           <strong>Security Deposit</strong>
                         </td>
@@ -1962,13 +2122,13 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                             : "0"}{" "}
                           {reservationDetails?.currency || ""}
                         </td>
-                      </tr>
+                      </tr>*/}
                     </tbody>
                   </Table>
                 </Col>
               </Row>
               {/* ✅ Full-width row at the end */}
-              <Row style={{ marginTop: "-16px" }}>
+              {/*<Row style={{ marginTop: "-16px" }}>
                 <Col md={12}>
                   <Table striped bordered hover size="sm">
                     <tbody>
@@ -2000,7 +2160,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                     </tbody>
                   </Table>
                 </Col>
-              </Row>
+              </Row>*/}
             </>
           )}
         </DialogContent>
@@ -2339,6 +2499,7 @@ function KanbanView() {
     tags: "Tags", // fldXAbO0T3KFSXClVcF
     stack: "Status", // fldUCJESFtQspNSVHLs
     listingName: "Listing Name",
+    agent: "Agent",
   };
 
   const [snackbar, setSnackbar] = useState({
@@ -2520,6 +2681,7 @@ function KanbanView() {
           actualCheckout: fields[FIELD_MAP.actualCheckout] || "N/A",
           tags,
           stack: stacks.includes(stack) ? stack : "Unknown",
+          agent: fields[FIELD_MAP.agent] || "",
           type: fields[FIELD_MAP.listingName]
             ? (() => {
               const rawType = fields[FIELD_MAP.listingName].match(/\(([^)]+)\)/)?.[1] || "N/A";
@@ -2541,7 +2703,7 @@ function KanbanView() {
     } catch (err) {
       console.error("Fetch failed:", err);
       let errorMessage = "Failed to load reservations. ";
-      
+
       if (err.message.includes('timed out')) {
         errorMessage += "The Teable server is not responding. This could be a network issue or the server may be down. Please check your internet connection and try again.";
       } else if (err.message.includes('API Error')) {
@@ -2551,7 +2713,7 @@ function KanbanView() {
       } else {
         errorMessage += err.message || "Unknown error occurred.";
       }
-      
+
       setError(errorMessage);
       setReservations([]);
     } finally {
@@ -2754,102 +2916,7 @@ function KanbanView() {
     return null;
   }
 
-  function mapRecordToReservation(row) {
-    const fields = row.fields || {};
 
-    let tags = [];
-    try {
-      const rawTags = fields["Tags"];
-      if (Array.isArray(rawTags)) tags = rawTags;
-      else if (typeof rawTags === "string" && rawTags) tags = JSON.parse(rawTags);
-    } catch (e) {
-      console.warn("Tag parse failed:", e);
-    }
-
-    const stacks = [
-      "Upcoming Stay",
-      "Checked In",
-      "Staying Guest",
-      "Upcoming Checkout",
-      "Checked Out",
-      "Same Day Check Out",
-      "No Show",
-      "Unknown",
-    ];
-
-    const stack = fields["Status"] || "Unknown";
-
-    return {
-      id: row.id,
-      guestName: fields["Guest Name"] || "N/A",
-      reservationId: fields["Reservation ID"] || "N/A",
-      listingName: fields["Listing Name"] || "N/A",
-      arrivalDate: fields["Arrival Date"] || "N/A",
-      departureDate: fields["Departure Date"] || "N/A",
-      aptStatus: fields["Apt Status"] || "N/A",
-      stayDuration: fields["Stay Duration"] || "N/A",
-      actualCheckin: fields["Actual Checkin"] || "N/A",
-      actualCheckout: fields["Actual Checkout"] || "N/A",
-      tags,
-      stack: stacks.includes(stack) ? stack : "Unknown",
-      listingName: fields["Listing Name"] || "N/A",
-    };
-  }
-
-  // Loading state - only show for initial home tab data load
-  if (loading && activeTab === 0) {
-    const loadingContent = (
-      <MDBox mt={6} mb={3} display="flex" justifyContent="center">
-        <CircularProgress />
-      </MDBox>
-    );
-
-    return user?.role === "user" ? (
-      loadingContent
-    ) : (
-      <DashboardLayout>
-        <DashboardNavbar />
-        <MDBox
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "80vh",
-          }}
-        >
-          <MDTypography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
-            Loading home data...
-          </MDTypography>
-        </MDBox>
-        <Footer />
-      </DashboardLayout>
-    );
-  }
-
-  // Error state
-  if (error) {
-    const errorContent = (
-      <MDBox mt={6} mb={3}>
-        <MDTypography color="error">Error: {error}</MDTypography>
-      </MDBox>
-    );
-
-    if (user?.role === "user") {
-      return errorContent;
-    }
-
-    return (
-      <DashboardLayout>
-        <DashboardNavbar />
-        <MDBox mt={6} mb={3}>
-          <MDTypography variant="h5" color="error">
-            Error: {error}
-          </MDTypography>
-        </MDBox>
-        <Footer />
-      </DashboardLayout>
-    );
-  }
 
   const refresh = () => {
     // your actual card refresh logic (API call, reload, etc.)
@@ -3470,7 +3537,7 @@ function KanbanView() {
             <Box display="flex" alignItems="center" gap={2}>
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
-                  FDO Panel
+                  Reservation Panel
                 </Typography>
                 <Typography
                   variant="body2"
