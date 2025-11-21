@@ -2,7 +2,7 @@
 const getApiBaseUrl = () => {
   // Check if we're in development or production
   if (process.env.NODE_ENV === "development") {
-    return "http://localhost:5000";
+    return process.env.REACT_APP_API_URL || "http://localhost:5000";
   }
 
   // In production, use specific backend URL
@@ -15,7 +15,7 @@ export const API_BASE_URL = getApiBaseUrl();
 export const API_ENDPOINTS = {
   // Base URL for dynamic endpoints
   BASE_URL: API_BASE_URL,
-  
+
   // Auth endpoints
   LOGIN: `${API_BASE_URL}/api/auth/login`,
   REGISTER: `${API_BASE_URL}/api/auth/register`,
@@ -63,7 +63,7 @@ export const API_ENDPOINTS = {
   DUBAI_REVENUE_STORE: `${API_BASE_URL}/api/dubai-revenue/store`,
   DUBAI_REVENUE_LISTINGS: `${API_BASE_URL}/api/dubai-revenue/listings`,
   DUBAI_REVENUE_HEALTH: `${API_BASE_URL}/api/dubai-revenue/health`,
-  
+
   // Dubai Database endpoints (FAST - from Teable, no Hostaway)
   DUBAI_PAYMENT_DATABASE_DETAILS: `${API_BASE_URL}/api/dubai-payment/database/details`,
   DUBAI_REVENUE_DATABASE_ACHIEVED: `${API_BASE_URL}/api/dubai-revenue/database/achieved`,
@@ -102,17 +102,17 @@ export const API_ENDPOINTS = {
   ROOMS_HEALTH: `${API_BASE_URL}/api/rooms/health`,
   ROOMS_TEST_CORS: `${API_BASE_URL}/api/rooms/test-cors`,
   ROOMS_TEST_TEABLE: `${API_BASE_URL}/api/rooms/test-teable`,
-  
+
   // Rooms Teable endpoints
   ROOMS_TEABLE_SYNC: `${API_BASE_URL}/api/rooms-teable/sync`,
   ROOMS_TEABLE_DATA: `${API_BASE_URL}/api/rooms-teable/data`,
   ROOMS_TEABLE_TEST: `${API_BASE_URL}/api/rooms-teable/test`,
-  
+
   // Room Availability Teable endpoints
   ROOM_AVAILABILITY_TEABLE_SYNC: `${API_BASE_URL}/api/room-availability-teable/sync`,
   ROOM_AVAILABILITY_TEABLE_DATA: `${API_BASE_URL}/api/room-availability-teable/data`,
   ROOM_AVAILABILITY_TEABLE_TEST: `${API_BASE_URL}/api/room-availability-teable/test`,
-  
+
   // Room Details Teable endpoints
   ROOM_DETAILS_TEABLE_SYNC: `${API_BASE_URL}/api/room-details-teable/sync`,
   ROOM_DETAILS_TEABLE_DATA: `${API_BASE_URL}/api/room-details-teable/data`,
@@ -122,17 +122,17 @@ export const API_ENDPOINTS = {
   PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/payment/today-reservations`,
   PAYMENT_RESERVATION_BY_ID: `${API_BASE_URL}/api/payment/reservation`, // + /:id
   PAYMENT_HEALTH: `${API_BASE_URL}/api/payment/health`,
-  
+
   // Dubai Payment endpoints (UAE)
   DUBAI_PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/dubai-payment/today-reservations`,
   DUBAI_PAYMENT_RESERVATION_BY_ID: `${API_BASE_URL}/api/dubai-payment/reservation`, // + /:id
   DUBAI_PAYMENT_HEALTH: `${API_BASE_URL}/api/dubai-payment/health`,
-  
+
   // Payment Teable endpoints (fast loading with cache)
   PAYMENT_TEABLE_FAST: `${API_BASE_URL}/api/payment-teable/fast`,
   PAYMENT_TEABLE_SYNC: `${API_BASE_URL}/api/payment-teable/sync`,
   PAYMENT_TEABLE_RECORDS: `${API_BASE_URL}/api/payment-teable/records`,
-  
+
   // Payment helper functions
   PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/payment/reservation/${id}`,
   DUBAI_PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/dubai-payment/reservation/${id}`,
