@@ -89,6 +89,8 @@ const corsOptions = {
       'http://128.199.0.150/authentication/sign-in',
       'http://137.184.14.198',
       'http://137.184.14.198:3000',
+      'http://uaeportal.namuve.com',
+      'http://uaeportal.namuve.com:3000',
       'https://tested-1pln9mbk8-rana-talhas-projects.vercel.app',
       'https://tested-murex.vercel.app',
       'https://portal.namuve.com',
