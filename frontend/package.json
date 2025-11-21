@@ -44,7 +44,7 @@
   },
   "proxy": "http://localhost:5000",
   "scripts": {
-    "start": "set WDS_SOCKET_PORT=0 && react-scripts start",
+    "start": "react-scripts start",
     "start:silent": "set WDS_SOCKET_PORT=0 && react-scripts start > nul 2>&1",
     "build": "react-scripts build",
     "test": "react-scripts test",
