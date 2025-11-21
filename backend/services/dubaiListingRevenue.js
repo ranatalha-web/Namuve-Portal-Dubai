@@ -907,6 +907,21 @@ async function getDubaiRevenueAndOccupancy() {
       actualRevenue = grandTotalBaseRate;
       
       console.log(`🏆 Updated Total Revenue (Total Base Rate All Categories): ${totalRevenue.toFixed(2)} AED`);
+      
+      // Store listing revenue to Teable in background (fire-and-forget)
+      try {
+        const { storeListingRevenue } = require('../api/dubaiListingRevenueTeable');
+        storeListingRevenue({
+          studio: categoryRevenue['Studio'] || 0,
+          oneBR: categoryRevenue['1BR'] || 0,
+          twoBR: categoryRevenue['2BR'] || 0,
+          total: totalRevenue
+        }).catch(err => {
+          console.warn(`⚠️ Background: Failed to store listing revenue:`, err.message);
+        });
+      } catch (storeError) {
+        console.warn(`⚠️ Could not load storeListingRevenue function:`, storeError.message);
+      }
     }
 
     return {

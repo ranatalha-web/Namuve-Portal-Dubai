@@ -2,7 +2,10 @@ const axios = require('axios');
 
 // Get Teable configuration from environment variables
 const TEABLE_REVENUE_URL = process.env.TEABLE_REVENUE_TABLE_URL;
-const TEABLE_REVENUE_TOKEN = process.env.TEABLE_REVENUE_BEARER_TOKEN;
+// Strip "Bearer " prefix if it already exists in the token
+const rawToken = process.env.TEABLE_REVENUE_BEARER_TOKEN || '';
+const cleanToken = rawToken.startsWith('Bearer ') ? rawToken.substring(7) : rawToken;
+const TEABLE_REVENUE_TOKEN = `Bearer ${cleanToken}`;
 
 /**
  * Store or update daily revenue in Teable database

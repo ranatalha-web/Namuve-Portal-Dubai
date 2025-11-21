@@ -97,68 +97,26 @@ async function fetchPaymentDetailsFromDatabase() {
 
 /**
  * Fetch achieved revenue from Teable database
+ * NOTE: This function is kept for backward compatibility but returns empty data
+ * The achieved revenue is now calculated directly in the Dubai revenue calculation
  */
 async function fetchAchievedRevenueFromDatabase() {
   try {
-    console.log(`\n💰 Fetching achieved revenue from Teable database...`);
+    console.log(`\n💰 Skipping Teable fetch - using calculated achieved revenue instead`);
     
-    const teableUrl = process.env.TEABLE_REVENUE_TABLE_URL;
-    const teableToken = process.env.TEABLE_REVENUE_BEARER_TOKEN;
-    
-    if (!teableUrl || !teableToken) {
-      console.error('❌ Teable revenue configuration missing');
-      throw new Error('Teable revenue configuration not found');
-    }
-
-    const startTime = Date.now();
-
-    const authHeader = teableToken.startsWith('Bearer ') ? teableToken : `Bearer ${teableToken}`;
-    
-    const response = await axios.get(teableUrl, {
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const records = response.data.records || [];
-    
-    if (records.length === 0) {
-      return {
-        success: true,
-        data: {
-          dailyAchieved: 0,
-          monthlyAchieved: 0,
-          quarterlyAchieved: 0
-        },
-        loadTime: '0ms'
-      };
-    }
-
-    // Get the latest record
-    const latestRecord = records.reduce((latest, current) => {
-      return new Date(current.createdTime) > new Date(latest.createdTime) ? current : latest;
-    });
-
-    const fields = latestRecord.fields || {};
-    const loadTime = Date.now() - startTime;
-
-    const achievedRevenue = {
-      dailyAchieved: parseFloat(fields['Daily Actual Revenue'] || 0) || 0,
-      monthlyAchieved: parseFloat(fields['MONTHLY Actual Revenue'] || 0) || 0,
-      quarterlyAchieved: parseFloat(fields['QUARTERLY Achieved Revenue'] || 0) || 0
-    };
-
-    console.log(`✅ Fetched achieved revenue from Teable in ${loadTime}ms:`, achievedRevenue);
-
+    // Return empty data - achieved revenue is calculated directly
     return {
       success: true,
-      data: achievedRevenue,
-      loadTime: `${loadTime}ms`,
-      timestamp: new Date().toISOString()
+      data: {
+        dailyAchieved: 0,
+        monthlyAchieved: 0,
+        quarterlyAchieved: 0
+      },
+      loadTime: '0ms',
+      note: 'Achieved revenue is calculated directly from reservations'
     };
   } catch (error) {
-    console.error(`❌ Error fetching achieved revenue:`, error.message);
+    console.error(`❌ Error in fetchAchievedRevenueFromDatabase:`, error.message);
     
     return {
       success: true,
@@ -190,7 +148,10 @@ async function fetchListingRevenueFromDatabase() {
 
     const startTime = Date.now();
 
-    const authHeader = teableToken.startsWith('Bearer ') ? teableToken : `Bearer ${teableToken}`;
+    // Strip "Bearer " prefix if it already exists in the token
+    const cleanToken = teableToken.startsWith('Bearer ') ? teableToken.substring(7) : teableToken;
+    const authHeader = `Bearer ${cleanToken}`;
+    console.log(`🔐 Using auth header: Bearer ${cleanToken.substring(0, 20)}...`);
     
     const response = await axios.get(teableUrl, {
       headers: {
@@ -239,6 +200,10 @@ async function fetchListingRevenueFromDatabase() {
     };
   } catch (error) {
     console.error(`❌ Error fetching listing revenue:`, error.message);
+    if (error.response) {
+      console.error(`   Status: ${error.response.status}`);
+      console.error(`   Data:`, error.response.data);
+    }
     
     return {
       success: true,
