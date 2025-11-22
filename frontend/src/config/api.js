@@ -6,7 +6,7 @@ const getApiBaseUrl = () => {
   }
 
   // In production, use specific backend URL
-  return "https://portal.namuve.com/api";
+  return process.env.REACT_APP_API_URL || "https://uaeportal.namuve.com";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
