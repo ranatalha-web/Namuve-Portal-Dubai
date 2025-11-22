@@ -3944,11 +3944,11 @@ function KanbanView() {
                 <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
 
                 {/* Right side (Search + Button) */}
-                <MDBox display="flex" alignItems="center" gap={2}>
+                <MDBox display="flex" alignItems="center" gap={{ xs: 0.5, sm: 0.5, md: 1 }} sx={{ flexShrink: 1 }}>
 
                   {/* From Date */}
                   <MDBox display="flex" alignItems="center" gap={1}>
-                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap", display: { xs: "none", sm: "block" } }}>
                       From:
                     </MDTypography>
                     <TextField
@@ -3965,7 +3965,7 @@ function KanbanView() {
                         }
                       }}
                       InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
-                      sx={{ width: { xs: 130, sm: 140, md: 150 } }}
+                      sx={{ width: { xs: 90, sm: 140, md: 150 } }}
                       inputProps={{
                         max: endDate || new Date().toISOString().split("T")[0], // can't pick future if no end
                       }}
@@ -3974,7 +3974,7 @@ function KanbanView() {
 
                   {/* To Date */}
                   <MDBox display="flex" alignItems="center" gap={1}>
-                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap", display: { xs: "none", sm: "block" } }}>
                       To:
                     </MDTypography>
                     <TextField
@@ -4002,7 +4002,7 @@ function KanbanView() {
                         }
                       }}
                       InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
-                      sx={{ width: { xs: 130, sm: 140, md: 150 } }}
+                      sx={{ width: { xs: 90, sm: 140, md: 150 } }}
                       inputProps={{
                         min: startDate,
                       }}
@@ -4048,14 +4048,15 @@ function KanbanView() {
                       },
                     }}
                   >
-                    Start
+                    <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>Start</Box>
+                    <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>Go</Box>
                   </MDButton>
 
                   {/* Search Bar */}
                   <MDBox
                     sx={{
                       position: "relative",
-                      width: 160,
+                      width: { xs: 80, sm: 120, md: 160 },
                     }}
                   >
                     {/* Search icon inside input */}
@@ -4110,13 +4111,14 @@ function KanbanView() {
                       fontWeight: "bold",
                       fontSize: "0.8rem",
                       borderRadius: "10px",
-                      px: 2,
-                      py: 0.6,
+                      px: 0,
+                      py: 0,
                       border: "2px solid",
                       borderColor: "primary.main",
                       color: "primary.main",
                       backgroundColor: "transparent",
                       transition: "all 0.2s ease",
+                      fontSize: { xs: "0.7rem", md: "0.8rem" },
                       "&:hover": {
                         borderColor: "primary.dark",
                         color: "primary.dark",
@@ -4204,7 +4206,24 @@ function KanbanView() {
                           </MDBox>
                         </MDBox>
 
-                        <MDBox px={2} pb={2} sx={{ flex: 1, overflowY: "auto", overflowX: "hidden", maxHeight: "calc(98vh - 280px)" }}>
+                        <MDBox px={2} pb={2} sx={{
+                          flex: 1,
+                          overflowY: "auto",
+                          overflowX: "hidden",
+                          maxHeight: {
+                            xs: "calc(100vh - 180px)",  // Mobile portrait: reduce overhead to 180px
+                            sm: "calc(98vh - 220px)",    // Tablet portrait: reduce overhead to 220px
+                            md: "calc(98vh - 250px)",    // Medium: reduce overhead to 250px
+                            lg: "calc(98vh - 280px)"     // Desktop: keep original 280px
+                          },
+                          // Landscape mode adjustments - reduce overhead even more due to shorter viewport height
+                          "@media (max-width: 600px) and (orientation: landscape)": {
+                            maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
+                          },
+                          "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
+                            maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
+                          }
+                        }}>
                           {filteredGuests.map((guest) => (
                             <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
                           ))}

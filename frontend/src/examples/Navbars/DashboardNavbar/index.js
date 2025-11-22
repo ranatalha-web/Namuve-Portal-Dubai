@@ -54,10 +54,10 @@ function DashboardNavbar({ absolute, light, isMini }) {
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, darkMode } = controller;
   const route = useLocation().pathname.split("/").slice(1);
-  
+
   // Check if screen is mobile (below 1200px)
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("lg")); // Below 1200px
 
   useEffect(() => {
     // Setting the navbar type
@@ -112,10 +112,8 @@ function DashboardNavbar({ absolute, light, isMini }) {
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
       <Toolbar sx={(theme) => navbarContainer(theme)}>
-        <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
-        </MDBox>
         {isMini ? null : (
-          <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
+          <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
             <MDBox color={light ? "white" : "inherit"}>
               <IconButton
                 size="large"
@@ -137,6 +135,8 @@ function DashboardNavbar({ absolute, light, isMini }) {
             </MDBox>
           </MDBox>
         )}
+        <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
+        </MDBox>
       </Toolbar>
     </AppBar>
   );
