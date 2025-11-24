@@ -3546,9 +3546,9 @@ function KanbanView() {
             mb: 2,
           }}
         >
-          <Toolbar sx={{ justifyContent: "space-between", px: 2, py: 1 }}>
+          <Toolbar sx={{ justifyContent: "space-between", px: { xs: 0.5, sm: 2 }, py: 1 }}>
             {/* Left: Title */}
-            <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 1 }} sx={{ flexShrink: 0 }}>
+            <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 1 }} sx={{ flexShrink: 0, mr: { xs: 0.5, sm: 2 } }}>
               <IconButton
                 size="small"
                 disableRipple
@@ -3587,13 +3587,13 @@ function KanbanView() {
                     textTransform: "none",
                     fontSize: { xs: "0.75rem", sm: "0.85rem", md: "0.95rem" },
                     mx: { xs: 0.5, sm: 0.5 },
-                    px: { xs: 1, sm: 1, md: 2 },
+                    px: { xs: 1.5, sm: 2, md: 3 },
                     py: 1,
                     borderRadius: "12px",
                     transition: "all 0.3s ease",
                     color: "#4b5563",
                     backgroundColor: "transparent",
-                    minWidth: { xs: "auto", sm: "90px" },
+                    minWidth: { xs: "55px", sm: "90px" },
                     "&:hover": {
                       backgroundColor: "#f3f4f6",
                     },
@@ -3615,29 +3615,29 @@ function KanbanView() {
                 }}
               >
                 <Tab
-                  icon={<HomeIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  icon={<HomeIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
                   label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Home</Box>}
                 />
                 <Tab
-                  icon={<ApartmentIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  icon={<ApartmentIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
                   label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Apartment Status</Box>}
                 />
                 <Tab
-                  icon={<EventAvailableIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  icon={<EventAvailableIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
                   label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Todays Check-In/Out</Box>}
                 />
               </Tabs>
             </Box>
 
             {/* Right: User Info */}
-            <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 0 }} sx={{ flexShrink: 0 }}>
+            <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 1 }} sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 2 } }}>
               <Avatar
                 sx={{
-                  width: 36,
-                  height: 36,
+                  width: 28,
+                  height: 28,
                   backgroundColor: "#f3f4f6",
                   color: "#374151",
-                  fontSize: "0.875rem",
+                  fontSize: "0.75rem",
                   fontWeight: "600",
                 }}
               >
@@ -3658,7 +3658,7 @@ function KanbanView() {
                 onClick={() => setNotificationsOpen(true)}
               >
                 <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsIcon fontSize="small" />
+                  <NotificationsIcon />
                 </Badge>
               </IconButton>
             </Box>
@@ -3672,18 +3672,20 @@ function KanbanView() {
       {
         user?.role !== "user" && activeTab === 1 ? (
           // Apartment Status Tab Content
-          <Box sx={{ p: 4 }}>
+          <Box sx={{ p: { xs: 2, sm: 4 } }}>
             <Box
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                mb: 3,
+                mb: { xs: 2, sm: 3 },
+                flexWrap: "nowrap",
+                gap: { xs: 1, sm: 2 },
               }}
             >
               <Typography
-                variant="h5"
-                sx={{ fontWeight: "700", color: "#1f2937" }}
+                variant={{ xs: "h6", sm: "h5" }}
+                sx={{ fontWeight: "700", color: "#1f2937", fontSize: { xs: "0.95rem", sm: "1.5rem" }, flexShrink: 1, minWidth: 0 }}
               >
                 🏢 Apartment Status
               </Typography>
@@ -3695,11 +3697,15 @@ function KanbanView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
                 sx={{
-                  width: "280px",
+                  width: { xs: "180px", sm: "280px" },
                   backgroundColor: "#fff",
                   borderRadius: "8px",
+                  flexShrink: 0,
                   "& .MuiOutlinedInput-root": {
                     borderRadius: "8px",
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
                   },
                 }}
               />
@@ -3761,7 +3767,7 @@ function KanbanView() {
                           <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", fontSize: { xs: "0.9rem", sm: "1.25rem" } }}>
                             {category}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500, textAlign: "right", fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
+                          <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500, textAlign: "right", fontSize: { xs: "0.7rem", sm: "1rem" } }}>
                             Total: {total} |{" "}
                             <span style={{ color: "#10B981", fontWeight: 600 }}>Available: {available}</span>{" "}
                             |{" "}
@@ -3774,17 +3780,19 @@ function KanbanView() {
                         <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
                           <thead>
                             <tr>
-                              <th>Listing Name</th>
-                              <th>Status</th>
+                              <th style={{ fontSize: 'clamp(0.75rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Listing Name</th>
+                              <th style={{ fontSize: 'clamp(0.75rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Status</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filteredEntries.map((row, i) => (
                               <tr key={i}>
-                                <td>{row.name}</td>
+                                <td style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.name}</td>
                                 <td
                                   style={{
                                     fontWeight: 600,
+                                    fontSize: 'clamp(0.7rem, 2vw, 1rem)',
+                                    padding: 'clamp(4px, 1vw, 12px)',
                                     color:
                                       row.status === "available"
                                         ? "#10B981"
@@ -3817,12 +3825,12 @@ function KanbanView() {
                 mb: 3,
               }}
             >
-              <Typography variant="h5" sx={{ mb: 3, fontWeight: "700", color: "#1f2937" }}>
+              <Typography variant={{ xs: "h6", sm: "h5" }} sx={{ mb: { xs: 2, sm: 3 }, fontWeight: "700", color: "#1f2937", fontSize: { xs: "0.95rem", sm: "1.5rem" } }}>
                 📅 Today's Check-In / Check-Out
               </Typography>
 
               {!loadingCheck && (
-                <Box sx={{ display: "flex", gap: 2 }}>
+                <Box sx={{ display: "flex", gap: { xs: 1, sm: 2 }, flexWrap: "nowrap" }}>
                   {/* PDF Button */}
                   <Button
                     variant="outlined"
@@ -3832,9 +3840,12 @@ function KanbanView() {
                       borderRadius: "12px",
                       textTransform: "none",
                       fontWeight: "bold",
+                      fontSize: { xs: "0.6rem", sm: "0.875rem" },
+                      padding: { xs: "4px 8px", sm: "6px 16px" },
+                      minWidth: "auto",
                       boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                       color: "#17621B",
-                      border: "2px solid #17621B",
+                      border: { xs: "1px solid #17621B", sm: "2px solid #17621B" },
                       "&:hover": {
                         backgroundColor: "#1e7a20",
                         borderColor: "#145517",
@@ -3854,9 +3865,12 @@ function KanbanView() {
                       borderRadius: "12px",
                       textTransform: "none",
                       fontWeight: "bold",
+                      fontSize: { xs: "0.6rem", sm: "0.875rem" },
+                      padding: { xs: "4px 8px", sm: "6px 16px" },
+                      minWidth: "auto",
                       boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                       color: "#d97706",
-                      border: "2px solid #d97706",
+                      border: { xs: "1px solid #d97706", sm: "2px solid #d97706" },
                       "&:hover": {
                         backgroundColor: "#f59e0b",
                         borderColor: "#d97706",
@@ -3910,19 +3924,19 @@ function KanbanView() {
                     <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
                       <thead>
                         <tr>
-                          <th>Guest Name</th>
-                          <th>Vehicle Number</th>
-                          <th>Apartment</th>
-                          <th>Arrival Date</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Guest Name</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Vehicle Number</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Apartment</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Arrival Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {todayCheckIn.map((row, i) => (
                           <tr key={i}>
-                            <td>{row.guest}</td>
-                            <td>{row.vehicle}</td>
-                            <td>{row.apartment}</td>
-                            <td>{row.arrival}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.guest}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.vehicle}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.apartment}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.arrival}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -3952,19 +3966,19 @@ function KanbanView() {
                     <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
                       <thead>
                         <tr>
-                          <th>Guest Name</th>
-                          <th>Vehicle Number</th>
-                          <th>Apartment</th>
-                          <th>Departure Date</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Guest Name</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Vehicle Number</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Apartment</th>
+                          <th style={{ fontSize: 'clamp(0.7rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>Departure Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {todayCheckOut.map((row, i) => (
                           <tr key={i}>
-                            <td>{row.guest}</td>
-                            <td>{row.vehicle}</td>
-                            <td>{row.apartment}</td>
-                            <td>{row.departure}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.guest}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.vehicle}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.apartment}</td>
+                            <td style={{ fontSize: 'clamp(0.65rem, 2vw, 1rem)', padding: 'clamp(4px, 1vw, 12px)' }}>{row.departure}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -3986,7 +4000,7 @@ function KanbanView() {
                   alignItems="center"
                 >
                   {/* Left side title */}
-                  <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
+                  <MDTypography variant={{ xs: "subtitle1", sm: "h5" }} sx={{ fontWeight: "700", color: "#1f2937", fontSize: { xs: "0.9rem", sm: "1.5rem" } }} noWrap>Reservations</MDTypography>
 
                   {/* Right side (Search + Button) */}
                   <MDBox display="flex" alignItems="center" gap={{ xs: 0.5, sm: 0.5, md: 1 }} sx={{ flexShrink: 1 }}>
