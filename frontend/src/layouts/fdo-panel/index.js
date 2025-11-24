@@ -38,11 +38,17 @@ import EventIcon from "@mui/icons-material/Event";
 import CommentIcon from "@mui/icons-material/Comment";
 import CommentSection from "components/CommentSection/CommentSection";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import Popover from "@mui/material/Popover";
+import HomeIcon from "@mui/icons-material/Home";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 
 // Authentication context
 import { useAuth } from "context/AuthContext";
 
 // @mui material components
+import { useMaterialUIController, setMiniSidenav } from "context";
+import Icon from "@mui/material/Icon";
 import IconButton from "@mui/material/IconButton";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import Grid from "@mui/material/Grid";
@@ -2231,6 +2237,9 @@ ReservationCard.propTypes = {
 
 function KanbanView() {
   const { user, isAuthenticated, loading: authLoading, isViewOnly, isCustom, hasPermission } = useAuth();
+  const [controller, dispatch] = useMaterialUIController();
+  const { miniSidenav } = controller;
+  const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -2257,6 +2266,11 @@ function KanbanView() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const hasAutoLoaded = useRef(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const handleFilterClick = (event) => setFilterAnchorEl(event.currentTarget);
+  const handleFilterClose = () => setFilterAnchorEl(null);
+  const openFilter = Boolean(filterAnchorEl);
+  const filterId = openFilter ? "mobile-filter-popover" : undefined;
 
   // API Configuration
   const API_ENDPOINT = "https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record";
@@ -3532,16 +3546,26 @@ function KanbanView() {
             mb: 2,
           }}
         >
-          <Toolbar sx={{ justifyContent: "space-between", px: 4, py: 1 }}>
+          <Toolbar sx={{ justifyContent: "space-between", px: 2, py: 1 }}>
             {/* Left: Title */}
-            <Box display="flex" alignItems="center" gap={2}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
+            <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 1 }} sx={{ flexShrink: 0 }}>
+              <IconButton
+                size="small"
+                disableRipple
+                color="inherit"
+                onClick={handleMiniSidenav}
+                sx={{ p: 0.5, display: { lg: "none" } }}
+              >
+                <Icon fontSize="small">{miniSidenav ? "menu_open" : "menu"}</Icon>
+              </IconButton>
+              <Box display="flex" flexDirection="column">
+                <Typography variant={{ xs: "subtitle1", sm: "h5" }} sx={{ fontWeight: "700", color: "#1f2937", fontSize: { xs: "0.9rem", sm: "1.5rem" } }} noWrap>
                   Reservation Panel
                 </Typography>
                 <Typography
-                  variant="body2"
-                  sx={{ color: "#6b7280", fontSize: "0.75rem", fontWeight: "500" }}
+                  variant={{ xs: "caption", sm: "body2" }}
+                  sx={{ color: "#6b7280", fontSize: { xs: "0.55rem", sm: "0.75rem" }, fontWeight: "500" }}
+                  noWrap
                 >
                   Guest Management System
                 </Typography>
@@ -3549,10 +3573,11 @@ function KanbanView() {
             </Box>
 
             {/* Center: Complete Tabs - All three tabs visible */}
-            <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+            <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center", overflow: "hidden" }}>
               <Tabs
                 value={activeTab}
                 onChange={(event, newValue) => setActiveTab(newValue)}
+                centered
                 sx={{
                   "& .MuiTabs-indicator": {
                     display: "none",
@@ -3560,16 +3585,25 @@ function KanbanView() {
                   "& .MuiTab-root": {
                     fontWeight: 600,
                     textTransform: "none",
-                    fontSize: "0.95rem",
-                    mx: 1,
-                    px: 3,
+                    fontSize: { xs: "0.75rem", sm: "0.85rem", md: "0.95rem" },
+                    mx: { xs: 0.5, sm: 0.5 },
+                    px: { xs: 1, sm: 1, md: 2 },
                     py: 1,
                     borderRadius: "12px",
                     transition: "all 0.3s ease",
                     color: "#4b5563",
                     backgroundColor: "transparent",
+                    minWidth: { xs: "auto", sm: "90px" },
                     "&:hover": {
                       backgroundColor: "#f3f4f6",
+                    },
+                    // Ensure content is centered
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    "& .MuiTab-iconWrapper": {
+                      marginBottom: 0,
+                      marginRight: 0,
                     },
                   },
                   "& .Mui-selected": {
@@ -3580,451 +3614,220 @@ function KanbanView() {
                   },
                 }}
               >
-                <Tab label="Home" />
-                <Tab label="Apartment Status" />
-                <Tab label="Todays Check-In/Out" />
+                <Tab
+                  icon={<HomeIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Home</Box>}
+                />
+                <Tab
+                  icon={<ApartmentIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Apartment Status</Box>}
+                />
+                <Tab
+                  icon={<EventAvailableIcon sx={{ display: { xs: "block", sm: "none" } }} />}
+                  label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Todays Check-In/Out</Box>}
+                />
               </Tabs>
             </Box>
 
             {/* Right: User Info */}
-            <Box display="flex" alignItems="center" gap={2}>
-              <Box display="flex" alignItems="center" gap={1.5}>
-                <Avatar
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    backgroundColor: "#f3f4f6",
-                    color: "#374151",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                  }}
-                >
-                  {(user?.name || user?.username)?.charAt(0)?.toUpperCase() || "U"}
-                </Avatar>
-                <Typography sx={{ color: "#1f2937", fontWeight: 600 }}>
-                  {user?.name || user?.username}
-                </Typography>
+            <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 0 }} sx={{ flexShrink: 0 }}>
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                {(user?.name || user?.username)?.charAt(0)?.toUpperCase() || "U"}
+              </Avatar>
+              <Typography sx={{ color: "#1f2937", fontWeight: 600, display: { xs: "none", sm: "block" } }}>
+                {user?.name || user?.username}
+              </Typography>
 
-                {/* NOTIFICATION ICON */}
-                <IconButton
-                  ref={anchorRef}
-                  size="small"
-                  sx={{
-                    color: "#4b5563",
-                    "&:hover": { backgroundColor: "#f3f4f6" },
-                  }}
-                  onClick={() => setNotificationsOpen(true)}
-                >
-                  <Badge badgeContent={unreadCount} color="error">
-                    <NotificationsIcon fontSize="small" />
-                  </Badge>
-                </IconButton>
-              </Box>
+              {/* NOTIFICATION ICON */}
+              <IconButton
+                ref={anchorRef}
+                size="small"
+                sx={{
+                  color: "#4b5563",
+                  "&:hover": { backgroundColor: "#f3f4f6" },
+                }}
+                onClick={() => setNotificationsOpen(true)}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon fontSize="small" />
+                </Badge>
+              </IconButton>
             </Box>
+
           </Toolbar>
         </AppBar>
       )}
 
+
       {/* ✅ Conditional content based on active tab for admin users */}
-      {user?.role !== "user" && activeTab === 1 ? (
-        // Apartment Status Tab Content
-        <Box sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 3,
-            }}
-          >
-            <Typography
-              variant="h5"
-              sx={{ fontWeight: "700", color: "#1f2937" }}
-            >
-              🏢 Apartment Status
-            </Typography>
-
-            <TextField
-              label="Search by Apartment Name"
-              variant="outlined"
-              size="small"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
-              sx={{
-                width: "280px",
-                backgroundColor: "#fff",
-                borderRadius: "8px",
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                },
-              }}
-            />
-          </Box>
-
-          {loading && (
+      {
+        user?.role !== "user" && activeTab === 1 ? (
+          // Apartment Status Tab Content
+          <Box sx={{ p: 4 }}>
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "center",
+                justifyContent: "space-between",
                 alignItems: "center",
-                height: "60vh",
+                mb: 3,
               }}
             >
-              <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
-                Loading apartment data...
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: "700", color: "#1f2937" }}
+              >
+                🏢 Apartment Status
               </Typography>
+
+              <TextField
+                label="Search by Apartment Name"
+                variant="outlined"
+                size="small"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
+                sx={{
+                  width: "280px",
+                  backgroundColor: "#fff",
+                  borderRadius: "8px",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                  },
+                }}
+              />
             </Box>
-          )}
-          {error && <Typography color="error">{error}</Typography>}
 
-          {!loading && !error && Object.keys(listingSections).length > 0 && (
-            <Row>
-              {Object.entries(listingSections).map(([category, entries], idx) => {
-                const filteredEntries = entries.filter((row) =>
-                  row.name.toLowerCase().includes(searchQuery)
-                );
-
-                if (filteredEntries.length === 0) return null;
-
-                const total = entries.length;
-                const available = entries.filter((e) => e.status === "available").length;
-                const reserved = entries.filter((e) => e.status === "reserved").length;
-                const blocked = entries.filter((e) => e.status === "blocked").length;
-                const occupancy = total > 0 ? ((reserved / total) * 100).toFixed(1) : 0;
-
-                return (
-                  <Col key={idx} md={6} className="mb-4">
-                    <Box
-                      sx={{
-                        backgroundColor: "#fff",
-                        borderRadius: "12px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          backgroundColor: "#f9fafb",
-                          px: 3,
-                          py: 2,
-                          borderBottom: "1px solid #e5e7eb",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
-                          {category}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500 }}>
-                          Total: {total} |{" "}
-                          <span style={{ color: "#10B981", fontWeight: 600 }}>Available: {available}</span>{" "}
-                          |{" "}
-                          <span style={{ color: "#EF4444", fontWeight: 600 }}>Reserved: {reserved}</span>{" "}
-                          |{" "}
-                          <span style={{ color: "#6B7280", fontWeight: 600 }}>Blocked: {blocked}</span>
-                        </Typography>
-                      </Box>
-
-                      <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
-                        <thead>
-                          <tr>
-                            <th>Listing Name</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredEntries.map((row, i) => (
-                            <tr key={i}>
-                              <td>{row.name}</td>
-                              <td
-                                style={{
-                                  fontWeight: 600,
-                                  color:
-                                    row.status === "available"
-                                      ? "#10B981"
-                                      : row.status === "reserved"
-                                        ? "#EF4444"
-                                        : "#6B7280",
-                                }}
-                              >
-                                {row.status}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </Box>
-                  </Col>
-                );
-              })}
-            </Row>
-          )}
-        </Box>
-      ) : user?.role !== "user" && activeTab === 2 ? (
-        // Today's Check-In/Out Tab Content
-        <Box sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 3,
-            }}
-          >
-            <Typography variant="h5" sx={{ mb: 3, fontWeight: "700", color: "#1f2937" }}>
-              📅 Today's Check-In / Check-Out
-            </Typography>
-
-            {!loadingCheck && (
-              <Box sx={{ display: "flex", gap: 2 }}>
-                {/* PDF Button */}
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={downloadPDF}
-                  sx={{
-                    borderRadius: "12px",
-                    textTransform: "none",
-                    fontWeight: "bold",
-                    boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                    color: "#17621B",
-                    border: "2px solid #17621B",
-                    "&:hover": {
-                      backgroundColor: "#1e7a20",
-                      borderColor: "#145517",
-                      color: "#fff",
-                    },
-                  }}
-                >
-                  Download PDF
-                </Button>
-
-                {/* CSV Button */}
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={downloadExcel}
-                  sx={{
-                    borderRadius: "12px",
-                    textTransform: "none",
-                    fontWeight: "bold",
-                    boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-                    color: "#d97706",
-                    border: "2px solid #d97706",
-                    "&:hover": {
-                      backgroundColor: "#f59e0b",
-                      borderColor: "#d97706",
-                      color: "#fff",
-                    },
-                  }}
-                >
-                  Download Sheet
-                </Button>
+            {loading && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "60vh",
+                }}
+              >
+                <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                  Loading apartment data...
+                </Typography>
               </Box>
             )}
-          </Box>
+            {error && <Typography color="error">{error}</Typography>}
 
-          {loadingCheck && (
+            {!loading && !error && Object.keys(listingSections).length > 0 && (
+              <Row>
+                {Object.entries(listingSections).map(([category, entries], idx) => {
+                  const filteredEntries = entries.filter((row) =>
+                    row.name.toLowerCase().includes(searchQuery)
+                  );
+
+                  if (filteredEntries.length === 0) return null;
+
+                  const total = entries.length;
+                  const available = entries.filter((e) => e.status === "available").length;
+                  const reserved = entries.filter((e) => e.status === "reserved").length;
+                  const blocked = entries.filter((e) => e.status === "blocked").length;
+                  const occupancy = total > 0 ? ((reserved / total) * 100).toFixed(1) : 0;
+
+                  return (
+                    <Col key={idx} md={6} className="mb-4">
+                      <Box
+                        sx={{
+                          backgroundColor: "#fff",
+                          borderRadius: "12px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundColor: "#f9fafb",
+                            px: { xs: 2, sm: 3 },
+                            py: 2,
+                            borderBottom: "1px solid #e5e7eb",
+                            display: "flex",
+                            flexDirection: "row", // Force row direction
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", fontSize: { xs: "0.9rem", sm: "1.25rem" } }}>
+                            {category}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 500, textAlign: "right", fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
+                            Total: {total} |{" "}
+                            <span style={{ color: "#10B981", fontWeight: 600 }}>Available: {available}</span>{" "}
+                            |{" "}
+                            <span style={{ color: "#EF4444", fontWeight: 600 }}>Reserved: {reserved}</span>{" "}
+                            |{" "}
+                            <span style={{ color: "#6B7280", fontWeight: 600 }}>Blocked: {blocked}</span>
+                          </Typography>
+                        </Box>
+
+                        <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
+                          <thead>
+                            <tr>
+                              <th>Listing Name</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEntries.map((row, i) => (
+                              <tr key={i}>
+                                <td>{row.name}</td>
+                                <td
+                                  style={{
+                                    fontWeight: 600,
+                                    color:
+                                      row.status === "available"
+                                        ? "#10B981"
+                                        : row.status === "reserved"
+                                          ? "#EF4444"
+                                          : "#6B7280",
+                                  }}
+                                >
+                                  {row.status}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </Table>
+                      </Box>
+                    </Col>
+                  );
+                })}
+              </Row>
+            )}
+          </Box>
+        ) : user?.role !== "user" && activeTab === 2 ? (
+          // Today's Check-In/Out Tab Content
+          <Box sx={{ p: 4 }}>
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "center",
+                justifyContent: "space-between",
                 alignItems: "center",
-                height: "60vh",
+                mb: 3,
               }}
             >
-              <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
-                Loading data...
+              <Typography variant="h5" sx={{ mb: 3, fontWeight: "700", color: "#1f2937" }}>
+                📅 Today's Check-In / Check-Out
               </Typography>
-            </Box>
-          )}
-          {errorCheck && <Typography color="error">{errorCheck}</Typography>}
 
-          {!loadingCheck && !errorCheck && (
-            <Row>
-              {/* Check-In Table */}
-              <Col md={6} className="mb-4">
-                <Box sx={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <Box
-                    sx={{
-                      backgroundColor: "#f9fafb",
-                      px: 3,
-                      py: 2,
-                      border: "2px solid #e5e7eb",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
-                      Today Check-In &nbsp; <Typography component="span" variant="body2" sx={{ color: "#6b7280" }}>Total: {todayCheckIn.length}</Typography>
-                    </Typography>
-                  </Box>
-
-                  <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
-                    <thead>
-                      <tr>
-                        <th>Guest Name</th>
-                        <th>Vehicle Number</th>
-                        <th>Apartment</th>
-                        <th>Arrival Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {todayCheckIn.map((row, i) => (
-                        <tr key={i}>
-                          <td>{row.guest}</td>
-                          <td>{row.vehicle}</td>
-                          <td>{row.apartment}</td>
-                          <td>{row.arrival}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Box>
-              </Col>
-
-              {/* Check-Out Table */}
-              <Col md={6} className="mb-4">
-                <Box sx={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <Box
-                    sx={{
-                      backgroundColor: "#f9fafb",
-                      px: 3,
-                      py: 2,
-                      border: "2px solid #e5e7eb",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
-                      Today Check-Out &nbsp; <Typography component="span" variant="body2" sx={{ color: "#6b7280" }}>Total: {todayCheckOut.length}</Typography>
-                    </Typography>
-                  </Box>
-
-                  <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
-                    <thead>
-                      <tr>
-                        <th>Guest Name</th>
-                        <th>Vehicle Number</th>
-                        <th>Apartment</th>
-                        <th>Departure Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {todayCheckOut.map((row, i) => (
-                        <tr key={i}>
-                          <td>{row.guest}</td>
-                          <td>{row.vehicle}</td>
-                          <td>{row.apartment}</td>
-                          <td>{row.departure}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Box>
-              </Col>
-            </Row>
-          )}
-        </Box>
-      ) : (
-        // Home Tab Content (Default - Reservations)
-        <Grid container spacing={3} justifyContent="center">
-          <Grid item xs={12}>
-            <Card>
-              <MDBox
-                p={1}
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                {/* Left side title */}
-                <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
-
-                {/* Right side (Search + Button) */}
-                <MDBox display="flex" alignItems="center" gap={{ xs: 0.5, sm: 0.5, md: 1 }} sx={{ flexShrink: 1 }}>
-
-                  {/* From Date */}
-                  <MDBox display="flex" alignItems="center" gap={1}>
-                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap", display: { xs: "none", sm: "block" } }}>
-                      From:
-                    </MDTypography>
-                    <TextField
-                      type="date"
-                      size="small"
-                      value={startDate}
-                      onChange={(e) => {
-                        const newStart = e.target.value;
-                        if (endDate && new Date(newStart) > new Date(endDate)) {
-                          setStartDate(endDate); // auto-fix
-                          setSnackbar({ open: true, message: "From cannot be after To", severity: "info" });
-                        } else {
-                          setStartDate(newStart);
-                        }
-                      }}
-                      InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
-                      sx={{ width: { xs: 90, sm: 140, md: 150 } }}
-                      inputProps={{
-                        max: endDate || new Date().toISOString().split("T")[0], // can't pick future if no end
-                      }}
-                    />
-                  </MDBox>
-
-                  {/* To Date */}
-                  <MDBox display="flex" alignItems="center" gap={1}>
-                    <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap", display: { xs: "none", sm: "block" } }}>
-                      To:
-                    </MDTypography>
-                    <TextField
-                      type="date"
-                      size="small"
-                      value={endDate}
-                      onChange={(e) => {
-                        const newEnd = e.target.value;
-                        if (startDate && new Date(newEnd) < new Date(startDate)) {
-                          setEndDate(startDate);
-                          setSnackbar({ open: true, message: "To cannot be before From", severity: "info" });
-                        } else if (startDate) {
-                          const diff = Math.floor((new Date(newEnd) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-                          if (diff > 31) {
-                            setSnackbar({ open: true, message: "Maximum 31 days allowed", severity: "warning" });
-                            // Auto-correct to max 31 days
-                            const maxEnd = new Date(startDate);
-                            maxEnd.setDate(maxEnd.getDate() + 30);
-                            setEndDate(maxEnd.toISOString().split("T")[0]);
-                          } else {
-                            setEndDate(newEnd);
-                          }
-                        } else {
-                          setEndDate(newEnd);
-                        }
-                      }}
-                      InputProps={{ sx: { fontSize: { xs: "0.8rem", sm: "0.875rem" }, height: { xs: 34, sm: 36 } } }}
-                      sx={{ width: { xs: 90, sm: 140, md: 150 } }}
-                      inputProps={{
-                        min: startDate,
-                      }}
-                    />
-                  </MDBox>
-
-                  {/* START BUTTON — Looks perfect, no logic attached */}
-                  <MDButton
-                    variant="contained"
+              {!loadingCheck && (
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  {/* PDF Button */}
+                  <Button
+                    variant="outlined"
                     size="small"
-                    onClick={() => {
-                      if (!isValidDateRange()) {
-                        setSnackbar({
-                          open: true,
-                          message: "Date range must be 1 to 31 days only",
-                          severity: "warning",
-                        });
-                        return;
-                      }
-                      fetchReservationsByDateRange();
-                    }}
-                    disabled={!startDate || !endDate || startDate > endDate || loading}
+                    onClick={downloadPDF}
                     sx={{
                       borderRadius: "12px",
                       textTransform: "none",
@@ -4032,226 +3835,585 @@ function KanbanView() {
                       boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                       color: "#17621B",
                       border: "2px solid #17621B",
-                      transition: "all 0.2s ease",
                       "&:hover": {
                         backgroundColor: "#1e7a20",
                         borderColor: "#145517",
                         color: "#fff",
                       },
-                      "&:focus": {
-                        backgroundColor: "#145517",
-                        color: "#fff",
-                      },
-                      "&:active": {
-                        backgroundColor: "#145517",
-                        color: "#fff",
-                      },
                     }}
                   >
-                    <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>Start</Box>
-                    <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>Go</Box>
-                  </MDButton>
+                    Download PDF
+                  </Button>
 
-                  {/* Search Bar */}
-                  <MDBox
-                    sx={{
-                      position: "relative",
-                      width: { xs: 80, sm: 120, md: 160 },
-                    }}
-                  >
-                    {/* Search icon inside input */}
-                    <SearchIcon
-                      sx={{
-                        position: "absolute",
-                        left: 12,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        fontSize: 15,
-                        color: "#666",
-                        zIndex: 1,
-                        pointerEvents: "none",
-                      }}
-                    />
-
-                    {/* Input field */}
-                    <InputBase
-                      placeholder="Search reservations..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      sx={{
-                        pl: 5.5,
-                        pr: 1.5,
-                        py: 0.7,
-                        width: "100%",
-                        borderRadius: "10px",
-                        border: "1px solid #ccc",
-                        backgroundColor: "#fff",
-                        fontSize: "0.65rem",
-                        transition: "border 0.2s ease, box-shadow 0.2s ease",
-                        "&:hover": {
-                          border: "1.5px solid #555",
-                        },
-                        "&:focus-within": {
-                          border: "2px solid #333",
-                        },
-                      }}
-                    />
-                  </MDBox>
-
-                  {/* Sync Button */}
-                  <MDButton
+                  {/* CSV Button */}
+                  <Button
                     variant="outlined"
-                    onClick={handleSync}
-                    disabled={syncing || cooldown > 0 || isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
+                    size="small"
+                    onClick={downloadExcel}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
+                      borderRadius: "12px",
                       textTransform: "none",
                       fontWeight: "bold",
-                      fontSize: "0.8rem",
-                      borderRadius: "10px",
-                      px: 0,
-                      py: 0,
-                      border: "2px solid",
-                      borderColor: "primary.main",
-                      color: "primary.main",
-                      backgroundColor: "transparent",
-                      transition: "all 0.2s ease",
-                      fontSize: { xs: "0.7rem", md: "0.8rem" },
+                      boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                      color: "#d97706",
+                      border: "2px solid #d97706",
                       "&:hover": {
-                        borderColor: "primary.dark",
-                        color: "primary.dark",
-                      },
-                      "&:disabled": {
-                        opacity: 1, // keep text readable
-                        color: "text.secondary", // visible text when disabled
-                        borderColor: "text.secondary",
+                        backgroundColor: "#f59e0b",
+                        borderColor: "#d97706",
+                        color: "#fff",
                       },
                     }}
                   >
-                    <SyncIcon
-                      sx={{
-                        fontSize: 10,
-                        animation: syncing ? "spin 1s linear infinite" : "none",
-                        "@keyframes spin": {
-                          "0%": { transform: "rotate(0deg)" },
-                          "100%": { transform: "rotate(360deg)" },
-                        },
-                      }}
-                    />
+                    Download Sheet
+                  </Button>
+                </Box>
+              )}
+            </Box>
 
-                    {syncing
-                      ? "Syncing..."
-                      : cooldown > 0
-                        ? `${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
-                        : "Sync"}
-                  </MDButton>
-                </MDBox>
-              </MDBox>
-
-              <MDBox
-                display="flex"
-                overflow="auto"
-                px={2}
-                pb={2}
+            {loadingCheck && (
+              <Box
                 sx={{
-                  "& > *:last-child": { mr: 0 },
-                  // Desktop view (xl and up): Keep original layout
-                  "@media (min-width: 1536px)": {
-                    flexDirection: "row",
-                    flexWrap: "nowrap",
-                  },
-                  // Laptop/Tablet view (lg and down): Single row layout
-                  "@media (max-width: 1535px)": {
-                    flexDirection: "row",
-                    flexWrap: "nowrap",
-                    gap: 1,
-                    "& > div": {
-                      minWidth: "280px !important",
-                      maxWidth: "280px",
-                      flex: "0 0 280px",
-                    },
-                  },
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "60vh",
                 }}
               >
-                {stacks.map((stack) => {
-                  // Get all guests in this stack
-                  const stackGuests = reservations.filter((guest) => guest.stack === stack);
+                <Typography variant="h6" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                  Loading data...
+                </Typography>
+              </Box>
+            )}
+            {errorCheck && <Typography color="error">{errorCheck}</Typography>}
 
-                  // Skip completely empty stacks
-                  if (stackGuests.length === 0) return null;
-
-                  // Filter guests by search term
-                  const filteredGuests = stackGuests.filter((guest) => matchesSearch(guest, searchTerm));
-
-                  // Skip stack if no guests match the search
-                  if (filteredGuests.length === 0) return null;
-
-                  return (
-                    <MDBox
-                      key={stack}
-                      minWidth={360}
-                      mr={2}
+            {!loadingCheck && !errorCheck && (
+              <Row>
+                {/* Check-In Table */}
+                <Col md={6} className="mb-4">
+                  <Box sx={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <Box
                       sx={{
-                        "@media (min-width: 1536px)": { minWidth: 335, marginRight: 2 },
-                        "@media (max-width: 1535px)": { minWidth: "280px !important", maxWidth: "280px", marginRight: 1, flex: "0 0 280px" }
+                        backgroundColor: "#f9fafb",
+                        px: 3,
+                        py: 2,
+                        border: "2px solid #e5e7eb",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
                       }}
                     >
-                      <Card sx={{ ...(stackStyles[stack] || {}) }}>
-                        <MDBox p={2}>
-                          <MDBox display="flex" justifyContent="space-between" alignItems="center">
-                            <MDTypography variant="h6">{stack}</MDTypography>
-                            <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: "#28282B" }} />
-                          </MDBox>
-                        </MDBox>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
+                        Today Check-In &nbsp; <Typography component="span" variant="body2" sx={{ color: "#6b7280" }}>Total: {todayCheckIn.length}</Typography>
+                      </Typography>
+                    </Box>
 
-                        <MDBox px={2} pb={2} sx={{
-                          flex: 1,
-                          overflowY: "auto",
-                          overflowX: "hidden",
-                          maxHeight: {
-                            xs: "calc(100vh - 180px)",  // Mobile portrait: reduce overhead to 180px
-                            sm: "calc(98vh - 220px)",    // Tablet portrait: reduce overhead to 220px
-                            md: "calc(98vh - 250px)",    // Medium: reduce overhead to 250px
-                            lg: "calc(98vh - 280px)"     // Desktop: keep original 280px
-                          },
-                          // Landscape mode adjustments - reduce overhead even more due to shorter viewport height
-                          "@media (max-width: 600px) and (orientation: landscape)": {
-                            maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
-                          },
-                          "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
-                            maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
-                          }
-                        }}>
-                          {filteredGuests.map((guest) => (
-                            <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
-                          ))}
-                        </MDBox>
-                      </Card>
-                    </MDBox>
-                  );
-                })}
-                {/* ✅ Show message if no stacks have any match */}
-                {stacks.every(stack => {
-                  const stackGuests = reservations.filter(guest => guest.stack === stack);
-                  const filteredGuests = stackGuests.filter(guest => matchesSearch(guest, searchTerm));
-                  return filteredGuests.length === 0;
-                }) && (
-                    <MDTypography
-                      variant="body2"
-                      align="center"
-                      sx={{ color: "#dark", mt: 3, width: "100%" }}
+                    <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>Guest Name</th>
+                          <th>Vehicle Number</th>
+                          <th>Apartment</th>
+                          <th>Arrival Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayCheckIn.map((row, i) => (
+                          <tr key={i}>
+                            <td>{row.guest}</td>
+                            <td>{row.vehicle}</td>
+                            <td>{row.apartment}</td>
+                            <td>{row.arrival}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </Box>
+                </Col>
+
+                {/* Check-Out Table */}
+                <Col md={6} className="mb-4">
+                  <Box sx={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <Box
+                      sx={{
+                        backgroundColor: "#f9fafb",
+                        px: 3,
+                        py: 2,
+                        border: "2px solid #e5e7eb",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}
                     >
-                      No matches found
-                    </MDTypography>
-                  )}
-              </MDBox>
-            </Card>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937" }}>
+                        Today Check-Out &nbsp; <Typography component="span" variant="body2" sx={{ color: "#6b7280" }}>Total: {todayCheckOut.length}</Typography>
+                      </Typography>
+                    </Box>
+
+                    <Table striped bordered hover responsive style={{ marginBottom: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>Guest Name</th>
+                          <th>Vehicle Number</th>
+                          <th>Apartment</th>
+                          <th>Departure Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayCheckOut.map((row, i) => (
+                          <tr key={i}>
+                            <td>{row.guest}</td>
+                            <td>{row.vehicle}</td>
+                            <td>{row.apartment}</td>
+                            <td>{row.departure}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </Box>
+                </Col>
+              </Row>
+            )}
+          </Box>
+        ) : (
+          // Home Tab Content (Default - Reservations)
+          <Grid container spacing={3} justifyContent="center">
+            <Grid item xs={12}>
+              <Card>
+                <MDBox
+                  p={1}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  {/* Left side title */}
+                  <MDTypography variant="h5" mr={2}>Reservations</MDTypography>
+
+                  {/* Right side (Search + Button) */}
+                  <MDBox display="flex" alignItems="center" gap={{ xs: 0.5, sm: 0.5, md: 1 }} sx={{ flexShrink: 1 }}>
+
+                    {/* From Date - Desktop/Tablet */}
+                    <MDBox display="flex" alignItems="center" gap={1} sx={{ display: { xs: "none", sm: "flex" } }}>
+                      <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                        From:
+                      </MDTypography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={startDate}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          if (endDate && new Date(newStart) > new Date(endDate)) {
+                            setStartDate(endDate); // auto-fix
+                            setSnackbar({ open: true, message: "From cannot be after To", severity: "info" });
+                          } else {
+                            setStartDate(newStart);
+                          }
+                        }}
+                        InputProps={{ sx: { fontSize: "0.875rem", height: 36 } }}
+                        sx={{ width: { sm: 140, md: 150 } }}
+                        inputProps={{
+                          max: endDate || new Date().toISOString().split("T")[0], // can't pick future if no end
+                        }}
+                      />
+                    </MDBox>
+
+                    {/* To Date - Desktop/Tablet */}
+                    <MDBox display="flex" alignItems="center" gap={1} sx={{ display: { xs: "none", sm: "flex" } }}>
+                      <MDTypography variant="caption" fontWeight="bold" sx={{ whiteSpace: "nowrap" }}>
+                        To:
+                      </MDTypography>
+                      <TextField
+                        type="date"
+                        size="small"
+                        value={endDate}
+                        onChange={(e) => {
+                          const newEnd = e.target.value;
+                          if (startDate && new Date(newEnd) < new Date(startDate)) {
+                            setEndDate(startDate);
+                            setSnackbar({ open: true, message: "To cannot be before From", severity: "info" });
+                          } else if (startDate) {
+                            const diff = Math.floor((new Date(newEnd) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                            if (diff > 31) {
+                              setSnackbar({ open: true, message: "Maximum 31 days allowed", severity: "warning" });
+                              // Auto-correct to max 31 days
+                              const maxEnd = new Date(startDate);
+                              maxEnd.setDate(maxEnd.getDate() + 30);
+                              setEndDate(maxEnd.toISOString().split("T")[0]);
+                            } else {
+                              setEndDate(newEnd);
+                            }
+                          } else {
+                            setEndDate(newEnd);
+                          }
+                        }}
+                        InputProps={{ sx: { fontSize: "0.875rem", height: 36 } }}
+                        sx={{ width: { sm: 140, md: 150 } }}
+                        inputProps={{
+                          min: startDate,
+                        }}
+                      />
+                    </MDBox>
+
+                    {/* Start Button - Desktop/Tablet */}
+                    <MDButton
+                      variant="contained"
+                      size="small"
+                      onClick={() => {
+                        if (!isValidDateRange()) {
+                          setSnackbar({
+                            open: true,
+                            message: "Date range must be 1 to 31 days only",
+                            severity: "warning",
+                          });
+                          return;
+                        }
+                        fetchReservationsByDateRange();
+                      }}
+                      disabled={!startDate || !endDate || startDate > endDate || loading}
+                      sx={{
+                        display: { xs: "none", sm: "flex" },
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
+                        color: "#17621B",
+                        border: "2px solid #17621B",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          backgroundColor: "#1e7a20",
+                          borderColor: "#145517",
+                          color: "#fff",
+                        },
+                        "&:focus": {
+                          backgroundColor: "#145517",
+                          color: "#fff",
+                        },
+                        "&:active": {
+                          backgroundColor: "#145517",
+                          color: "#fff",
+                        },
+                      }}
+                    >
+                      Start
+                    </MDButton>
+
+                    {/* Mobile Filter Button */}
+                    <IconButton
+                      onClick={handleFilterClick}
+                      sx={{
+                        display: { xs: "flex", sm: "none" },
+                        color: "#17621B",
+                        border: "1px solid #17621B",
+                        borderRadius: "8px",
+                        p: 0.5,
+                      }}
+                    >
+                      <FilterListIcon />
+                    </IconButton>
+
+                    {/* Mobile Filter Popover */}
+                    <Popover
+                      id={filterId}
+                      open={openFilter}
+                      anchorEl={filterAnchorEl}
+                      onClose={handleFilterClose}
+                      anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'right',
+                      }}
+                      transformOrigin={{
+                        vertical: 'top',
+                        horizontal: 'right',
+                      }}
+                    >
+                      <Box p={2} display="flex" flexDirection="column" gap={2} minWidth="280px" sx={{ bgcolor: "background.paper", borderRadius: "12px", boxShadow: 3 }}>
+                        <Typography variant="h6" fontWeight="bold">Filter Reservations</Typography>
+
+                        <Box>
+                          <Typography variant="caption" fontWeight="bold" display="block" mb={0.5}>From Date</Typography>
+                          <TextField
+                            type="date"
+                            size="small"
+                            fullWidth
+                            value={startDate}
+                            onChange={(e) => {
+                              const newStart = e.target.value;
+                              if (endDate && new Date(newStart) > new Date(endDate)) {
+                                setStartDate(endDate);
+                                setSnackbar({ open: true, message: "From cannot be after To", severity: "info" });
+                              } else {
+                                setStartDate(newStart);
+                              }
+                            }}
+                            inputProps={{
+                              max: endDate || new Date().toISOString().split("T")[0],
+                            }}
+                          />
+                        </Box>
+
+                        <Box>
+                          <Typography variant="caption" fontWeight="bold" display="block" mb={0.5}>To Date</Typography>
+                          <TextField
+                            type="date"
+                            size="small"
+                            fullWidth
+                            value={endDate}
+                            onChange={(e) => {
+                              const newEnd = e.target.value;
+                              if (startDate && new Date(newEnd) < new Date(startDate)) {
+                                setEndDate(startDate);
+                                setSnackbar({ open: true, message: "To cannot be before From", severity: "info" });
+                              } else if (startDate) {
+                                const diff = Math.floor((new Date(newEnd) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                                if (diff > 31) {
+                                  setSnackbar({ open: true, message: "Maximum 31 days allowed", severity: "warning" });
+                                  const maxEnd = new Date(startDate);
+                                  maxEnd.setDate(maxEnd.getDate() + 30);
+                                  setEndDate(maxEnd.toISOString().split("T")[0]);
+                                } else {
+                                  setEndDate(newEnd);
+                                }
+                              } else {
+                                setEndDate(newEnd);
+                              }
+                            }}
+                            inputProps={{
+                              min: startDate,
+                            }}
+                          />
+                        </Box>
+
+                        <MDButton
+                          variant="contained"
+                          fullWidth
+                          onClick={() => {
+                            if (!isValidDateRange()) {
+                              setSnackbar({
+                                open: true,
+                                message: "Date range must be 1 to 31 days only",
+                                severity: "warning",
+                              });
+                              return;
+                            }
+                            fetchReservationsByDateRange();
+                            handleFilterClose();
+                          }}
+                          disabled={!startDate || !endDate || startDate > endDate || loading}
+                          sx={{
+                            borderRadius: "8px",
+                            textTransform: "none",
+                            fontWeight: "bold",
+                            backgroundColor: "#17621B",
+                            color: "#fff",
+                            "&:hover": { backgroundColor: "#145517" },
+                          }}
+                        >
+                          Apply Filter
+                        </MDButton>
+                      </Box>
+                    </Popover>
+
+                    {/* Search Bar */}
+                    <MDBox
+                      sx={{
+                        position: "relative",
+                        width: { xs: 80, sm: 120, md: 160 },
+                      }}
+                    >
+                      {/* Search icon inside input */}
+                      <SearchIcon
+                        sx={{
+                          position: "absolute",
+                          left: 12,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          fontSize: 15,
+                          color: "#666",
+                          zIndex: 1,
+                          pointerEvents: "none",
+                        }}
+                      />
+
+                      {/* Input field */}
+                      <InputBase
+                        placeholder="Search reservations..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{
+                          pl: 5.5,
+                          pr: 1.5,
+                          py: 0.7,
+                          width: "100%",
+                          borderRadius: "10px",
+                          border: "1px solid #ccc",
+                          backgroundColor: "#fff",
+                          fontSize: "0.65rem",
+                          transition: "border 0.2s ease, box-shadow 0.2s ease",
+                          "&:hover": {
+                            border: "1.5px solid #555",
+                          },
+                          "&:focus-within": {
+                            border: "2px solid #333",
+                          },
+                        }}
+                      />
+                    </MDBox>
+
+                    {/* Sync Button */}
+                    <MDButton
+                      variant="outlined"
+                      onClick={handleSync}
+                      disabled={syncing || cooldown > 0 || isViewOnly() || (isCustom() && !hasPermission('fdoPanel', 'complete'))}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        fontSize: "0.8rem",
+                        borderRadius: "10px",
+                        px: 0,
+                        py: 0,
+                        border: "2px solid",
+                        borderColor: "primary.main",
+                        color: "primary.main",
+                        backgroundColor: "transparent",
+                        transition: "all 0.2s ease",
+                        fontSize: { xs: "0.7rem", md: "0.8rem" },
+                        "&:hover": {
+                          borderColor: "primary.dark",
+                          color: "primary.dark",
+                        },
+                        "&:disabled": {
+                          opacity: 1, // keep text readable
+                          color: "text.secondary", // visible text when disabled
+                          borderColor: "text.secondary",
+                        },
+                      }}
+                    >
+                      <SyncIcon
+                        sx={{
+                          fontSize: 10,
+                          animation: syncing ? "spin 1s linear infinite" : "none",
+                          "@keyframes spin": {
+                            "0%": { transform: "rotate(0deg)" },
+                            "100%": { transform: "rotate(360deg)" },
+                          },
+                        }}
+                      />
+
+                      {syncing
+                        ? "Syncing..."
+                        : cooldown > 0
+                          ? `${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
+                          : "Sync"}
+                    </MDButton>
+                  </MDBox>
+                </MDBox>
+
+                <MDBox
+                  display="flex"
+                  overflow="auto"
+                  px={2}
+                  pb={2}
+                  sx={{
+                    "& > *:last-child": { mr: 0 },
+                    // Desktop view (xl and up): Keep original layout
+                    "@media (min-width: 1536px)": {
+                      flexDirection: "row",
+                      flexWrap: "nowrap",
+                    },
+                    // Laptop/Tablet view (lg and down): Single row layout
+                    "@media (max-width: 1535px)": {
+                      flexDirection: "row",
+                      flexWrap: "nowrap",
+                      gap: 1,
+                      "& > div": {
+                        minWidth: "280px !important",
+                        maxWidth: "280px",
+                        flex: "0 0 280px",
+                      },
+                    },
+                  }}
+                >
+                  {stacks.map((stack) => {
+                    // Get all guests in this stack
+                    const stackGuests = reservations.filter((guest) => guest.stack === stack);
+
+                    // Skip completely empty stacks
+                    if (stackGuests.length === 0) return null;
+
+                    // Filter guests by search term
+                    const filteredGuests = stackGuests.filter((guest) => matchesSearch(guest, searchTerm));
+
+                    // Skip stack if no guests match the search
+                    if (filteredGuests.length === 0) return null;
+
+                    return (
+                      <MDBox
+                        key={stack}
+                        minWidth={360}
+                        mr={2}
+                        sx={{
+                          "@media (min-width: 1536px)": { minWidth: 335, marginRight: 2 },
+                          "@media (max-width: 1535px)": { minWidth: "280px !important", maxWidth: "280px", marginRight: 1, flex: "0 0 280px" }
+                        }}
+                      >
+                        <Card sx={{ ...(stackStyles[stack] || {}) }}>
+                          <MDBox p={2}>
+                            <MDBox display="flex" justifyContent="space-between" alignItems="center">
+                              <MDTypography variant="h6">{stack}</MDTypography>
+                              <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: "#28282B" }} />
+                            </MDBox>
+                          </MDBox>
+
+                          <MDBox px={2} pb={2} sx={{
+                            flex: 1,
+                            overflowY: "auto",
+                            overflowX: "hidden",
+                            maxHeight: {
+                              xs: "calc(100vh - 180px)",  // Mobile portrait: reduce overhead to 180px
+                              sm: "calc(98vh - 220px)",    // Tablet portrait: reduce overhead to 220px
+                              md: "calc(98vh - 250px)",    // Medium: reduce overhead to 250px
+                              lg: "calc(98vh - 280px)"     // Desktop: keep original 280px
+                            },
+                            // Landscape mode adjustments - reduce overhead even more due to shorter viewport height
+                            "@media (max-width: 600px) and (orientation: landscape)": {
+                              maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
+                            },
+                            "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
+                              maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
+                            }
+                          }}>
+                            {filteredGuests.map((guest) => (
+                              <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
+                            ))}
+                          </MDBox>
+                        </Card>
+                      </MDBox>
+                    );
+                  })}
+                  {/* ✅ Show message if no stacks have any match */}
+                  {stacks.every(stack => {
+                    const stackGuests = reservations.filter(guest => guest.stack === stack);
+                    const filteredGuests = stackGuests.filter(guest => matchesSearch(guest, searchTerm));
+                    return filteredGuests.length === 0;
+                  }) && (
+                      <MDTypography
+                        variant="body2"
+                        align="center"
+                        sx={{ color: "#dark", mt: 3, width: "100%" }}
+                      >
+                        No matches found
+                      </MDTypography>
+                    )}
+                </MDBox>
+              </Card>
+            </Grid>
           </Grid>
-        </Grid>
-      )}
-    </MDBox>
+        )
+      }
+    </MDBox >
   );
 
   // Return with appropriate layout based on user role
@@ -4261,7 +4423,7 @@ function KanbanView() {
         mainContent
       ) : (
         <DashboardLayout>
-          <DashboardNavbar />
+
           {mainContent}
           <Footer />
         </DashboardLayout>

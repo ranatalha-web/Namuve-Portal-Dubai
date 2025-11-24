@@ -101,44 +101,28 @@ function DashboardNavbar({ absolute, light, isMini }) {
   });
 
   // Only render navbar on mobile devices
-  if (!isMobile) {
+  if (!isMobile || isMini) {
     return null;
   }
 
   return (
-    <AppBar
-      position={absolute ? "absolute" : navbarType}
+    <IconButton
+      size="small"
+      disableRipple
       color="inherit"
-      sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
+      sx={(theme) => ({
+        ...navbarMobileMenu(theme),
+        padding: 0.5,
+        '&:hover': {
+          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+        }
+      })}
+      onClick={handleMiniSidenav}
     >
-      <Toolbar sx={(theme) => navbarContainer(theme)}>
-        {isMini ? null : (
-          <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
-            <MDBox color={light ? "white" : "inherit"}>
-              <IconButton
-                size="large"
-                disableRipple
-                color="inherit"
-                sx={(theme) => ({
-                  ...navbarMobileMenu(theme),
-                  padding: 2,
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                })}
-                onClick={handleMiniSidenav}
-              >
-                <Icon sx={iconsStyle} fontSize="large">
-                  {miniSidenav ? "menu_open" : "menu"}
-                </Icon>
-              </IconButton>
-            </MDBox>
-          </MDBox>
-        )}
-        <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
-        </MDBox>
-      </Toolbar>
-    </AppBar>
+      <Icon sx={iconsStyle} fontSize="small">
+        {miniSidenav ? "menu_open" : "menu"}
+      </Icon>
+    </IconButton>
   );
 }
 
