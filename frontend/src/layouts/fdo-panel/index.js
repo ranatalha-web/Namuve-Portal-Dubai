@@ -4424,12 +4424,12 @@ function KanbanView() {
                               lg: "calc(98vh - 280px)"     // Desktop: keep original 280px
                             },
                             // Landscape mode adjustments - reduce overhead even more due to shorter viewport height
-                            // "@media (max-width: 600px) and (orientation: landscape)": {
-                            //   maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
-                            // },
-                            // "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
-                            //   maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
-                            // }
+                            "@media (max-width: 600px) and (orientation: landscape)": {
+                              maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
+                            },
+                            "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
+                              maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
+                            }
                           }}>
                             {filteredGuests.map((guest) => (
                               <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />

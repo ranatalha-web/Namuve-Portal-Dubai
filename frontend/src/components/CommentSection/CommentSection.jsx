@@ -42,8 +42,12 @@ export default function CommentSection({ guest, bookingDate }) {
     const aptName = guest.apartment || guest.listingName || "Unit";
 
     let actionText = "commented on";
-    if (type.includes("reply")) actionText = "replied to";
-    if (type.includes("edit")) actionText = "edited comment on";
+
+    if (type.includes("edit")) {
+      actionText = type.includes("reply") ? "edited reply on" : "edited comment on";
+    } else if (type.includes("reply")) {
+      actionText = "replied to";
+    }
 
     const text = `👤 *${userName}* ${actionText} reservation of *${guestName} (${aptName} 🏠)*\n\n${message.trim()}\n\n🔗 https://dashboard.hostaway.com/reservations/${reservationId}`;
 
