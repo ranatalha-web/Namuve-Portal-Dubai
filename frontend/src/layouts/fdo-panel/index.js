@@ -194,6 +194,37 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
     }
   };
 
+  const sendToGoogleChat = async (message, type = "comment") => {
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+    // PASTE YOUR NEW WEBHOOK URL HERE
+    const GOOGLE_CHAT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAQAwWCTZJU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=yBKx0OabFRMCJh3GW2ab-rh0W73qOw7pXDtRrg3SttY";
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+    const guestName = guest.guestName || "Guest";
+    const aptName = guest.apartment || guest.listingName || "Unit";
+
+    let actionText = "commented on";
+    if (type.includes("reply")) actionText = "replied to";
+    if (type.includes("edit")) actionText = "edited comment on";
+
+    const text = `👤 *${user.name}* ${actionText} reservation of *${guestName} (${aptName} 🏠)*\n\n${message.trim()}\n\n🔗 https://dashboard.hostaway.com/reservations/${guest.reservationId}`;
+
+    try {
+      const res = await fetch(GOOGLE_CHAT_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Google Chat error:", res.status, err);
+      }
+    } catch (err) {
+      console.error("Network error:", err);
+    }
+  };
+
   /* ------------------------------------------------- POST COMMENT ------------------------------------------------- */
   const handleSend = async () => {
     // FIXED: Only block if empty OR no reservationId
@@ -236,6 +267,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         setNewComment("");
         fetchCommentCount(guest.reservationId); // ← REFRESH COMMENTS counts
         handleSendNotification(newComment, "commented");
+        sendToGoogleChat(newComment, "commented");
         // alert("Comment posted successfully!"); // ← SUCCESS
       } else {
         // alert("Save failed: " + (responseData.message || "Unknown error"));
@@ -4392,12 +4424,12 @@ function KanbanView() {
                               lg: "calc(98vh - 280px)"     // Desktop: keep original 280px
                             },
                             // Landscape mode adjustments - reduce overhead even more due to shorter viewport height
-                            "@media (max-width: 600px) and (orientation: landscape)": {
-                              maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
-                            },
-                            "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
-                              maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
-                            }
+                            // "@media (max-width: 600px) and (orientation: landscape)": {
+                            //   maxHeight: "calc(100vh - 60px)"  // Mobile landscape: minimal overhead (increased from 120px)
+                            // },
+                            // "@media (min-width: 600px) and (max-width: 900px) and (orientation: landscape)": {
+                            //   maxHeight: "calc(100vh - 60px)"  // Tablet landscape: reduced overhead (increased from 150px)
+                            // }
                           }}>
                             {filteredGuests.map((guest) => (
                               <ReservationCard key={guest.id} guest={guest} setSnackbar={setSnackbar} searchTerm={searchTerm} stack={stack} isViewOnly={isViewOnly} isCustom={isCustom} hasPermission={hasPermission} />
