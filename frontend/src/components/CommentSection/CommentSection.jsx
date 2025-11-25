@@ -382,17 +382,11 @@ export default function CommentSection({ guest, bookingDate }) {
     </svg>
   );
 
-  const formatTime = (date) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    if (days) return `${days}d ago`;
-    if (hours) return `${hours}h ago`;
-    if (minutes
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
 
-    ) return `${minutes}m ago`;
-    return "Just now";
+    // Format: "Nov 25, 2025 at 3:42 PM"
+    return dayjs(date).format("MMM D, YYYY [at] h:mm A");
   };
 
   /* ------------------------------------------------- RENDER ------------------------------------------------- */

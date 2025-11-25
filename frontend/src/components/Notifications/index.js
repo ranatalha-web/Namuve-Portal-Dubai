@@ -40,7 +40,7 @@ const NOTIFICATION_API = `https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmT
   JSON.stringify({ fieldId: "Time", direction: "desc" })
 )}`;
 
-export default function Notifications({ open, onClose, anchorEl }) {
+export default function Notifications({ open, onClose, anchorEl, onNotificationClick }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -170,7 +170,24 @@ export default function Notifications({ open, onClose, anchorEl }) {
           <List disablePadding>
             {notifications.map((notif, idx) => (
               <Box key={notif.id}>
-                <ListItem alignItems="flex-start" sx={{ py: 1.5, px: 2 }}>
+                <ListItem
+                  alignItems="flex-start"
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: '#f3f4f6',
+                    },
+                    transition: 'background-color 0.2s',
+                  }}
+                  onClick={() => {
+                    if (onNotificationClick && notif.reservationId) {
+                      onNotificationClick(notif.reservationId);
+                      onClose(); // Close the notifications popover
+                    }
+                  }}
+                >
                   <ListItemAvatar>
                     <Avatar
                       sx={{

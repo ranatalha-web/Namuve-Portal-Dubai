@@ -1194,11 +1194,13 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   return (
     <Card
       sx={{
-        mb: 2,
+        position: "relative",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 3px 9px rgba(0,0,0,0.08)",
         borderRadius: "16px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        border: "1px solid rgba(0, 0, 0, 0.05)",
         overflow: "hidden",
       }}
+      id={`reservation-${guest.reservationId}`}
     >
       <MDBox p={2}>
         {/* Reservation ID at top */}
@@ -1323,42 +1325,44 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         </MDBox>
 
         {/* Tags + Comment Icon */}
-        {guest.tags?.length > 0 && (
-          <MDBox display="flex" mt={1}>
-            {/* Tags on the left */}
-            <MDBox display="flex" flexWrap="wrap">
-              {guest.tags.map((tag, index) => {
-                const tagColors = {
-                  "Urgent": "#007bff",
-                  "Normal": "#ffec99",
-                  "Paid": "#28a745",
-                  "Partially paid": "#a3cca3",
-                  "Due": "#ae0814",
-                  "Unknown": "#404040",
-                  "Not Cleaned ❌": "#c4c4c4",
-                  "Cleaned ✅": "#a3cca3",
-                  "Unpaid": "#ccaa2f"
-                };
+        {
+          guest.tags?.length > 0 && (
+            <MDBox display="flex" mt={1}>
+              {/* Tags on the left */}
+              <MDBox display="flex" flexWrap="wrap">
+                {guest.tags.map((tag, index) => {
+                  const tagColors = {
+                    "Urgent": "#007bff",
+                    "Normal": "#ffec99",
+                    "Paid": "#28a745",
+                    "Partially paid": "#a3cca3",
+                    "Due": "#ae0814",
+                    "Unknown": "#404040",
+                    "Not Cleaned ❌": "#c4c4c4",
+                    "Cleaned ✅": "#a3cca3",
+                    "Unpaid": "#ccaa2f"
+                  };
 
-                return (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    size="small"
-                    sx={{
-                      mr: 0.5,
-                      mb: 0.5,
-                      bgcolor: tagColors[tag] || "#808080",
-                      color: "#fff",
-                      fontWeight: "bold",
-                      fontSize: "0.71rem",
-                    }}
-                  />
-                );
-              })}
+                  return (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      size="small"
+                      sx={{
+                        mr: 0.5,
+                        mb: 0.5,
+                        bgcolor: tagColors[tag] || "#808080",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "0.71rem",
+                      }}
+                    />
+                  );
+                })}
+              </MDBox>
             </MDBox>
-          </MDBox>
-        )}
+          )
+        }
 
         {/* User Selection Dropdown */}
         <MDBox mt={1} mb={1}>
@@ -1485,6 +1489,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                 color="inherit"
                 onClick={() => setShowComments(true)}
                 sx={{ p: 0.5 }}
+                data-comment-button="true"
               >
                 <Badge badgeContent={commentCount} color="error">
                   <CommentIcon fontSize="small" />
@@ -1893,9 +1898,9 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
               </Button>
             )}
         </MDBox>
-      </MDBox>
+      </MDBox >
       {/* Preview Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+      < Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth >
         <DialogTitle
           sx={{
             display: "flex",
@@ -2223,7 +2228,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
             Close
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog >
     </Card >
   );
 }
@@ -2350,6 +2355,25 @@ function KanbanView() {
     "1BR": [387833, 387834, 451414,],
     Studio: [392230],
     "2BR": [441361, 443140, 449910, 452131, 453688, 453690, 454454],
+  };
+
+  // Handle notification click to open specific reservation
+  const handleNotificationClick = (reservationId) => {
+    // Find the reservation element in the DOM
+    const element = document.getElementById(`reservation-${reservationId}`);
+    if (element) {
+      // Scroll to the element
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Optionally trigger the comment section to open
+      // This would require adding a data attribute to the comment icon button
+      setTimeout(() => {
+        const commentButton = element.querySelector('[data-comment-button="true"]');
+        if (commentButton) {
+          commentButton.click();
+        }
+      }, 500);
+    }
   };
 
   // Add function
@@ -4479,6 +4503,7 @@ function KanbanView() {
         open={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
         anchorEl={anchorRef.current}
+        onNotificationClick={handleNotificationClick}
       />
 
       {/* ✅ Global Snackbar */}
