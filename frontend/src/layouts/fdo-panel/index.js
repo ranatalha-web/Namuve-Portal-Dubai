@@ -2358,7 +2358,7 @@ function KanbanView() {
   };
 
   // Handle notification click to open specific reservation
-  const handleNotificationClick = (reservationId) => {
+  const handleNotificationClick = (reservationId, guestName) => {
     // Find the reservation element in the DOM
     const element = document.getElementById(`reservation-${reservationId}`);
     if (element) {
@@ -2366,13 +2366,22 @@ function KanbanView() {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
       // Optionally trigger the comment section to open
-      // This would require adding a data attribute to the comment icon button
       setTimeout(() => {
         const commentButton = element.querySelector('[data-comment-button="true"]');
         if (commentButton) {
           commentButton.click();
         }
       }, 500);
+    } else {
+      // Use the guest name passed from the notification
+      const displayName = guestName || `Reservation #${reservationId}`;
+
+      // Reservation not found in current view - show helpful message
+      setSnackbar({
+        open: true,
+        message: `${displayName} is not currently visible. Try adjusting your date filters to find it.`,
+        severity: "warning",
+      });
     }
   };
 
@@ -3687,36 +3696,38 @@ function KanbanView() {
 
             {/* Right: User Info */}
             <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 1 }} sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 2 } }}>
-              <Avatar
-                sx={{
-                  width: 28,
-                  height: 28,
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  fontSize: "0.75rem",
-                  fontWeight: "600",
-                }}
-              >
-                {(user?.name || user?.username)?.charAt(0)?.toUpperCase() || "U"}
-              </Avatar>
-              <Typography sx={{ color: "#1f2937", fontWeight: 600, display: { xs: "none", sm: "block" } }}>
-                {user?.name || user?.username}
-              </Typography>
+              <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 1 }} sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 2 } }}>
+                <Avatar
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    backgroundColor: "#f3f4f6",
+                    color: "#374151",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  {(user?.name || user?.username)?.charAt(0)?.toUpperCase() || "U"}
+                </Avatar>
+                <Typography sx={{ color: "#1f2937", fontWeight: 600, display: { xs: "none", sm: "block" } }}>
+                  {user?.name || user?.username}
+                </Typography>
 
-              {/* NOTIFICATION ICON */}
-              <IconButton
-                ref={anchorRef}
-                size="small"
-                sx={{
-                  color: "#4b5563",
-                  "&:hover": { backgroundColor: "#f3f4f6" },
-                }}
-                onClick={() => setNotificationsOpen(true)}
-              >
-                <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
+                {/* NOTIFICATION ICON */}
+                <IconButton
+                  ref={anchorRef}
+                  size="small"
+                  sx={{
+                    color: "#4b5563",
+                    "&:hover": { backgroundColor: "#f3f4f6" },
+                  }}
+                  onClick={() => setNotificationsOpen(true)}
+                >
+                  <Badge badgeContent={unreadCount} color="error">
+                    <NotificationsIcon />
+                  </Badge>
+                </IconButton>
+              </Box>
             </Box>
 
           </Toolbar>
