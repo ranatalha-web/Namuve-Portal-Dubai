@@ -2286,6 +2286,9 @@ function KanbanView() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [prevCount, setPrevCount] = useState(0);
 
+  // 🔔 Notification Stack State
+  const [snackPack, setSnackPack] = useState([]);
+
   // ✅ Tab functionality for admin users
   const [activeTab, setActiveTab] = useState(0);
   const [listingSections, setListingSections] = useState({});
@@ -2308,6 +2311,7 @@ function KanbanView() {
   const handleFilterClose = () => setFilterAnchorEl(null);
   const openFilter = Boolean(filterAnchorEl);
   const filterId = openFilter ? "mobile-filter-popover" : undefined;
+  const isInitialLoadRef = useRef(true); // Track initial load
 
   // API Configuration
   const API_ENDPOINT = "https://teable.namuve.com/api/table/tbl33tAyDHee9RRHS6b/record";
@@ -2417,6 +2421,19 @@ function KanbanView() {
           return; // ← Keep badge unchanged
         }
 
+        // === Badge:INCREMENT by number of new records (ALWAYS, even on initial load) ===
+        setUnreadCount((prev) => prev + newRecords.length);
+
+        // 🔄 On initial load, just mark all as seen without showing snackbars
+        if (isInitialLoadRef.current) {
+          newRecords.forEach((record) => {
+            notifiedRecordIdsRef.current.add(record.id);
+          });
+          isInitialLoadRef.current = false;
+          console.log("🔕 Initial load: marked", newRecords.length, "notifications as seen (no snackbars)");
+          return; // Don't show snackbars on first load
+        }
+
         const currentUserNames = [
           user?.name,
           user?.username,
@@ -2425,7 +2442,7 @@ function KanbanView() {
           .filter(Boolean)
           .map((s) => s.trim().toLowerCase());
 
-        let latestOtherComment = null;
+        const newOtherComments = [];
 
         for (const record of newRecords) {
           const sender = record?.fields?.User?.trim() || "";
@@ -2448,53 +2465,64 @@ function KanbanView() {
 
           notifiedRecordIdsRef.current.add(record.id);
 
-          if (!isOwnComment && !latestOtherComment) {
-            latestOtherComment = { sender, fields: record.fields };
+          if (!isOwnComment) {
+            newOtherComments.push({
+              sender,
+              fields: record.fields,
+            });
           }
         }
 
-        // === Show styled toast for latest OTHER comment ===
-        if (latestOtherComment) {
-          const { sender, fields } = latestOtherComment;
+        // Show ALL new comments — stacked
+        if (newOtherComments.length > 0) {
+          newOtherComments.forEach((comment, index) => {
+            const newId = new Date().getTime() + Math.random();
 
-          setSnackbar({
-            open: true,
-            severity: "info",
-            richContent: (
-              <Typography
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  flexWrap: "wrap",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  lineHeight: 1.4,
-                  color: "#fff",
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>{sender}</span>
-                <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
-                  commented
-                </Typography>
-                <Typography component="span" variant="caption" sx={{ color: "#dbeafe" }}>
-                  on
-                </Typography>
-                <Typography component="span" variant="caption" sx={{ color: "#fbbf24", fontWeight: 600 }}>
-                  {fields["Guest Name"] || "Guest"}
-                </Typography>
-                <Typography component="span" variant="caption" sx={{ color: "#34d399", fontWeight: 600 }}>
-                  {fields.APT || "Unit"}
-                </Typography>
-              </Typography>
-            ),
+            // Add to stack with a slight delay for visual separation if multiple arrive at once
+            setTimeout(() => {
+              setSnackPack((prev) => [
+                ...prev,
+                {
+                  id: newId,
+                  message: "New Comment",
+                  severity: "info",
+                  richContent: (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CommentIcon sx={{ fontSize: 18 }} />
+                      <Typography
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          flexWrap: "wrap",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          lineHeight: 1.4,
+                          color: "#fff",
+                        }}
+                      >
+                        <span style={{ fontWeight: 700 }}>{comment.sender}</span>
+                        <span style={{ color: "#dbeafe" }}>commented on</span>
+                        <span style={{ color: "#fbbf24", fontWeight: 600 }}>
+                          {comment.fields["Guest Name"] || "Guest"}
+                        </span>
+                        <span style={{ color: "#34d399", fontWeight: 600 }}>
+                          {comment.fields.APT || "Unit"}
+                        </span>
+                      </Typography>
+                    </Box>
+                  ),
+                },
+              ]);
+              playNotificationSound();
+
+              // Auto-dismiss after 5 seconds
+              setTimeout(() => {
+                setSnackPack((prev) => prev.filter((item) => item.id !== newId));
+              }, 5000);
+            }, index * 300); // 300ms stagger
           });
-
-          playNotificationSound();
         }
-
-        // === Badge: INCREMENT by number of new records ===
-        setUnreadCount((prev) => prev + newRecords.length);
 
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
@@ -3723,7 +3751,14 @@ function KanbanView() {
                   }}
                   onClick={() => setNotificationsOpen(true)}
                 >
-                  <Badge badgeContent={unreadCount} color="error">
+                  <Badge
+                    badgeContent={
+                      unreadCount > 20
+                        ? "20+"
+                        : unreadCount
+                    }
+                    color="error"
+                  >
                     <NotificationsIcon />
                   </Badge>
                 </IconButton>
@@ -4517,7 +4552,7 @@ function KanbanView() {
         onNotificationClick={handleNotificationClick}
       />
 
-      {/* ✅ Global Snackbar */}
+      {/* ✅ Global Snackbar (for check-in/out, sync, etc.) */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={snackbar.richContent ? 5000 : 4000}
@@ -4562,6 +4597,37 @@ function KanbanView() {
           {snackbar.richContent || snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* 🔔 STACKED Snackbars for Comment Notifications */}
+      {snackPack.map((item, index) => (
+        <Snackbar
+          key={item.id}
+          open={true}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          sx={{
+            zIndex: (theme) => theme.zIndex.drawer + 10000 + index,
+            mb: 8 + index * 7, // Stack vertically with 7 unit spacing
+            mr: 3,
+          }}
+        >
+          <Alert
+            onClose={() => setSnackPack((prev) => prev.filter((i) => i.id !== item.id))}
+            severity={item.severity}
+            variant="filled"
+            sx={{
+              width: "100%",
+              minWidth: 320,
+              borderRadius: "12px",
+              fontWeight: "bold",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+              color: "#fff",
+            }}
+          >
+            {item.richContent || item.message}
+          </Alert>
+        </Snackbar>
+      ))}
     </>
   );
 }

@@ -499,12 +499,26 @@ export default function CommentSection({ guest, bookingDate }) {
                           {c.avatar}
                         </div>
                         <div className="ml-3">
-                          <h5 className="mt-0 mb-0 font-weight-bold d-inline">
-                            {c.author}
-                          </h5>
-                          <span className="text-muted small ml-2">
-                            - {formatTime(c.timestamp)}
-                          </span>
+                          <div>
+                            <strong className="d-inline">{c.author}</strong>
+                            <span className="text-muted small ml-2">
+                              - {formatTime(c.timestamp)}
+                            </span>
+                          </div>
+
+                          {/* ←←← THIS IS THE ONLY CHANGE YOU NEED */}
+                          {editingId === c.id ? (
+                            <textarea
+                              className="form-control form-control-sm mt-2"
+                              rows="2"
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              autoFocus
+                              style={{ fontSize: "0.875rem" }}
+                            />
+                          ) : (
+                            <p className="mt-1 mb-0">{c.text}</p>
+                          )}
                         </div>
                       </div>
 
@@ -571,20 +585,6 @@ export default function CommentSection({ guest, bookingDate }) {
                         )}
                       </div>
                     </div>
-
-                    {/* COMMENT TEXT */}
-                    {editingId === c.id ? (
-                      <textarea
-                        className="form-control form-control-sm mt-2"
-                        rows="2"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        autoFocus
-                        style={{ fontSize: "0.875rem" }}
-                      />
-                    ) : (
-                      <p className="mt-2 mb-0">{c.text}</p>
-                    )}
 
                     {/* REPLIES LIST */}
                     {(replies[c.commentId] || []).map((r) => (
