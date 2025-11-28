@@ -2396,6 +2396,14 @@ function KanbanView() {
     audio.play().catch(() => { });
   };
 
+  // Register global notification handler for UserLayout to access
+  useEffect(() => {
+    window.handleReservationNotificationClick = handleNotificationClick;
+    return () => {
+      delete window.handleReservationNotificationClick;
+    };
+  }, []);
+
   // useEffect
   useEffect(() => {
     const fetchNotificationUpdate = async () => {

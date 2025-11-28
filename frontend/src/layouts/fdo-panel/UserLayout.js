@@ -70,12 +70,31 @@ function UserLayout({ children }) {
   const notifiedRecordIdsRef = useRef(new Set());
   const isInitialLoadRef = useRef(true); // Track initial load// 🔔 Notification Stack State
   const [snackPack, setSnackPack] = useState([]);
+  const [notificationClickSnackbar, setNotificationClickSnackbar] = useState({
+    open: false,
+    guestName: "",
+  });
 
   // Add function
   const playNotificationSound = () => {
     const audio = new Audio("/notification.mp3"); // Put in public/
     audio.volume = 0.4;
     audio.play().catch(() => { });
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (reservationId, guestName) => {
+    // Try to use the child component's handler if available (scrolls to card and opens comments)
+    if (window.handleReservationNotificationClick) {
+      window.handleReservationNotificationClick(reservationId, guestName);
+    } else {
+      // Fallback: Switch to Home tab and show message (if child component not loaded yet)
+      setActiveTab(0);
+      setNotificationClickSnackbar({
+        open: true,
+        guestName: guestName || "Guest",
+      });
+    }
   };
 
   // useEffect
@@ -1408,6 +1427,7 @@ function UserLayout({ children }) {
         onClose={() => setNotificationsOpen(false)}
         anchorEl={anchorRef.current}
         onMarkAsRead={() => setUnreadCount(0)}
+        onNotificationClick={handleNotificationClick}
       />
       {/* Snackbar */}
       <Snackbar
