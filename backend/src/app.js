@@ -5,13 +5,8 @@
 //   ENABLE_LOGS=false npm start (disable logs)
 //   npm start (default: logs enabled in development, disabled in production)
 
-<<<<<<< HEAD
-const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined 
-  ? process.env.ENABLE_LOGS === 'true' 
-=======
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined
   ? process.env.ENABLE_LOGS === 'true'
->>>>>>> 29e2a649bd61e8e8e1cfcaf0e358f6674d2830e2
   : false; // Default: logs disabled
 
 // Store original console methods
