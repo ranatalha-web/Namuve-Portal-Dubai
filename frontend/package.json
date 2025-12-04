@@ -44,7 +44,7 @@
   },
   "proxy": "http://localhost:5000",
   "scripts": {
-    "start": "npx cross-env DANGEROUSLY_DISABLE_HOST_CHECK=true REACT_APP_API_URL=https://uaeportal.namuve.com react-scripts start",
+    "start": "npx cross-env DANGEROUSLY_DISABLE_HOST_CHECK=true REACT_APP_API_URL=http://localhost:5000 react-scripts start",
     "start:silent": "set WDS_SOCKET_PORT=0 && react-scripts start > nul 2>&1",
     "build": "react-scripts build",
     "test": "react-scripts test",

@@ -1,12 +1,7 @@
 // API Configuration
 const getApiBaseUrl = () => {
-  // Check if we're in development or production
-  if (process.env.NODE_ENV === "development") {
-    return process.env.REACT_APP_API_URL || "http://localhost:5000";
-  }
-
-  // In production, use specific backend URL
-  return process.env.REACT_APP_API_URL || "https://uaeportal.namuve.com";
+  // Always use localhost for development, production URL from env
+  return process.env.REACT_APP_API_URL || "http://localhost:5000";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
