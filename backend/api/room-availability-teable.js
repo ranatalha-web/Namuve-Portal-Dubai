@@ -4,12 +4,15 @@ const router = express.Router();
 
 // Teable configuration
 const TEABLE_BASE_URL = 'https://teable.namuve.com/api';
-const TEABLE_TOKEN = process.env.TEABLE_BEARER_TOKEN;
-const TABLE_ID = 'tblOUchMsdbCUcd6w1J'; // Room Availability Table
+const TEABLE_TOKEN = process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN;
+const TABLE_ID = 'tblzvnqbWHp2p3njzQk'; // Room Availability Table - Dubai/UAE
 
 // Fetch all room availability records from Teable
 const fetchAllAvailabilityRecords = async () => {
   try {
+    console.log('🔗 Fetching from Teable URL:', `${TEABLE_BASE_URL}/table/${TABLE_ID}/record`);
+    console.log('🔑 Using token:', TEABLE_TOKEN ? 'YES' : 'NO');
+    
     const response = await axios.get(
       `${TEABLE_BASE_URL}/table/${TABLE_ID}/record`,
       {
@@ -19,9 +22,20 @@ const fetchAllAvailabilityRecords = async () => {
         }
       }
     );
+    console.log('✅ Teable API response status:', response.status);
+    
+    // Log field names from first record if available
+    if (response.data.records && response.data.records.length > 0) {
+      console.log('📋 Available fields in Teable table:', Object.keys(response.data.records[0].fields || {}));
+    }
+    
     return response.data.records || [];
   } catch (error) {
     console.error('❌ Error fetching availability records:', error.message);
+    if (error.response) {
+      console.error('❌ Teable API Status:', error.response.status);
+      console.error('❌ Teable API Error:', error.response.data);
+    }
     throw error;
   }
 };
@@ -34,18 +48,17 @@ const createAvailabilityRecord = async (availabilityData) => {
         {
           fields: {
             "Studio ": String(availabilityData.studio || 0),
-            "2BR Premium ": String(availabilityData.twoBRPremium || 0),
-            "3BR": String(availabilityData.threeBR || 0),
             "1BR ": String(availabilityData.oneBR || 0),
+            "2BR ": String(availabilityData.twoBR || 0),
             "Available ": String(availabilityData.available || 0),
             "Reserved ": String(availabilityData.reserved || 0),
-            "2BR ": String(availabilityData.twoBR || 0),
             "Blocked ": String(availabilityData.blocked || 0)
           }
         }
       ]
     };
     
+    console.log('📤 Field names being sent:', Object.keys(requestBody.records[0].fields));
     console.log('📤 Sending availability request to Teable:', JSON.stringify(requestBody, null, 2));
     
     const response = await axios.post(
@@ -81,12 +94,10 @@ const updateAvailabilityRecord = async (recordId, availabilityData) => {
             id: recordId,
             fields: {
               "Studio ": String(availabilityData.studio || 0),
-              "2BR Premium ": String(availabilityData.twoBRPremium || 0),
-              "3BR": String(availabilityData.threeBR || 0),
               "1BR ": String(availabilityData.oneBR || 0),
+              "2BR ": String(availabilityData.twoBR || 0),
               "Available ": String(availabilityData.available || 0),
               "Reserved ": String(availabilityData.reserved || 0),
-              "2BR ": String(availabilityData.twoBR || 0),
               "Blocked ": String(availabilityData.blocked || 0)
             }
           }
@@ -123,7 +134,7 @@ const syncAvailabilityToTeable = async (availabilityData) => {
     console.log('📊 Starting room availability sync to Teable...');
     
     if (!TEABLE_TOKEN) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured');
+      throw new Error('TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not configured in .env');
     }
 
     // Fetch existing records
@@ -189,15 +200,33 @@ const syncAvailabilityToTeable = async (availabilityData) => {
 // GET /api/room-availability-teable/data - Fetch all records
 router.get('/data', async (req, res) => {
   try {
+    console.log('📥 GET /data request received');
+    console.log('🔑 Token configured:', !!TEABLE_TOKEN);
+    console.log('📊 Table ID:', TABLE_ID);
+    
+    if (!TEABLE_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        error: 'TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not configured in .env'
+      });
+    }
+    
     const records = await fetchAllAvailabilityRecords();
+    console.log(`✅ Fetched ${records.length} records from Teable`);
+    
     res.json({
       success: true,
-      data: records
+      data: records,
+      count: records.length
     });
   } catch (error) {
+    console.error('❌ Error in GET /data:', error.message);
+    console.error('❌ Error details:', error.response?.data || error);
+    
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      details: error.response?.data
     });
   }
 });
@@ -236,8 +265,6 @@ router.get('/test', async (req, res) => {
     // Test 2: Create a sample record
     const testData = {
       studio: 5,
-      twoBRPremium: 3,
-      threeBR: 2,
       oneBR: 4,
       available: 10,
       reserved: 4,

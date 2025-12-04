@@ -1,12 +1,95 @@
 const axios = require('axios');
 const fetch = require('node-fetch');
+const config = require('../config/config');
 
 class TeableSchedulerService {
   constructor() {
     this.intervals = [];
     this.isRunning = false;
-    this.SYNC_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
+    this.SYNC_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
     this.BASE_URL = 'http://localhost:5000';
+    this.HOSTAWAY_AUTH_TOKEN = config.HOSTAWAY_AUTH_TOKEN;
+  }
+
+  /**
+   * Fetch detailed listing information from Hostaway including Airbnb summary
+   * @param {number} listingId - The listing ID
+   * @returns {Promise<Object>} Detailed listing data
+   */
+  async fetchListingDetails(listingId) {
+    try {
+      const response = await axios.get(`https://api.hostaway.com/v1/listings/${listingId}`, {
+        headers: {
+          'Authorization': this.HOSTAWAY_AUTH_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+
+      return response.data?.result || null;
+    } catch (error) {
+      console.log(`⚠️ Could not fetch details for listing ${listingId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Determine room category from Airbnb summary, bedrooms, or accommodates
+   * @param {Object} listingDetails - Detailed listing data
+   * @param {string} apartmentName - Apartment name
+   * @returns {string} Category (Studio, 1BR, 2BR, 3BR)
+   */
+  determineCategory(listingDetails, apartmentName) {
+    // Check bedroomsNumber field first (most reliable from Hostaway)
+    if (listingDetails?.bedroomsNumber !== undefined && listingDetails?.bedroomsNumber !== null) {
+      const bedrooms = parseInt(listingDetails.bedroomsNumber);
+      if (bedrooms === 0) return 'Studio';
+      if (bedrooms === 1) return '1BR';
+      if (bedrooms === 2) return '2BR';
+      if (bedrooms >= 3) return '3BR';
+    }
+
+    // Check Airbnb summary
+    if (listingDetails?.airbnbSummary) {
+      const summary = listingDetails.airbnbSummary.toLowerCase();
+      
+      if (summary.includes('studio') || summary.includes('0 bedroom')) {
+        return 'Studio';
+      } else if (summary.includes('3 bedroom') || summary.includes('3-bedroom')) {
+        return '3BR';
+      } else if (summary.includes('2 bedroom') || summary.includes('2-bedroom')) {
+        return '2BR';
+      } else if (summary.includes('1 bedroom') || summary.includes('1-bedroom')) {
+        return '1BR';
+      }
+    }
+
+    // Check bedrooms field
+    if (listingDetails?.bedrooms) {
+      const bedrooms = parseInt(listingDetails.bedrooms);
+      if (bedrooms === 0) return 'Studio';
+      if (bedrooms === 1) return '1BR';
+      if (bedrooms === 2) return '2BR';
+      if (bedrooms >= 3) return '3BR';
+    }
+
+    // Check accommodates field
+    if (listingDetails?.accommodates) {
+      const accommodates = parseInt(listingDetails.accommodates);
+      if (accommodates <= 2) return 'Studio';
+      if (accommodates <= 4) return '1BR';
+      if (accommodates <= 6) return '2BR';
+      return '3BR';
+    }
+
+    // Fallback to apartment name parsing
+    const name = apartmentName.toLowerCase();
+    if (name.includes('studio') || name.includes('(s)')) return 'Studio';
+    if (name.includes('3br') || name.includes('3 br') || name.includes('(3b)')) return '3BR';
+    if (name.includes('2br') || name.includes('2 br') || name.includes('(2b)')) return '2BR';
+    if (name.includes('1br') || name.includes('1 br') || name.includes('(1b)')) return '1BR';
+
+    return '';
   }
 
   // Fetch occupancy data and sync rooms
@@ -120,7 +203,7 @@ class TeableSchedulerService {
       // Collect all apartments from all room types
       const allApartments = [];
       
-      availabilityData.roomTypes.forEach(roomType => {
+      for (const roomType of availabilityData.roomTypes) {
         if (roomType.apartments) {
           // Combine available, reserved, and blocked apartments
           const apartments = [
@@ -129,16 +212,23 @@ class TeableSchedulerService {
             ...(roomType.apartments.blocked || [])
           ];
           
-          apartments.forEach(apt => {
+          for (const apt of apartments) {
+            const apartmentName = apt.internalName || apt.name;
+            
+            // Use the room type from availability data
+            // This is already correctly determined from bedroomsNumber in the occupancy API
+            const category = roomType.roomType;
+            
             allApartments.push({
-              apartmentName: apt.internalName || apt.name,
+              apartmentName: apartmentName,
+              category: category,
               available: apt.status === 'available' ? 1 : 0,
               reserved: apt.status === 'reserved' ? 1 : 0,
               blocked: apt.status === 'blocked' ? 1 : 0
             });
-          });
+          }
         }
-      });
+      }
 
       if (allApartments.length === 0) {
         console.log('⚠️ No apartment details to sync');
@@ -165,6 +255,28 @@ class TeableSchedulerService {
     }
   }
 
+  // Sync yesterday/today reservations
+  async syncYesterdayTodayReservations() {
+    try {
+      console.log('📅 Syncing yesterday/today reservations...');
+      
+      const response = await fetch(`${this.BASE_URL}/api/teable-room/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      console.log('✅ Yesterday/today reservations synced:', result);
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error syncing yesterday/today reservations:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Main sync function
   async performSync() {
     const startTime = Date.now();
@@ -174,7 +286,8 @@ class TeableSchedulerService {
     const results = {
       rooms: null,
       availability: null,
-      roomDetails: null
+      roomDetails: null,
+      yesterdayToday: null
     };
 
     try {
@@ -192,6 +305,10 @@ class TeableSchedulerService {
         console.log('\n🏢 Step 3: Syncing Room Details...');
         results.roomDetails = await this.syncRoomDetails(availabilityResult.fullData);
       }
+
+      // 4. Sync Yesterday/Today Reservations
+      console.log('\n📅 Step 4: Syncing Yesterday/Today Reservations...');
+      results.yesterdayToday = await this.syncYesterdayTodayReservations();
 
       const syncTime = Date.now() - startTime;
       console.log(`\n✅ ========== SYNC COMPLETED IN ${syncTime}ms ==========\n`);

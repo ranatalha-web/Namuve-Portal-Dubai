@@ -1307,10 +1307,10 @@ function AdminPanel() {
                           </MDBox>
                         </MDBox>
 
-                        {/* Rooms Permissions - HIDDEN */}
-                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'none' }}>
+                        {/* Rooms Permissions */}
+                        <MDBox mb={2} p={2} sx={{ backgroundColor: '#f3e8ff', borderRadius: '12px', border: '1px solid #d8b4fe' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#7c3aed">
-                            🏠 Rooms Access
+                            🏠 Room View Access
                           </MDTypography>
                           <MDBox display="flex" gap={2}>
                             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -2178,11 +2178,11 @@ function AdminPanel() {
                       </MDBox>
                     </Grid>
 
-                    {/* Rooms Permissions - HIDDEN */}
-                    <Grid item xs={12} md={6} sx={{ display: 'none' }}>
-                      <MDBox p={3} sx={{ backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                        <MDTypography variant="h6" fontWeight="600" sx={{ color: "#374151", mb: 2 }}>
-                          🏠 Rooms
+                    {/* Rooms Permissions */}
+                    <Grid item xs={12} md={6}>
+                      <MDBox p={3} sx={{ backgroundColor: "#f3e8ff", borderRadius: "12px", border: "1px solid #d8b4fe" }}>
+                        <MDTypography variant="h6" fontWeight="600" sx={{ color: "#7c3aed", mb: 2 }}>
+                          🏠 Room View Access
                         </MDTypography>
                         <MDBox display="flex" flexDirection="column">
                           <FormControlLabel
@@ -2190,7 +2190,7 @@ function AdminPanel() {
                               <Checkbox
                                 checked={editPermissions.rooms?.view || false}
                                 onChange={() => handleEditPermissionChange('rooms', 'view')}
-                                sx={{ color: "#3b82f6" }}
+                                sx={{ color: "#7c3aed" }}
                               />
                             }
                             label="View Access"
@@ -2200,7 +2200,7 @@ function AdminPanel() {
                               <Checkbox
                                 checked={editPermissions.rooms?.complete || false}
                                 onChange={() => handleEditPermissionChange('rooms', 'complete')}
-                                sx={{ color: "#3b82f6" }}
+                                sx={{ color: "#7c3aed" }}
                               />
                             }
                             label="Complete Access"

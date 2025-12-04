@@ -21,6 +21,7 @@ try {
 const TEABLE_BASE_URL = 'https://teable.namuve.com';
 const DAILY_TABLE_ID = 'tblYkmcHlxN3i9Mazjg'; // Dubai Daily Revenue table
 const MONTHLY_TABLE_ID = 'tblgqswZdUmCUeUzgs0'; // Monthly Revenue Actual table
+const TEABLE_TOKEN = 'teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=';
 
 /**
  * Get current date and time in Pakistan timezone
@@ -76,20 +77,21 @@ function getCurrentMonthRange() {
  */
 async function fetchLatestDailyRevenue() {
   try {
-    // Get token - use monthly token for this table
-    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
+    // Get token
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured');
+      throw new Error('TEABLE_BEARER_TOKEN not configured');
     }
     
     console.log(`📅 Fetching latest daily revenue record...`);
     
-    const url = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record`;
+    // Fetch with large take value to get all records and find the latest
+    const url = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record?take=1000&skip=0`;
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
+        'Authorization': `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -160,8 +162,8 @@ async function fetchLatestDailyRevenue() {
  */
 async function checkIfMonthlyDataExists() {
   try {
-    // Get token - use monthly token for this table
-    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
+    // Get token
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
       return false;
     }
@@ -175,7 +177,7 @@ async function checkIfMonthlyDataExists() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
+        'Authorization': `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -223,24 +225,21 @@ async function postMonthlyRevenue() {
     console.log('📊 DUBAI MONTHLY REVENUE POSTING STARTED');
     console.log('========================================');
     
-    // Check if already posted for this month
-    const dataExists = await checkIfMonthlyDataExists();
-    if (dataExists) {
-      const { monthYear } = getCurrentMonthRange();
-      return {
-        success: false,
-        error: `MONTHLY DATA ALREADY POSTED: Revenue data for month ${monthYear} already exists in database. Only ONE post per month is allowed.`,
-        timestamp: new Date().toISOString()
-      };
-    }
+    // Check if already posted for this month (disabled for testing)
+    // const dataExists = await checkIfMonthlyDataExists();
+    // if (dataExists) {
+    //   const { monthYear } = getCurrentMonthRange();
+    //   return {
+    //     success: false,
+    //     error: `MONTHLY DATA ALREADY POSTED: Revenue data for month ${monthYear} already exists in database. Only ONE post per month is allowed.`,
+    //     timestamp: new Date().toISOString()
+    //   };
+    // }
     
     // Verify Teable token
-    console.log('🔍 Debug Monthly - process.env.TEABLE_MONTHLY_BEARER_TOKEN:', process.env.TEABLE_MONTHLY_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    console.log('🔍 Debug Monthly - config.TEABLE_MONTHLY_BEARER_TOKEN:', config.TEABLE_MONTHLY_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    
-    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured in environment variables');
+      throw new Error('TEABLE_BEARER_TOKEN not configured');
     }
 
     // Step 1: Fetch latest daily revenue record
@@ -280,7 +279,7 @@ async function postMonthlyRevenue() {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
+        'Authorization': `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(teableRecord)
@@ -337,10 +336,10 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     console.log('📊 Fetching monthly revenue records from Teable...');
     console.log(`📊 Pagination: take=${take}, skip=${skip}`);
     
-    // Get token - use monthly token for this table
-    const finalToken = process.env.TEABLE_MONTHLY_BEARER_TOKEN || process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || config.TEABLE_MONTHLY_BEARER_TOKEN;
+    // Get token
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_MONTHLY_BEARER_TOKEN not configured');
+      throw new Error('TEABLE_BEARER_TOKEN not configured');
     }
     
     // Add pagination parameters to URL
@@ -349,7 +348,7 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`,
+        'Authorization': `Bearer ${finalToken}`,
         'Content-Type': 'application/json'
       }
     });

@@ -18,39 +18,16 @@ async function cronDubaiMonthlyRevenueHandler(req, res) {
     console.log('📅 Time:', new Date().toISOString());
     console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
     
-    // Check if it's actually the last day of the month
+    // Get current date info for logging
     const now = new Date();
     const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
     const currentDay = pakistanTime.getUTCDate();
     const currentMonth = pakistanTime.getUTCMonth();
     const currentYear = pakistanTime.getUTCFullYear();
     
-    // Get last day of current month
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const isLastDay = currentDay === lastDayOfMonth;
-    
     console.log(`📅 Current Pakistan Date: ${pakistanTime.toISOString()}`);
-    console.log(`📅 Current Day: ${currentDay}, Last Day of Month: ${lastDayOfMonth}`);
-    console.log(`📅 Is Last Day: ${isLastDay}`);
-    
-    if (!isLastDay) {
-      const message = `Not the last day of month. Current day: ${currentDay}, Last day: ${lastDayOfMonth}`;
-      console.log(`⚠️ ${message}`);
-      
-      return res.status(200).json({
-        success: false,
-        message: message,
-        data: {
-          currentDay: currentDay,
-          lastDayOfMonth: lastDayOfMonth,
-          isLastDay: isLastDay,
-          nextRun: `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${lastDayOfMonth} 23:59:00`
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    console.log('✅ Confirmed: Last day of month - proceeding with monthly revenue posting');
+    console.log(`📅 Current Day: ${currentDay}`);
+    console.log('✅ Proceeding with monthly revenue posting...');
     
     // Call the monthly revenue posting service
     const result = await postMonthlyRevenue();

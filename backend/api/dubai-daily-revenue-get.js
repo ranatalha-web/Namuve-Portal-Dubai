@@ -23,55 +23,87 @@ try {
 const TEABLE_BASE_URL = 'https://teable.namuve.com';
 const DAILY_TABLE_ID = 'tblYkmcHlxN3i9Mazjg'; // Dubai Daily Revenue table
 
+// Hardcoded token for Teable API (without Bearer prefix - will be added in headers)
+const FORMATTED_TOKEN = 'teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=';
+
+/**
+ * Helper function to fetch all records with pagination using fetch
+ */
+async function fetchAllRecords(token, pageSize = 100) {
+  const allRecords = [];
+  let skip = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record?take=${pageSize}&skip=${skip}`;
+    
+    console.log(`📡 Fetching from URL: ${url}`);
+    console.log(`🔑 Token starts with: ${token.substring(0, 20)}...`);
+    
+    try {
+      console.log(`🔐 Using Authorization header: Bearer ${token.substring(0, 20)}...`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`📨 Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        console.error(`❌ Teable API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ Error details:`, errorText);
+        throw new Error(`Failed to fetch from Teable: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.records || !Array.isArray(data.records)) {
+        throw new Error('Invalid response format from Teable');
+      }
+
+      allRecords.push(...data.records);
+      
+      // Check if there are more records to fetch
+      hasMore = data.records.length === pageSize;
+      skip += pageSize;
+      
+      console.log(`📥 Fetched ${allRecords.length} records so far...`);
+    } catch (error) {
+      console.error(`❌ Teable API error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  return allRecords;
+}
+
 /**
  * GET /api/dubai-daily-revenue-get/latest
  * Get the latest daily revenue value from Dubai Daily Revenue table
  */
 router.get('/latest', async (req, res) => {
   try {
-    console.log('\n🏙️ Getting Latest Daily Revenue from Teable');
+    console.log('\n🏙️ [DUBAI-DAILY] Getting Latest Daily Revenue from Teable');
+    console.log(`🔑 [DUBAI-DAILY] Token check: ${FORMATTED_TOKEN ? 'FOUND' : 'NOT FOUND'}`);
     
-    // Get token
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
-    if (!finalToken) {
+    if (!FORMATTED_TOKEN) {
       return res.status(400).json({
         success: false,
-        message: 'TEABLE_BEARER_TOKEN not configured',
+        message: 'TEABLE_REVENUE_BEARER_TOKEN or TEABLE_BEARER_TOKEN not configured',
         timestamp: new Date().toISOString()
       });
     }
     
-    console.log('📅 Fetching from Dubai Daily Revenue table...');
+    console.log('📅 [DUBAI-DAILY] Fetching all records from Dubai Daily Revenue table...');
     
-    const url = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record`;
+    const allRecords = await fetchAllRecords(FORMATTED_TOKEN);
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${finalToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        success: false,
-        message: `Failed to fetch from Teable: ${response.status}`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const data = await response.json();
-    
-    if (!data.records || !Array.isArray(data.records)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid response format from Teable',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    if (data.records.length === 0) {
+    if (allRecords.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'No daily revenue records found',
@@ -80,7 +112,7 @@ router.get('/latest', async (req, res) => {
     }
     
     // Sort records by date/time to get the latest one
-    const sortedRecords = data.records
+    const sortedRecords = allRecords
       .filter(record => {
         const dateTime = record.fields['Date and Time '] || record.fields['Date and Time'];
         const revenue = record.fields['Daily Revenue Actual'] || record.fields['Daily Revenue'];
@@ -115,6 +147,7 @@ router.get('/latest', async (req, res) => {
     
     console.log(`📊 Latest daily revenue: ${revenueValue.toFixed(2)} AED`);
     console.log(`📅 From: ${latestDateTime}`);
+    console.log(`📈 Total records processed: ${allRecords.length}`);
     
     res.status(200).json({
       success: true,
@@ -123,7 +156,7 @@ router.get('/latest', async (req, res) => {
         revenue: revenueValue.toFixed(2),
         dateTime: latestDateTime,
         recordId: latestRecord.id,
-        totalRecords: data.records.length
+        totalRecords: allRecords.length
       },
       timestamp: new Date().toISOString()
     });
@@ -145,11 +178,26 @@ router.get('/latest', async (req, res) => {
  * Health check endpoint
  */
 router.get('/health', (req, res) => {
+  console.log('🏥 [DUBAI-DAILY] Health check called');
   res.status(200).json({
     success: true,
     message: 'Dubai Daily Revenue Get API is healthy',
     service: 'Dubai Daily Revenue Get Service',
     status: 'operational',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * GET /api/dubai-daily-revenue-get/debug
+ * Debug endpoint to test token and table ID
+ */
+router.get('/debug', (req, res) => {
+  res.status(200).json({
+    success: true,
+    token: FORMATTED_TOKEN.substring(0, 30) + '...',
+    tableId: DAILY_TABLE_ID,
+    baseUrl: TEABLE_BASE_URL,
     timestamp: new Date().toISOString()
   });
 });

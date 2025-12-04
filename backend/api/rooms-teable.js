@@ -2,10 +2,17 @@ const axios = require('axios');
 const express = require('express');
 const router = express.Router();
 
-// Teable Configuration
+// Teable Configuration - Dubai Listings
 const TEABLE_BASE_URL = 'https://teable.namuve.com/api';
-const TEABLE_TOKEN = process.env.TEABLE_BEARER_TOKEN; // From .env file
-const TABLE_ID = 'tblqQ0uy0lceDPDGvMr'; // Your table ID
+const TEABLE_TOKEN = process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN || process.env.TEABLE_BEARER_TOKEN; // Dubai bearer token
+const TABLE_ID = process.env.TEABLE_DUBAI_TABLE_ID || 'tblzeTQIYtfdLzAnNzC'; // Dubai rooms table ID
+
+// Log token status on startup
+console.log('🔐 Teable Token Status:');
+console.log(`   - TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN: ${process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN ? '✅ SET' : '❌ NOT SET'}`);
+console.log(`   - TEABLE_BEARER_TOKEN: ${process.env.TEABLE_BEARER_TOKEN ? '✅ SET' : '❌ NOT SET'}`);
+console.log(`   - Using token: ${TEABLE_TOKEN ? '✅ YES' : '❌ NO'}`);
+console.log(`   - Table ID: ${TABLE_ID}`);
 
 /**
  * Fetch all room records from Teable with pagination
@@ -63,7 +70,7 @@ const createRoomRecord = async (roomData) => {
             "Guest Name ": roomData.guestName,
             "Listing Name": roomData.listingName,
             "Reservation ID ": roomData.reservationId,
-            "Check in Time": roomData.checkInTime
+            "Check in Date": roomData.checkInTime
           }
         }
       ]
@@ -110,7 +117,7 @@ const updateRoomRecord = async (recordId, roomData) => {
               "Guest Name ": roomData.guestName,
               "Listing Name": roomData.listingName,
               "Reservation ID ": roomData.reservationId,
-              "Check in Time": roomData.checkInTime
+              "Check in Date": roomData.checkInTime
             }
           }
         ]
@@ -164,10 +171,39 @@ const syncRoomDataToTeable = async (occupancyData) => {
     
     // Validate token
     if (!TEABLE_TOKEN) {
-      throw new Error('TEABLE_BEARER_TOKEN is not set in environment variables');
+      console.error('❌ CRITICAL: Teable token is not configured!');
+      console.error('   - TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN:', process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN ? 'SET' : 'NOT SET');
+      console.error('   - TEABLE_BEARER_TOKEN:', process.env.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT SET');
+      throw new Error('TEABLE token is not set in environment variables. Please set TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN or TEABLE_BEARER_TOKEN');
     }
     
+    console.log('✅ Teable token is configured and ready');
+    console.log(`📊 Using table ID: ${TABLE_ID}`);
+    
     const startTime = Date.now();
+
+    // If no reserved rooms, fetch guest data from occupancy service
+    let reservedRooms = occupancyData.reservedRooms || [];
+    if (reservedRooms.length === 0) {
+      console.log('📋 No reserved rooms in occupancyData, fetching from occupancy service...');
+      try {
+        const OccupancyService = require('../../services/occupancy');
+        const occupancyService = new OccupancyService();
+        const guestDataResult = await occupancyService.getTodayCheckinsDetails();
+        if (guestDataResult.success && guestDataResult.data) {
+          reservedRooms = guestDataResult.data.map(guest => ({
+            guestName: guest.guestName,
+            listingName: guest.listingName,
+            reservationId: guest.reservationId,
+            actualCheckInTime: guest.checkInDate,
+            listingId: guest.listingId
+          }));
+          console.log(`✅ Fetched ${reservedRooms.length} guest records from occupancy service`);
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not fetch guest data from occupancy service:', err.message);
+      }
+    }
 
     // Fetch existing records from Teable
     const existingRecords = await fetchAllRoomRecords();
@@ -183,6 +219,21 @@ const syncRoomDataToTeable = async (occupancyData) => {
 
     console.log(`📊 Found ${existingRecords.length} existing records in Teable`);
     console.log(`📊 Processing occupancy data from Hostaway`);
+    
+    // Calculate available rooms dynamically
+    // Available = Total Dubai listings - Reserved rooms
+    let totalDubaiListings = 0;
+    let calculatedAvailable = 0;
+    const totalReserved = occupancyData.totalReserved || reservedRooms.length || 0;
+    
+    // We'll calculate this after fetching listings below
+    console.log(`📊 Occupancy Summary (before calculation):`, {
+      occupancyRate: occupancyData.occupancyRate,
+      totalAvailable: occupancyData.totalAvailable,
+      totalReserved: totalReserved,
+      totalRooms: occupancyData.totalRooms,
+      reservedRoomsCount: occupancyData.reservedRooms?.length || 0
+    });
 
     // Track statistics
     let created = 0;
@@ -193,9 +244,94 @@ const syncRoomDataToTeable = async (occupancyData) => {
     // Get current date for report period
     const reportPeriod = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // Process reserved rooms (with guest information)
-    if (occupancyData.reservedRooms && occupancyData.reservedRooms.length > 0) {
-      for (const room of occupancyData.reservedRooms) {
+    // Process reserved rooms (with guest information) - Dubai listings only
+    if (reservedRooms && reservedRooms.length > 0) {
+      // Fetch all listings to identify Dubai properties dynamically
+      console.log('🔍 Fetching all listings to identify Dubai properties...');
+      let allListings = [];
+      let listingOffset = 0;
+      const listingLimit = 1000;
+      let listingHasMore = true;
+      const hostawayAuthToken = process.env.HOSTAWAY_AUTH_TOKEN;
+
+      while (listingHasMore) {
+        try {
+          const listingsUrl = `https://api.hostaway.com/v1/listings?limit=${listingLimit}&offset=${listingOffset}`;
+          const listingsResponse = await axios.get(listingsUrl, {
+            headers: {
+              Authorization: hostawayAuthToken,
+              'Content-Type': 'application/json'
+            },
+            timeout: 60000
+          });
+
+          const listings = listingsResponse.data.result || [];
+          allListings = allListings.concat(listings);
+
+          if (listings.length < listingLimit) {
+            listingHasMore = false;
+          } else {
+            listingOffset += listingLimit;
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not fetch listings, will use all reservations:', err.message);
+          listingHasMore = false;
+        }
+      }
+
+      // Filter for Dubai listings dynamically
+      console.log(`🔍 Total listings fetched: ${allListings.length}`);
+      
+      const dubaiListingIds = allListings
+        .filter(listing => {
+          const city = listing.city || listing.location || listing.address || '';
+          const cityLower = city.toLowerCase();
+          const isDubai = cityLower.includes('dubai') || cityLower.includes('uae');
+          if (isDubai) {
+            console.log(`   ✅ Dubai: ${listing.id} - ${listing.name} (${city})`);
+          }
+          return isDubai;
+        })
+        .map(listing => listing.id);
+
+      console.log(`✅ Found ${dubaiListingIds.length} Dubai listings dynamically`);
+      
+      // If no Dubai listings found, use hardcoded list as fallback
+      const finalDubaiListingIds = dubaiListingIds.length > 0 ? dubaiListingIds : 
+        [288676, 288677, 288678, 288679, 288681, 288683, 288684, 288690, 288726, 305327, 306543, 307143, 309909, 383744, 389366, 395345, 400763];
+      
+      console.log(`📍 Using ${finalDubaiListingIds.length} Dubai listing IDs for filtering`);
+      
+      // Calculate available rooms dynamically
+      // Available = Total Dubai listings - Reserved rooms
+      totalDubaiListings = finalDubaiListingIds.length;
+      calculatedAvailable = Math.max(0, totalDubaiListings - totalReserved);
+      const calculatedOccupancyRate = totalDubaiListings > 0 ? ((totalReserved / totalDubaiListings) * 100).toFixed(2) : 0;
+      
+      console.log(`📊 CALCULATED OCCUPANCY (from listings):`, {
+        totalDubaiListings: totalDubaiListings,
+        totalReserved: totalReserved,
+        calculatedAvailable: calculatedAvailable,
+        calculatedOccupancyRate: calculatedOccupancyRate + '%'
+      });
+      
+      // Filter for Dubai listings only
+      const dubaiListings = occupancyData.reservedRooms.filter(room => {
+        const isDubai = finalDubaiListingIds.includes(room.listingId);
+        console.log(`   ${isDubai ? '✅' : '❌'} Listing ${room.listingId} (${room.listingName}): ${isDubai ? 'INCLUDED' : 'EXCLUDED'}`);
+        return isDubai;
+      });
+      
+      console.log(`📍 Processing ${dubaiListings.length} Dubai reserved rooms out of ${occupancyData.reservedRooms.length} total`);
+      
+      // Create a map of listing IDs to internal names for reference
+      const listingNameMap = new Map();
+      allListings.forEach(listing => {
+        const internalName = listing.internalListingName || listing.title || listing.name || `Unit ${listing.id}`;
+        listingNameMap.set(listing.id, internalName);
+      });
+      
+      for (const room of dubaiListings) {
         let roomData = null; // Declare outside try block
         try {
           const reservationId = room.reservationId?.toString() || '';
@@ -211,27 +347,37 @@ const syncRoomDataToTeable = async (occupancyData) => {
             existingMap.delete(reservationId);
           }
 
+          // Use the correct listing name from the map
+          const correctListingName = listingNameMap.get(room.listingId) || room.listingName || `Unit ${room.listingId}`;
+
           roomData = {
             reportPeriod: reportPeriod,
-            occupancyRate: String(occupancyData.occupancyRate || '0'),
-            available: String(occupancyData.totalAvailable || '0'),
-            reserved: String(occupancyData.totalReserved || '0'),
+            occupancyRate: String(calculatedOccupancyRate || '0'),  // Use calculated occupancy rate
+            available: String(calculatedAvailable || '0'),  // Use calculated available rooms
+            reserved: String(totalReserved || '0'),  // Show total reserved rooms
             guestName: String(room.guestName || 'N/A'),
-            listingName: String(room.listingName || 'N/A'),
+            listingName: String(correctListingName),
             reservationId: String(reservationId),
             checkInTime: String(room.actualCheckInTime || 'N/A')
           };
+
+          console.log(`📤 Posting guest data to Teable:`, {
+            guestName: roomData.guestName,
+            listingName: roomData.listingName,
+            reservationId: roomData.reservationId,
+            checkInTime: roomData.checkInTime
+          });
 
           if (existingRecord) {
             // Always PATCH existing record to update all fields (including new ones)
             await updateRoomRecord(existingRecord.id, roomData);
             updated++;
-            console.log(`✅ Updated record for reservation ${reservationId}`);
+            console.log(`✅ Updated record for reservation ${reservationId} with guest: ${roomData.guestName}`);
           } else {
             // POST new record
             await createRoomRecord(roomData);
             created++;
-            console.log(`✅ Created new record for reservation ${reservationId}`);
+            console.log(`✅ Created new record for reservation ${reservationId} with guest: ${roomData.guestName}`);
           }
         } catch (error) {
           console.error(`❌ Error processing room ${room.reservationId}:`, error.message);

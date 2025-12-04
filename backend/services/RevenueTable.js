@@ -12,10 +12,10 @@ class RevenueTableService {
     this.listingRevenueUrl = 'https://teable.namuve.com/api/table/tblWSUEAGe7IirM9ODd/record';
     this.listingTableUrl = 'https://teable.namuve.com/api/table/tblWSUEAGe7IirM9ODd';
     this.listingRecordsUrl = 'https://teable.namuve.com/api/table/tblWSUEAGe7IirM9ODd/records';
-    this.authToken = process.env.TEABLE_BEARER_TOKEN;
+    this.authToken = process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN;
     
     if (!this.authToken) {
-      console.warn('⚠️ TEABLE_BEARER_TOKEN not found in environment variables');
+      console.warn('⚠️ TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not found in environment variables');
     }
   }
 

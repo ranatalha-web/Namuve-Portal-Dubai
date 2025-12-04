@@ -21,7 +21,7 @@ try {
 // Teable Configuration
 const TEABLE_BASE_URL = 'https://teable.namuve.com';
 const TEABLE_TABLE_ID = 'tblYkmcHlxN3i9Mazjg';
-const TEABLE_TOKEN = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+const TEABLE_TOKEN = 'teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=';
 
 /**
  * Get current date and time in Pakistan timezone
@@ -51,7 +51,7 @@ function getPakistanDateTime() {
 async function checkIfDataExistsForCurrentHour() {
   try {
     // Get token
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
       console.error('❌ TEABLE_BEARER_TOKEN not configured');
       return false;
@@ -127,12 +127,9 @@ async function postDubaiDailyRevenue() {
     }
 
     // Verify Teable token
-    console.log('🔍 Debug - process.env.TEABLE_BEARER_TOKEN:', process.env.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    console.log('🔍 Debug - config.TEABLE_BEARER_TOKEN:', config.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured in environment variables');
+      throw new Error('TEABLE_BEARER_TOKEN not configured');
     }
 
     // Step 1: Get Dubai revenue data
@@ -240,12 +237,9 @@ async function postSpecificDubaiRevenue(dailyRevenue, dateTime = null) {
     }
 
     // Verify Teable token
-    console.log('🔍 Debug Manual - process.env.TEABLE_BEARER_TOKEN:', process.env.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    console.log('🔍 Debug Manual - config.TEABLE_BEARER_TOKEN:', config.TEABLE_BEARER_TOKEN ? 'SET' : 'NOT_SET');
-    
-    const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
+    const finalToken = TEABLE_TOKEN;
     if (!finalToken) {
-      throw new Error('TEABLE_BEARER_TOKEN not configured in environment variables');
+      throw new Error('TEABLE_BEARER_TOKEN not configured');
     }
 
     // Use provided dateTime or get current Pakistan time

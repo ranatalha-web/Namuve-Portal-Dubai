@@ -19,6 +19,7 @@ const config = {
   // Teable Database Configuration
   TEABLE_BASE_URL: process.env.TEABLE_BASE_URL || '',
   TEABLE_BEARER_TOKEN: process.env.TEABLE_BEARER_TOKEN || '',
+  TEABLE_REVENUE_BEARER_TOKEN: process.env.TEABLE_REVENUE_BEARER_TOKEN || '',
   
   // Cache Configuration
   CACHE_DIR: process.env.CACHE_DIR || './cache',

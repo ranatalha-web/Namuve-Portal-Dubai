@@ -91,6 +91,7 @@ export const API_ENDPOINTS = {
   OCCUPANCY_HEALTH: `${API_BASE_URL}/api/occupancy/health`,
   OCCUPANCY_REPORT: `${API_BASE_URL}/api/occupancy/report`,
   OCCUPANCY_TODAY_CHECKINS: `${API_BASE_URL}/api/occupancy/today-checkins`,
+  OCCUPANCY_YESTERDAY_TODAY: `${API_BASE_URL}/api/occupancy/yesterday-today`,
 
   // Rooms endpoints
   ROOMS_LISTINGS: `${API_BASE_URL}/api/rooms/listings`,
@@ -117,6 +118,7 @@ export const API_ENDPOINTS = {
   ROOM_DETAILS_TEABLE_SYNC: `${API_BASE_URL}/api/room-details-teable/sync`,
   ROOM_DETAILS_TEABLE_DATA: `${API_BASE_URL}/api/room-details-teable/data`,
   ROOM_DETAILS_TEABLE_TEST: `${API_BASE_URL}/api/room-details-teable/test`,
+  ROOM_DETAILS_TEABLE_MANUAL_SYNC: `${API_BASE_URL}/api/room-details-teable/manual-sync`,
 
   // Payment endpoints (Pakistan)
   PAYMENT_TODAY_RESERVATIONS: `${API_BASE_URL}/api/payment/today-reservations`,
@@ -136,6 +138,34 @@ export const API_ENDPOINTS = {
   // Payment helper functions
   PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/payment/reservation/${id}`,
   DUBAI_PAYMENT_GET_RESERVATION: (id) => `${API_BASE_URL}/api/dubai-payment/reservation/${id}`,
+
+  // Hostaway Cleaning Status endpoints
+  HOSTAWAY_CLEANING_STATUS_ALL: `${API_BASE_URL}/api/hostaway/cleaning-status/all`,
+  HOSTAWAY_CLEANING_STATUS_DUBAI: `${API_BASE_URL}/api/hostaway/cleaning-status/dubai`,
+  HOSTAWAY_CLEANING_STATUS_LISTING: `${API_BASE_URL}/api/hostaway/cleaning-status/listing`, // + /:id
+  HOSTAWAY_CLEANING_STATUS_MULTIPLE: `${API_BASE_URL}/api/hostaway/cleaning-status/multiple`,
+  HOSTAWAY_CLEANING_STATUS_SUMMARY: `${API_BASE_URL}/api/hostaway/cleaning-status/summary`,
+
+  // Hostaway Cleaning Status helper functions
+  HOSTAWAY_CLEANING_STATUS_GET_LISTING: (id) => `${API_BASE_URL}/api/hostaway/cleaning-status/listing/${id}`,
+
+  // Cleaning Status Overrides endpoints
+  CLEANING_STATUS_OVERRIDES: `${API_BASE_URL}/api/cleaning-status-overrides`,
+  CLEANING_STATUS_OVERRIDE_GET: (id) => `${API_BASE_URL}/api/cleaning-status-overrides/${id}`,
+  CLEANING_STATUS_OVERRIDE_ADD: `${API_BASE_URL}/api/cleaning-status-overrides`,
+  CLEANING_STATUS_OVERRIDE_UPDATE: (id) => `${API_BASE_URL}/api/cleaning-status-overrides/${id}`,
+  CLEANING_STATUS_OVERRIDE_DELETE: (id) => `${API_BASE_URL}/api/cleaning-status-overrides/${id}`,
+
+  // Listing Name Mapping endpoints
+  LISTING_NAME_MAPPING: `${API_BASE_URL}/api/listing-name-mapping`,
+  LISTING_NAME_MAPPING_SEARCH: (term) => `${API_BASE_URL}/api/listing-name-mapping/search/${term}`,
+  LISTING_NAME_MAPPING_BY_ID: (id) => `${API_BASE_URL}/api/listing-name-mapping/by-id/${id}`,
+  LISTING_NAME_MAPPING_DEBUG: `${API_BASE_URL}/api/listing-name-mapping/debug-report`,
+
+  // Teable Room Reservation Database endpoints (FAST - <5 seconds, no Hostaway API calls)
+  TEABLE_ROOM_SYNC: `${API_BASE_URL}/api/teable-room/sync`,
+  TEABLE_ROOM_ALL: `${API_BASE_URL}/api/teable-room/all`,
+  TEABLE_ROOM_DELETE_ALL: `${API_BASE_URL}/api/teable-room/delete-all`,
 
   // Portal URLs
   PORTAL_AUTH_URL: 'https://portal.namuve.com/authentication/sign-in',

@@ -7,7 +7,7 @@
 
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined 
   ? process.env.ENABLE_LOGS === 'true' 
-  : true; // Default: logs disabled
+  : false; // Default: logs disabled
 
 // Store original console methods
 const originalConsole = {
@@ -199,6 +199,49 @@ const roomsTeableRoutes = require("../api/rooms-teable");
 const roomAvailabilityTeableRoutes = require("../api/room-availability-teable");
 const roomDetailsTeableRoutes = require("../api/room-details-teable");
 const monthlyTargetHandler = require("../api/monthly-target");
+const dubaiDailyRevenueGetRoutes = require("../api/dubai-daily-revenue-get");
+const cronDubaiRevenueHandler = require("../api/cron-dubai-revenue");
+const cronDubaiMonthlyRevenueHandler = require("../api/cron-dubai-monthly-revenue");
+let hostawayCleaningStatusRoutes;
+try {
+  hostawayCleaningStatusRoutes = require("../api/hostawayCleaningStatusApi");
+  console.log('✅ hostawayCleaningStatusRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading hostawayCleaningStatusRoutes:', error.message);
+  hostawayCleaningStatusRoutes = null;
+}
+
+let cleaningStatusOverridesRoutes;
+try {
+  cleaningStatusOverridesRoutes = require("../api/cleaningStatusOverrides");
+  console.log('✅ cleaningStatusOverridesRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading cleaningStatusOverridesRoutes:', error.message);
+  cleaningStatusOverridesRoutes = null;
+}
+
+let listingNameMappingRoutes;
+try {
+  listingNameMappingRoutes = require("../api/listingNameMapping");
+  console.log('✅ listingNameMappingRoutes loaded successfully');
+  originalConsole.log('✅ listingNameMappingRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading listingNameMappingRoutes:', error.message);
+  originalConsole.error('❌ Error loading listingNameMappingRoutes:', error.message);
+  originalConsole.error('❌ Full error:', error.stack);
+  listingNameMappingRoutes = null;
+}
+
+let teableRoomRoutes;
+try {
+  teableRoomRoutes = require("../routes/teableRoomRoutes");
+  console.log('✅ teableRoomRoutes loaded successfully');
+  originalConsole.log('✅ teableRoomRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading teableRoomRoutes:', error.message);
+  originalConsole.error('❌ Error loading teableRoomRoutes:', error.message);
+  teableRoomRoutes = null;
+}
 
 // Import RevenueTable integration
 const { RevenueTableService } = require("../services/RevenueTable");
@@ -275,6 +318,44 @@ app.use("/api/payment-teable", paymentTeableRoutes);
 app.use("/api/rooms-teable", roomsTeableRoutes);
 app.use("/api/room-availability-teable", roomAvailabilityTeableRoutes);
 app.use("/api/room-details-teable", roomDetailsTeableRoutes);
+app.use("/api/dubai-daily-revenue-get", dubaiDailyRevenueGetRoutes);
+if (hostawayCleaningStatusRoutes) {
+  app.use("/api/hostaway/cleaning-status", hostawayCleaningStatusRoutes);
+  console.log('✅ hostaway cleaning status routes registered');
+} else {
+  console.warn('⚠️ hostaway cleaning status routes not available');
+}
+
+if (cleaningStatusOverridesRoutes) {
+  app.use("/api/cleaning-status-overrides", cleaningStatusOverridesRoutes);
+  console.log('✅ cleaning status overrides routes registered');
+} else {
+  console.warn('⚠️ cleaning status overrides routes not available');
+}
+
+if (listingNameMappingRoutes) {
+  app.use("/api/listing-name-mapping", listingNameMappingRoutes);
+  console.log('✅ listing name mapping routes registered');
+  originalConsole.log('✅ listing name mapping routes registered');
+} else {
+  console.warn('⚠️ listing name mapping routes not available');
+  originalConsole.warn('⚠️ listing name mapping routes not available');
+}
+
+if (teableRoomRoutes) {
+  app.use("/api/teable-room", teableRoomRoutes);
+  console.log('✅ teable room routes registered');
+  originalConsole.log('✅ teable room routes registered');
+} else {
+  console.warn('⚠️ teable room routes not available');
+  originalConsole.warn('⚠️ teable room routes not available');
+}
+
+// Cron job endpoint for Dubai daily revenue posting
+app.post("/api/cron/post-dubai-revenue", cronDubaiRevenueHandler);
+
+// Cron job endpoint for Dubai monthly revenue posting
+app.post("/api/cron/post-dubai-monthly-revenue", cronDubaiMonthlyRevenueHandler);
 
 // RevenueTable API routes
 //app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());

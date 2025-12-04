@@ -45,7 +45,7 @@ async function updateCleaningStatusInTeable(listingId, newStatus) {
     }
     
     // First, fetch all records to find the one with matching listing ID
-    const teableUrl = 'https://teable.namuve.com/api/table/tblg8UqsmbyTMeZV1j8/record';
+    const teableUrl = 'https://teable.namuve.com/api/table/tblNqMvFzUBOpNjCPOj/record';
     console.log(`🔗 Fetching from Teable URL: ${teableUrl}`);
     
     const fetchResponse = await fetch(teableUrl, {
@@ -53,7 +53,7 @@ async function updateCleaningStatusInTeable(listingId, newStatus) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=',
+        'Authorization': `Bearer ${process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN}`,
         'User-Agent': 'Dashboard-App/1.0'
       }
     });
@@ -171,7 +171,7 @@ async function updateCleaningStatusInTeable(listingId, newStatus) {
 async function fetchCleaningStatusFromTeable() {
   try {
     console.log('🔄 Attempting to fetch from Teable API...');
-    const teableUrl = 'https://teable.namuve.com/api/table/tblg8UqsmbyTMeZV1j8/record';
+    const teableUrl = 'https://teable.namuve.com/api/table/tblNqMvFzUBOpNjCPOj/record';
     console.log('🔗 Teable URL:', teableUrl);
     
     const response = await fetch(teableUrl, {
@@ -179,7 +179,7 @@ async function fetchCleaningStatusFromTeable() {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=',
+        'Authorization': `Bearer ${process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN}`,
         'User-Agent': 'Dashboard-App/1.0'
       }
     });
@@ -209,6 +209,15 @@ async function fetchCleaningStatusFromTeable() {
     // Map Teable records to cleaning status by Listing IDs
     if (data.records && Array.isArray(data.records)) {
       console.log('📋 Processing', data.records.length, 'Teable records');
+      
+      // Show first record with ALL fields
+      if (data.records.length > 0) {
+        console.log('\n🔍 === FIRST RECORD - ALL FIELDS ===');
+        console.log('Record ID:', data.records[0].id);
+        console.log('All Fields:', JSON.stringify(data.records[0].fields, null, 2));
+        console.log('=== END FIRST RECORD ===\n');
+      }
+      
       data.records.forEach((record, index) => {
         const fields = record.fields;
         console.log(`🔍 Record ${index + 1}:`, {
@@ -1322,14 +1331,14 @@ router.put('/update-cleaning-status/:listingId', async (req, res) => {
     const fieldName = statusType === 'HW' ? 'HW - Status' : 'HK - Status';
     
     // Find the record in Teable by listing ID
-    const teableUrl = 'https://teable.namuve.com/api/table/tblg8UqsmbyTMeZV1j8/record';
+    const teableUrl = 'https://teable.namuve.com/api/table/tblNqMvFzUBOpNjCPOj/record';
     console.log(`🔗 Making request to Teable API: ${teableUrl}`);
     
     const response = await axios.get(teableUrl, {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=',
+        'Authorization': `Bearer ${process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN}`,
         'User-Agent': 'Dashboard-App/1.0'
       }
     });
@@ -1354,7 +1363,7 @@ router.put('/update-cleaning-status/:listingId', async (req, res) => {
     console.log(`📋 Found record: ${record.id} for listing ${listingId}`);
     
     // Update the record
-    const updateUrl = `https://teable.namuve.com/api/table/tblg8UqsmbyTMeZV1j8/record/${record.id}`;
+    const updateUrl = `https://teable.namuve.com/api/table/tblNqMvFzUBOpNjCPOj/record/${record.id}`;
     
     // Teable API requires record wrapper with fields
     const updatePayload = {
@@ -1434,13 +1443,13 @@ router.get('/test-teable', async (req, res) => {
     console.log('🧪 Testing Teable API connectivity...');
     
     // Get raw Teable data first
-    const teableUrl = 'https://teable.namuve.com/api/table/tblg8UqsmbyTMeZV1j8/record';
+    const teableUrl = 'https://teable.namuve.com/api/table/tblNqMvFzUBOpNjCPOj/record';
     const response = await fetch(teableUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=',
+        'Authorization': `Bearer ${process.env.TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN}`,
         'User-Agent': 'Dashboard-App/1.0'
       }
     });
@@ -1528,7 +1537,7 @@ router.get('/availability', async (req, res) => {
     console.log('✅ Fetched', allListings.length, 'listings directly from Hostaway API');
     console.log('✅ Room availability - Got all listings count:', allListings.length);
     
-    // Filter for Pakistan listings only - exclude specific non-Pakistan properties
+    // Filter for UAE/Dubai listings only - exclude specific non-UAE properties
     const listings = allListings.filter(listing => {
       const listingName = listing.internalListingName || listing.name || '';
       const fullName = listing.name || '';
@@ -1536,18 +1545,14 @@ router.get('/availability', async (req, res) => {
       const city = listing.city || '';
       const country = listing.country || '';
       
-      // Comprehensive non-Pakistan filtering
-      const isNonPakistan = 
+      // Comprehensive UAE/Dubai filtering
+      const isUAE = 
         // Country-based filtering
-        country === 'United States' || 
-        country === 'US' ||
-        country === 'Canada' || 
-        country === 'CA' ||
         country === 'United Arab Emirates' ||
         country === 'UAE' ||
         
         // City-based filtering
-        city && ['new york', 'toronto', 'vancouver', 'montreal', 'dubai', 'abu dhabi'].includes(city.toLowerCase()) ||
+        city && ['dubai', 'abu dhabi'].includes(city.toLowerCase()) ||
         
         // Name-based filtering for Dubai properties
         fullName.toLowerCase().includes('paramount') ||
@@ -1567,16 +1572,16 @@ router.get('/availability', async (req, res) => {
         address.toLowerCase().includes('emirates') ||
         address.toLowerCase().includes('uae');
       
-      if (isNonPakistan) {
-        console.log(`🚫 Non-Pakistan listing filtered: ${listing.id} - "${listingName}" (${city}, ${country})`);
+      if (isUAE) {
+        console.log(`✅ UAE/Dubai listing included: ${listing.id} - "${listingName}" (${city}, ${country})`);
       } else {
-        console.log(`✅ Pakistan listing included: ${listing.id} - "${listingName}" (${city}, ${country})`);
+        console.log(`🚫 Non-UAE listing filtered: ${listing.id} - "${listingName}" (${city}, ${country})`);
       }
       
-      return !isNonPakistan; // Return Pakistan listings only
+      return isUAE; // Return UAE/Dubai listings only
     });
     
-    console.log('✅ Room availability - Pakistan listings count:', listings.length);
+    console.log('✅ Room availability - UAE/Dubai listings count:', listings.length);
     
     // Get today's date for calendar check
     const today = new Date();
@@ -1595,14 +1600,6 @@ router.get('/availability', async (req, res) => {
       '2BR': { 
         available: 0, reserved: 0, blocked: 0, total: 0,
         apartments: { available: [], reserved: [], blocked: [] }
-      },
-      '2BR Premium': { 
-        available: 0, reserved: 0, blocked: 0, total: 0,
-        apartments: { available: [], reserved: [], blocked: [] }
-      },
-      '3BR': { 
-        available: 0, reserved: 0, blocked: 0, total: 0,
-        apartments: { available: [], reserved: [], blocked: [] }
       }
     };
     
@@ -1619,7 +1616,7 @@ router.get('/availability', async (req, res) => {
         const internalName = listing.internalListingName || '';
         const listingId = listing.id;
         
-        // Dynamic premium room identification with detailed logging
+        // Listing details logging
         console.log(`🔍 Checking listing ${listingId}:`);
         console.log(`   - All available fields:`, Object.keys(listing));
         console.log(`   - Internal name: "${listing.internalListingName}"`);
@@ -1629,20 +1626,6 @@ router.get('/availability', async (req, res) => {
         console.log(`   - ExternalListingName: "${listing.externalListingName}"`);
         console.log(`   - Bedrooms: ${listing.bedrooms}, bedroomsNumber: ${listing.bedroomsNumber}, basePrice: ${listing.basePrice}`);
         
-        // Specific premium apartment IDs (the actual premium apartments)
-        const premiumApartmentIds = [288688, 305055, 309909, 323227]; // 1F-12, GF-04, GF-06, 4F-42
-        
-        // Only use specific apartment IDs for premium detection (disable name/price detection)
-        const isPremiumById = premiumApartmentIds.includes(listing.id);
-        const isPremium = isPremiumById;
-        
-        if (isPremiumById) console.log(`🏆 Premium by ID: ${listingId} - ${listing.name}`);
-        if (isPremium) {
-          console.log(`🏆 PREMIUM DETECTED: ${listingId} - ${listingName}`);
-          console.log(`   - Internal: ${listing.internalListingName}`);
-          console.log(`   - External: ${listing.externalListingName}`);
-          console.log(`   - Price: ${listing.basePrice}`);
-        }
         
         // Primary method: Check for Studio first (name-based since bedroomsNumber is unreliable for studios)
         if (listingName && (listingName.toLowerCase().includes('studio') || 
@@ -1654,12 +1637,10 @@ router.get('/availability', async (req, res) => {
         else if (listing.bedroomsNumber !== undefined && listing.bedroomsNumber !== null) {
           if (listing.bedroomsNumber === 1) {
             roomType = '1BR';
-          } else if (listing.bedroomsNumber === 2) {
-            roomType = isPremium ? '2BR Premium' : '2BR';
-          } else if (listing.bedroomsNumber >= 3) {
-            roomType = '3BR';
+          } else if (listing.bedroomsNumber >= 2) {
+            roomType = '2BR';
           }
-          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedroomsNumber: ${listing.bedroomsNumber}, premium: ${isPremium})`);
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedroomsNumber: ${listing.bedroomsNumber})`);
         }
         // Fallback method: Use bedrooms field
         else if (listing.bedrooms !== undefined && listing.bedrooms !== null) {
@@ -1667,12 +1648,10 @@ router.get('/availability', async (req, res) => {
             roomType = 'Studio';
           } else if (listing.bedrooms === 1) {
             roomType = '1BR';
-          } else if (listing.bedrooms === 2) {
-            roomType = isPremium ? '2BR Premium' : '2BR';
-          } else if (listing.bedrooms >= 3) {
-            roomType = '3BR';
+          } else if (listing.bedrooms >= 2) {
+            roomType = '2BR';
           }
-          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedrooms: ${listing.bedrooms}, premium: ${isPremium})`);
+          console.log(`✅ Room type determined: ${listingId} → ${roomType} (from bedrooms: ${listing.bedrooms})`);
         }
         // Last resort: Name-based detection
         else if (listingName) {
@@ -1681,14 +1660,10 @@ router.get('/availability', async (req, res) => {
           
           if (name.includes('studio') || name.includes('(s)')) {
             roomType = 'Studio';
-          } else if (name.includes('3br') || name.includes('3 br') || name.includes('3-br') || name.includes('(3b)') || 
-                     name.includes('3 bedroom') || name.includes('three bedroom')) {
-            roomType = '3BR';
-          } else if ((name.includes('2br') || name.includes('2 br') || name.includes('2-br') || name.includes('(2b)') ||
-                     name.includes('2 bedroom') || name.includes('two bedroom')) && isPremium) {
-            roomType = '2BR Premium';
           } else if (name.includes('2br') || name.includes('2 br') || name.includes('2-br') || name.includes('(2b)') ||
-                     name.includes('2 bedroom') || name.includes('two bedroom')) {
+                     name.includes('2 bedroom') || name.includes('two bedroom') ||
+                     name.includes('3br') || name.includes('3 br') || name.includes('3-br') || name.includes('(3b)') || 
+                     name.includes('3 bedroom') || name.includes('three bedroom')) {
             roomType = '2BR';
           } else if (name.includes('1br') || name.includes('1 br') || name.includes('1-br') || name.includes('(1b)') ||
                      name.includes('1 bedroom') || name.includes('1-bedroom') || name.includes('one bedroom')) {
@@ -1773,7 +1748,6 @@ router.get('/availability', async (req, res) => {
             internalName: listing.internalListingName || listingName,
             externalName: listing.externalListingName || listing.name || listingName,
             status: isReserved ? 'reserved' : (isBlocked ? 'blocked' : 'available'),
-            isPremium: isPremium,
             bedrooms: listing.bedroomsNumber || listing.bedrooms,
             price: listing.basePrice
           };
@@ -1801,7 +1775,6 @@ router.get('/availability', async (req, res) => {
             internalName: listing.internalListingName || listingName,
             externalName: listing.externalListingName || listing.name || listingName,
             status: 'available',
-            isPremium: isPremium,
             bedrooms: listing.bedroomsNumber || listing.bedrooms,
             price: listing.basePrice
           };
@@ -1818,7 +1791,6 @@ router.get('/availability', async (req, res) => {
           internalName: internalName || 'Unknown',
           externalName: externalName || 'Unknown Apartment',
           status: 'available',
-          isPremium: false,
           bedrooms: 0,
           price: 0
         };

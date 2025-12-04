@@ -169,9 +169,9 @@ const routes = [
     route: "/payments",
     component: <Payments />,
   },
-  // 3. Rooms (hidden from sidebar)
+  // 3. Rooms (visible in sidebar)
   {
-    type: "hidden",
+    type: "collapse",
     name: "Rooms",
     key: "rooms",
     icon: <Icon fontSize="small">meeting_room</Icon>,

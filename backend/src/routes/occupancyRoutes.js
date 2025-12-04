@@ -127,4 +127,37 @@ router.get('/today-checkins', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/occupancy/yesterday-today
+ * Get yesterday's and today's reservations for each listing
+ */
+router.get('/yesterday-today', async (req, res) => {
+  try {
+    console.log('📋 API: Fetching yesterday\'s and today\'s reservations...');
+    
+    const result = await occupancyService.getYesterdayTodayReservations();
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data,
+        message: 'Yesterday and today reservations retrieved successfully'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: 'Failed to fetch reservations'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Yesterday/Today Reservations API Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;
