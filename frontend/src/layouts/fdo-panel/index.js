@@ -1199,6 +1199,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         borderRadius: "16px",
         border: "1px solid rgba(0, 0, 0, 0.05)",
         overflow: "hidden",
+        mb: 2,
       }}
       id={`reservation-${guest.reservationId}`}
     >
