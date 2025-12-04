@@ -1,9 +1,10 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function(proxy, allowedHost) {
+module.exports = function (proxy, allowedHost) {
   return {
     // Disable WebSocket connection to prevent connection errors
     webSocketServer: false,
+    allowedHosts: 'all',
     client: {
       webSocketURL: 'ws://localhost:3000/ws',
       // Disable overlay for WebSocket connection errors

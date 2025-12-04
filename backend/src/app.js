@@ -5,8 +5,13 @@
 //   ENABLE_LOGS=false npm start (disable logs)
 //   npm start (default: logs enabled in development, disabled in production)
 
+<<<<<<< HEAD
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined 
   ? process.env.ENABLE_LOGS === 'true' 
+=======
+const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined
+  ? process.env.ENABLE_LOGS === 'true'
+>>>>>>> 29e2a649bd61e8e8e1cfcaf0e358f6674d2830e2
   : false; // Default: logs disabled
 
 // Store original console methods
@@ -20,11 +25,11 @@ const originalConsole = {
 
 // Override console methods based on ENABLE_LOGS setting
 if (!ENABLE_LOGS) {
-  console.log = () => {};
-  console.error = () => {};
-  console.warn = () => {};
-  console.info = () => {};
-  console.debug = () => {};
+  console.log = () => { };
+  console.error = () => { };
+  console.warn = () => { };
+  console.info = () => { };
+  console.debug = () => { };
 } else {
   // Add timestamp and color to logs when enabled
   const addTimestamp = (originalMethod, prefix, color = '') => {
@@ -33,7 +38,7 @@ if (!ENABLE_LOGS) {
       originalMethod(`${color}[${timestamp}] ${prefix}`, ...args, '\x1b[0m');
     };
   };
-  
+
   console.log = addTimestamp(originalConsole.log, '📝 LOG:', '\x1b[36m'); // Cyan
   console.error = addTimestamp(originalConsole.error, '❌ ERROR:', '\x1b[31m'); // Red
   console.warn = addTimestamp(originalConsole.warn, '⚠️  WARN:', '\x1b[33m'); // Yellow
@@ -61,13 +66,13 @@ const corsOptions = {
   origin: function (origin, callback) {
     console.log(`🔍 CORS check for origin: "${origin}"`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       console.log('✅ CORS: Allowing request with no origin');
       return callback(null, true);
     }
-    
+
     // Development Origins
     const developmentOrigins = [
       'http://localhost:3000',
@@ -76,28 +81,33 @@ const corsOptions = {
       'http://localhost:5173', // Vite dev server
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
-      'http://127.0.0.1:5000', 
+      'http://127.0.0.1:5000',
       'http://127.0.0.1:5173', // Vite dev server
       /^http:\/\/localhost:\d+\/?$/, // Allow any localhost port with optional trailing slash
       /^http:\/\/127\.0\.0\.1:\d+\/?$/ // Allow any 127.0.0.1 port with optional trailing slash
     ];
-    
+
     // Production Origins
     const productionOrigins = [
       'http://128.199.0.150',
       'http://128.199.0.150:3000',
       'http://128.199.0.150/authentication/sign-in',
+      'http://137.184.14.198',
+      'http://137.184.14.198:3000',
+      'http://uaeportal.namuve.com',
+      'http://uaeportal.namuve.com:3000',
+      'https://uaeportal.namuve.com',
       'https://tested-1pln9mbk8-rana-talhas-projects.vercel.app',
       'https://tested-murex.vercel.app',
       'https://portal.namuve.com',
       /\.vercel\.app$/, // Allow all Vercel domains
     ];
-    
+
     // Choose origins based on environment
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? productionOrigins 
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? productionOrigins
       : [...developmentOrigins, ...productionOrigins]; // Dev includes both for testing
-    
+
     const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (typeof allowedOrigin === 'string') {
         // Check exact match and also match without trailing slash
@@ -114,7 +124,7 @@ const corsOptions = {
       }
       return false;
     });
-    
+
     if (isAllowed) {
       console.log(`✅ CORS: Origin "${origin}" is allowed in ${process.env.NODE_ENV || 'development'} mode`);
       callback(null, true);
@@ -151,7 +161,7 @@ app.use(cors(corsOptions));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   console.log(`🔍 Additional CORS middleware - Origin: "${origin}"`);
-  
+
   // Allow all localhost origins in development
   if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -160,13 +170,13 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
     console.log(`✅ Additional CORS: Allowing localhost origin "${origin}"`);
   }
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`✅ Handling OPTIONS preflight request for ${req.path}`);
     return res.status(200).end();
   }
-  
+
   next();
 });
 
@@ -262,7 +272,7 @@ app.get("/", (req, res) => {
       health: "/api/health",
       hello: "/api/hello",
       users: "/api/users",
-    //  revenue: "/api/revenue",
+      //  revenue: "/api/revenue",
       //revenueHealth: "/api/revenue/health",
       dubaiRevenue: "/api/dubai-revenue",
       dubaiRevenueListings: "/api/dubai-revenue/listings",
@@ -280,9 +290,9 @@ app.get("/", (req, res) => {
       //listingRevenue: "/api/listing-revenue",
       //listingRevenueData: "/api/listing-revenue/listing-revenue-data",
       //listingRevenuePopulate: "/api/listing-revenue/populate-listing-initial",
-     // roomsTeable: "/api/rooms-teable",
-     // roomsTeableData: "/api/rooms-teable/data",
-     // roomsTeableSync: "/api/rooms-teable/sync",
+      // roomsTeable: "/api/rooms-teable",
+      // roomsTeableData: "/api/rooms-teable/data",
+      // roomsTeableSync: "/api/rooms-teable/sync",
       //roomsTeableTest: "/api/rooms-teable/test",
       //roomAvailabilityTeable: "/api/room-availability-teable",
       //roomAvailabilityTeableData: "/api/room-availability-teable/data",
@@ -412,7 +422,7 @@ app.post("/api/teable-scheduler/sync-now", async (req, res) => {
 
 // Simple test route
 app.get("/api/hello", (req, res) => {
-  res.json({ 
+  res.json({
     message: "Hello from Backend 🚀",
     timestamp: new Date().toISOString(),
     environment: config.NODE_ENV
@@ -444,7 +454,7 @@ app.use((req, res) => {
 // Global error handler
 app.use((error, req, res, next) => {
   console.error('Global error handler:', error);
-  
+
   res.status(error.status || 500).json({
     success: false,
     error: config.NODE_ENV === 'development' ? error.message : 'Internal server error',
@@ -456,7 +466,7 @@ app.use((error, req, res, next) => {
 setTimeout(() => {
   console.log('🚀 Starting Teable hourly scheduler automatically...');
   schedulerService.start();
-  
+
   console.log('🚀 Starting Teable 10-minute auto-sync scheduler...');
   teableScheduler.start();
 }, 2000); // Wait 2 seconds after app initialization

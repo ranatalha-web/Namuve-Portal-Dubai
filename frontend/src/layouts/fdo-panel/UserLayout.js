@@ -17,12 +17,17 @@ import { saveAs } from "file-saver";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import Notifications from "components/Notifications/index";
 import { Snackbar, Alert } from "@mui/material";
+import ApartmentIcon from "@mui/icons-material/Apartment";
+import HomeIcon from "@mui/icons-material/Home";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
+import CommentIcon from "@mui/icons-material/Comment";
+import SendIcon from "@mui/icons-material/Send";
 
 
 const API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzNhNzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE"; // replace with your key
 
 const TEABLE_TOKEN =
-  "teable_accSkoTP5GM9CQvPm4u_csIKhbkyBkfGhWK+6GsEqCbzRDpxu/kJJAorC0dxkhE=";
+  "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
 
 const NOTIFICATION_API = `https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record?filter=${encodeURIComponent(
   JSON.stringify({
@@ -63,12 +68,33 @@ function UserLayout({ children }) {
   const [prevCount, setPrevCount] = useState(0);
   const [latestNotification, setLatestNotification] = useState(null);
   const notifiedRecordIdsRef = useRef(new Set());
+  const isInitialLoadRef = useRef(true); // Track initial load// 🔔 Notification Stack State
+  const [snackPack, setSnackPack] = useState([]);
+  const [notificationClickSnackbar, setNotificationClickSnackbar] = useState({
+    open: false,
+    guestName: "",
+  });
 
   // Add function
   const playNotificationSound = () => {
     const audio = new Audio("/notification.mp3"); // Put in public/
     audio.volume = 0.4;
     audio.play().catch(() => { });
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (reservationId, guestName) => {
+    // Try to use the child component's handler if available (scrolls to card and opens comments)
+    if (window.handleReservationNotificationClick) {
+      window.handleReservationNotificationClick(reservationId, guestName);
+    } else {
+      // Fallback: Switch to Home tab and show message (if child component not loaded yet)
+      setActiveTab(0);
+      setNotificationClickSnackbar({
+        open: true,
+        guestName: guestName || "Guest",
+      });
+    }
   };
 
   // useEffect
@@ -87,15 +113,28 @@ function UserLayout({ children }) {
         const data = await res.json();
         const records = data.records || [];
 
-        // === 1. Only NEW records (never seen before) ===
+        // === Get only NEW records (not seen before) ===
         const newRecords = records.filter(
           (record) => !notifiedRecordIdsRef.current.has(record.id)
         );
 
-        // === 2. No new records → keep current badge! ===
-        if (newRecords.length === 0) return;
+        if (newRecords.length === 0) {
+          return; // ← Keep badge unchanged
+        }
 
-        // === 3. Current user identifiers ===
+        // === Badge:INCREMENT by number of new records (ALWAYS, even on initial load) ===
+        setUnreadCount((prev) => prev + newRecords.length);
+
+        // 🔄 On initial load, just mark all as seen without showing snackbars
+        if (isInitialLoadRef.current) {
+          newRecords.forEach((record) => {
+            notifiedRecordIdsRef.current.add(record.id);
+          });
+          isInitialLoadRef.current = false;
+          console.log("🔕 Initial load: marked", newRecords.length, "notifications as seen (no snackbars)");
+          return; // Don't show snackbars on first load
+        }
+
         const currentUserNames = [
           user?.name,
           user?.username,
@@ -104,9 +143,8 @@ function UserLayout({ children }) {
           .filter(Boolean)
           .map((s) => s.trim().toLowerCase());
 
-        let latestOtherComment = null;
+        const newOtherComments = [];
 
-        // === 4. Process each new record ===
         for (const record of newRecords) {
           const sender = record?.fields?.User?.trim() || "";
           const senderLower = sender.toLowerCase();
@@ -126,30 +164,66 @@ function UserLayout({ children }) {
             );
           });
 
-          // Mark as seen (prevents duplicates)
           notifiedRecordIdsRef.current.add(record.id);
 
-          // Only track latest OTHER comment for toast
-          if (!isOwnComment && !latestOtherComment) {
-            latestOtherComment = { sender, fields: record.fields };
+          if (!isOwnComment) {
+            newOtherComments.push({
+              sender,
+              fields: record.fields,
+            });
           }
         }
 
-        // === 5. Show toast for latest OTHER comment ===
-        if (latestOtherComment) {
-          const { sender, fields } = latestOtherComment;
-          setLatestNotification({
-            author: sender,
-            type: "commented",
-            guestName: fields["Guest Name"] || "Guest",
-            apt: fields.APT || "Unit",
-          });
-          setSnackbarOpen(true);
-          playNotificationSound();
-        }
+        // Show ALL new comments — stacked
+        if (newOtherComments.length > 0) {
+          newOtherComments.forEach((comment, index) => {
+            const newId = new Date().getTime() + Math.random();
 
-        // === 6. Badge: INCREMENT by number of new records (yours + others) ===
-        setUnreadCount((prev) => prev + newRecords.length);
+            // Add to stack with a slight delay for visual separation if multiple arrive at once
+            setTimeout(() => {
+              setSnackPack((prev) => [
+                ...prev,
+                {
+                  id: newId,
+                  message: "New Comment",
+                  severity: "info",
+                  richContent: (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CommentIcon sx={{ fontSize: 18 }} />
+                      <Typography
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          flexWrap: "wrap",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          lineHeight: 1.4,
+                          color: "#fff",
+                        }}
+                      >
+                        <span style={{ fontWeight: 700 }}>{comment.sender}</span>
+                        <span style={{ color: "#dbeafe" }}>commented on</span>
+                        <span style={{ color: "#fbbf24", fontWeight: 600 }}>
+                          {comment.fields["Guest Name"] || "Guest"}
+                        </span>
+                        <span style={{ color: "#34d399", fontWeight: 600 }}>
+                          {comment.fields.APT || "Unit"}
+                        </span>
+                      </Typography>
+                    </Box>
+                  ),
+                },
+              ]);
+              playNotificationSound();
+
+              // Auto-dismiss after 5 seconds
+              setTimeout(() => {
+                setSnackPack((prev) => prev.filter((item) => item.id !== newId));
+              }, 5000);
+            }, index * 300); // 300ms stagger
+          });
+        }
 
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
@@ -159,7 +233,7 @@ function UserLayout({ children }) {
     fetchNotificationUpdate();
     const interval = setInterval(fetchNotificationUpdate, 30000);
     return () => clearInterval(interval);
-  }, [user?.name, user?.username, user?.email]); // ← include email
+  }, [user?.name, user?.username, user?.email]);
 
   async function downloadExcel() {
     if (loadingCheck) {
@@ -719,7 +793,7 @@ function UserLayout({ children }) {
   const LISTINGS_DATA = {
     "2BR Premium": [],
     "3BR": [],
-    "1BR": [387833, 387834, 451414, ],
+    "1BR": [387833, 387834, 451414,],
     Studio: [392230],
     "2BR": [441361, 443140, 449910, 452131, 453688, 453690, 454454],
   };
@@ -1197,17 +1271,21 @@ function UserLayout({ children }) {
           boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         }}
       >
-        <Toolbar sx={{ justifyContent: "space-between", px: 4, py: 1 }}>
+        <Toolbar sx={{ justifyContent: "space-between", px: { xs: 0.5, sm: 2 }, py: 1 }}>
           {/* Left: Logo & Title */}
-          <Box display="flex" alignItems="center" gap={2}>
-            <Logo width="80px" height="80px" />
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: "700", color: "#1f2937" }}>
-                FDO Panel
+          <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 1 }} sx={{ flexShrink: 0, mr: { xs: 0.5, sm: 2 } }}>
+            <Logo
+              width={{ xs: "50px", sm: "80px" }}
+              height={{ xs: "50px", sm: "80px" }}
+            />
+            <Box display="flex" flexDirection="column">
+              <Typography variant={{ xs: "subtitle1", sm: "h5" }} sx={{ fontWeight: "700", color: "#1f2937", fontSize: { xs: "0.9rem", sm: "1.5rem" } }} noWrap>
+                Reservation Panel
               </Typography>
               <Typography
-                variant="body2"
-                sx={{ color: "#6b7280", fontSize: "0.75rem", fontWeight: "500" }}
+                variant={{ xs: "caption", sm: "body2" }}
+                sx={{ color: "#6b7280", fontSize: { xs: "0.55rem", sm: "0.75rem" }, fontWeight: "500" }}
+                noWrap
               >
                 Guest Management System
               </Typography>
@@ -1215,64 +1293,83 @@ function UserLayout({ children }) {
           </Box>
 
           {/* Center: Tabs */}
-          <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+          <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center", overflow: "hidden" }}>
             <Tabs
               value={activeTab}
-              onChange={handleTabChange}
+              onChange={(event, newValue) => setActiveTab(newValue)}
+              centered
               sx={{
                 "& .MuiTabs-indicator": {
-                  display: "none", // hide the default underline
+                  display: "none",
                 },
                 "& .MuiTab-root": {
                   fontWeight: 600,
                   textTransform: "none",
-                  fontSize: "0.95rem",
-                  mx: 1,
-                  px: 3,
+                  fontSize: { xs: "0.75rem", sm: "0.85rem", md: "0.95rem" },
+                  mx: { xs: 0.5, sm: 0.5 },
+                  px: { xs: 1.5, sm: 2, md: 3 },
                   py: 1,
                   borderRadius: "12px",
                   transition: "all 0.3s ease",
-                  color: "#4b5563", // gray-700 for inactive
+                  color: "#4b5563",
                   backgroundColor: "transparent",
+                  minWidth: { xs: "55px", sm: "90px" },
                   "&:hover": {
-                    backgroundColor: "#f3f4f6", // subtle hover gray
+                    backgroundColor: "#f3f4f6",
+                  },
+                  // Ensure content is centered
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  "& .MuiTab-iconWrapper": {
+                    marginBottom: 0,
+                    marginRight: 0,
                   },
                 },
                 "& .Mui-selected": {
                   color: "#000 !important",
                   backgroundColor: "transparent !important",
-                  border: "1.5px solid #000", // black border for active
+                  border: "1.5px solid #000",
                   boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
                 },
               }}
             >
-              <Tab label="Home" />
-              <Tab label="Apartment Status" />
-              <Tab label="Todays Check-In/Out" />
+              <Tab
+                icon={<HomeIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
+                label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Home</Box>}
+              />
+              <Tab
+                icon={<ApartmentIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
+                label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Apartment Status</Box>}
+              />
+              <Tab
+                icon={<EventAvailableIcon sx={{ display: { xs: "block", sm: "none" }, fontSize: "30px" }} />}
+                label={<Box sx={{ display: { xs: "none", sm: "block" } }}>Todays Check-In/Out</Box>}
+              />
             </Tabs>
           </Box>
 
           {/* Right: User Info & Logout */}
           <Box display="flex" alignItems="center" gap={2}>
             {user && (
-              <Box display="flex" alignItems="center" gap={1.5}>
+              <Box display="flex" alignItems="center" gap={{ xs: 0, sm: 1 }} sx={{ flexShrink: 0, ml: { xs: 0.5, sm: 2 } }}>
                 <Avatar
                   sx={{
-                    width: 36,
-                    height: 36,
+                    width: 28,
+                    height: 28,
                     backgroundColor: "#f3f4f6",
                     color: "#374151",
-                    fontSize: "0.875rem",
+                    fontSize: "0.75rem",
                     fontWeight: "600",
                   }}
                 >
-                  {(user.name || user.username)?.charAt(0)?.toUpperCase() || "U"}
+                  {(user?.name || user?.username)?.charAt(0)?.toUpperCase() || "U"}
                 </Avatar>
-                <Typography sx={{ color: "#1f2937", fontWeight: 600 }}>
-                  {user.name || user.username}
+                <Typography sx={{ color: "#1f2937", fontWeight: 600, display: { xs: "none", sm: "block" } }}>
+                  {user?.name || user?.username}
                 </Typography>
 
-                {/* NOTIFICATION ICON — ADD HERE */}
+                {/* NOTIFICATION ICON */}
                 <IconButton
                   ref={anchorRef}
                   size="small"
@@ -1282,8 +1379,15 @@ function UserLayout({ children }) {
                   }}
                   onClick={() => setNotificationsOpen(true)}
                 >
-                  <Badge badgeContent={unreadCount} color="error">
-                    <NotificationsIcon fontSize="small" />
+                  <Badge
+                    badgeContent={
+                      unreadCount > 20
+                        ? "20+"
+                        : unreadCount
+                    }
+                    color="error"
+                  >
+                    <NotificationsIcon />
                   </Badge>
                 </IconButton>
               </Box>
@@ -1296,17 +1400,21 @@ function UserLayout({ children }) {
                 borderColor: "#ef4444",
                 color: "#ef4444",
                 borderRadius: "10px",
-                px: 3,
-                py: 1,
+                px: { xs: 1.5, sm: 3 },
+                py: { xs: 0.5, sm: 1 },
                 fontWeight: 600,
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                minWidth: { xs: "auto", sm: "auto" },
                 "&:hover": {
                   backgroundColor: "transparent",
                   borderColor: "#ef4444",
                 },
               }}
             >
-              <LogoutIcon fontSize="small" />
-              Logout
+              <LogoutIcon sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }} />
+              <Box component="span" sx={{ display: { xs: "none", sm: "inline" }, ml: 0.5 }}>
+                Logout
+              </Box>
             </MDButton>
           </Box>
         </Toolbar>
@@ -1319,6 +1427,7 @@ function UserLayout({ children }) {
         onClose={() => setNotificationsOpen(false)}
         anchorEl={anchorRef.current}
         onMarkAsRead={() => setUnreadCount(0)}
+        onNotificationClick={handleNotificationClick}
       />
       {/* Snackbar */}
       <Snackbar

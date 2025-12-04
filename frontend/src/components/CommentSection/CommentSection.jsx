@@ -15,7 +15,7 @@ export default function CommentSection({ guest, bookingDate }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [replyingLoading, setReplyingLoading] = useState(false);
-  const [replies, setReplies] = useState({}); 
+  const [replies, setReplies] = useState({});
   const [editingReplyId, setEditingReplyId] = useState(null);
   const [editReplyText, setEditReplyText] = useState("");
 
@@ -31,6 +31,41 @@ export default function CommentSection({ guest, bookingDate }) {
     "https://teable.namuve.com/api/table/tbl9WMkwmVTydFdnHfp/record";
   const NOTIFICATION_API =
     "https://teable.namuve.com/api/table/tbluQcBfr1LxBt7hmTn/record";
+
+  const sendToGoogleChat = async (message, type = "comment") => {
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+    // PASTE YOUR NEW WEBHOOK URL HERE
+    const GOOGLE_CHAT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAQAwWCTZJU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=yBKx0OabFRMCJh3GW2ab-rh0W73qOw7pXDtRrg3SttY";
+    // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+    const guestName = guest.guestName || "Guest";
+    const aptName = guest.apartment || guest.listingName || "Unit";
+
+    let actionText = "commented on";
+
+    if (type.includes("edit")) {
+      actionText = type.includes("reply") ? "edited reply on" : "edited comment on";
+    } else if (type.includes("reply")) {
+      actionText = "replied to";
+    }
+
+    const text = `👤 *${userName}* ${actionText} reservation of *${guestName} (${aptName} 🏠)*\n\n${message.trim()}\n\n🔗 https://dashboard.hostaway.com/reservations/${reservationId}`;
+
+    try {
+      const res = await fetch(GOOGLE_CHAT_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Google Chat error:", res.status, err);
+      }
+    } catch (err) {
+      console.error("Network error:", err);
+    }
+  };
 
   /* ------------------------------------------------- POST NOTIFICATION ------------------------------------------------- */
   const handleSendNotification = async (commentText, type = "comment") => {
@@ -155,6 +190,7 @@ export default function CommentSection({ guest, bookingDate }) {
         setNewComment("");
         fetchComments();
         handleSendNotification(commentText, "commented");
+        sendToGoogleChat(commentText, "comment");
       } else {
         const err = await res.json();
         alert("Save failed: " + (err.message || "Unknown error"));
@@ -195,6 +231,7 @@ export default function CommentSection({ guest, bookingDate }) {
       fetchComments();
       setEditingId(null);
       setEditText("");
+      sendToGoogleChat(editText, "edited comment");
 
     } catch (err) {
       alert("Update failed: " + err.message);
@@ -229,6 +266,7 @@ export default function CommentSection({ guest, bookingDate }) {
 
       setEditingReplyId(null);
       setEditReplyText("");
+      sendToGoogleChat(editReplyText, "edited reply");
     } catch (err) {
       alert("Update reply failed: " + err.message);
     }
@@ -318,6 +356,7 @@ export default function CommentSection({ guest, bookingDate }) {
         setReplyText("");
         setReplyingTo(null);
         fetchReplies(c.commentId);
+        sendToGoogleChat(replyText, "reply");
       } else {
         const err = await res.json();
         alert("Reply failed: " + (err.message || "Unknown error"));
@@ -343,17 +382,11 @@ export default function CommentSection({ guest, bookingDate }) {
     </svg>
   );
 
-  const formatTime = (date) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    if (days) return `${days}d ago`;
-    if (hours) return `${hours}h ago`;
-    if (minutes
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
 
-    ) return `${minutes}m ago`;
-    return "Just now";
+    // Format: "Nov 25, 2025 at 3:42 PM"
+    return dayjs(date).format("MMM D, YYYY [at] h:mm A");
   };
 
   /* ------------------------------------------------- RENDER ------------------------------------------------- */
@@ -466,12 +499,26 @@ export default function CommentSection({ guest, bookingDate }) {
                           {c.avatar}
                         </div>
                         <div className="ml-3">
-                          <h5 className="mt-0 mb-0 font-weight-bold d-inline">
-                            {c.author}
-                          </h5>
-                          <span className="text-muted small ml-2">
-                            - {formatTime(c.timestamp)}
-                          </span>
+                          <div>
+                            <strong className="d-inline">{c.author}</strong>
+                            <span className="text-muted small ml-2">
+                              - {formatTime(c.timestamp)}
+                            </span>
+                          </div>
+
+                          {/* ←←← THIS IS THE ONLY CHANGE YOU NEED */}
+                          {editingId === c.id ? (
+                            <textarea
+                              className="form-control form-control-sm mt-2"
+                              rows="2"
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              autoFocus
+                              style={{ fontSize: "0.875rem" }}
+                            />
+                          ) : (
+                            <p className="mt-1 mb-0">{c.text}</p>
+                          )}
                         </div>
                       </div>
 
@@ -538,20 +585,6 @@ export default function CommentSection({ guest, bookingDate }) {
                         )}
                       </div>
                     </div>
-
-                    {/* COMMENT TEXT */}
-                    {editingId === c.id ? (
-                      <textarea
-                        className="form-control form-control-sm mt-2"
-                        rows="2"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        autoFocus
-                        style={{ fontSize: "0.875rem" }}
-                      />
-                    ) : (
-                      <p className="mt-2 mb-0">{c.text}</p>
-                    )}
 
                     {/* REPLIES LIST */}
                     {(replies[c.commentId] || []).map((r) => (
