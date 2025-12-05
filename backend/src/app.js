@@ -7,7 +7,7 @@
 
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined
   ? process.env.ENABLE_LOGS === 'true'
-  : true; // Default: logs disabled
+  : false; // Default: logs disabled
 
 // Store original console methods
 const originalConsole = {
@@ -53,6 +53,7 @@ const express = require("express");
 const cors = require("cors");
 const compression = require("compression");
 const config = require("./config/config");
+const { getSafeError } = require("./utils/sanitizer");
 
 const app = express();
 
@@ -448,7 +449,28 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((error, req, res, next) => {
-  console.error('Global error handler:', error);
+  // Log error safely without exposing sensitive data
+  console.error('Global error handler:', getSafeError(error));
+
+  // Handle missing environment variables gracefully
+  if (error.message && error.message.includes('environment variable')) {
+    return res.status(503).json({
+      success: false,
+      error: 'Service temporarily unavailable - configuration issue',
+      details: config.NODE_ENV === 'development' ? error.message : 'Server configuration incomplete',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Handle network/API errors gracefully
+  if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+    return res.status(503).json({
+      success: false,
+      error: 'External service unavailable',
+      details: config.NODE_ENV === 'development' ? error.message : 'Unable to reach external service',
+      timestamp: new Date().toISOString()
+    });
+  }
 
   res.status(error.status || 500).json({
     success: false,

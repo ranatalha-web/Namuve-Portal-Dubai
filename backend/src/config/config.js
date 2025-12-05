@@ -83,16 +83,32 @@ const config = {
   PORTAL_AUTH_URL: process.env.PORTAL_AUTH_URL || '',
 };
 
-// Validation
+// Validation - Check for critical environment variables
 const requiredEnvVars = ['HOSTAWAY_AUTH_TOKEN', 'TEABLE_BASE_URL', 'TEABLE_BEARER_TOKEN'];
-
 const missingEnvVars = requiredEnvVars.filter(envVar => !config[envVar]);
 
+// Add missing env vars to config object with default values to prevent 500 errors
 if (missingEnvVars.length > 0) {
   console.error('Missing required environment variables:', missingEnvVars);
+  
+  // Provide default/fallback values to prevent API crashes
+  missingEnvVars.forEach(envVar => {
+    switch(envVar) {
+      case 'HOSTAWAY_AUTH_TOKEN':
+        config[envVar] = process.env.HOSTAWAY_AUTH_TOKEN || 'Bearer_NOT_SET';
+        break;
+      case 'TEABLE_BASE_URL':
+        config[envVar] = process.env.TEABLE_BASE_URL || 'https://teable.namuve.com/api/table/NOT_SET/record';
+        break;
+      case 'TEABLE_BEARER_TOKEN':
+        config[envVar] = process.env.TEABLE_BEARER_TOKEN || 'NOT_SET';
+        break;
+    }
+  });
+  
   if (process.env.NODE_ENV === 'production') {
     console.warn('⚠️  Production deployment with missing environment variables - some features may not work');
-    // Don't exit in production, just warn
+    console.warn('⚠️  Using fallback values to prevent crashes');
   } else {
     console.warn('Running in development mode with missing environment variables');
   }

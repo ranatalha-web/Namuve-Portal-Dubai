@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const config = require('../config/config');
+const { getSafeError } = require('../utils/sanitizer');
 
 class AuthService {
   constructor() {
@@ -83,11 +84,7 @@ class AuthService {
 
       return response.data;
     } catch (error) {
-      console.error('❌ Teable API Error:', error.message);
-      if (error.response) {
-        console.error('❌ Response status:', error.response.status);
-        console.error('❌ Response data:', error.response.data);
-      }
+      console.error('❌ Teable API Error:', getSafeError(error));
       throw error;
     }
   }
