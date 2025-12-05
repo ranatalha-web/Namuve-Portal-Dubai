@@ -336,6 +336,7 @@ function Basic() {
                   type="text"
                   placeholder="Username"
                   fullWidth
+                  autoComplete="username"
                   value={formData.username}
                   onChange={handleInputChange("username")}
                   sx={{
@@ -384,6 +385,7 @@ function Basic() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   fullWidth
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={handleInputChange("password")}
                   sx={{
