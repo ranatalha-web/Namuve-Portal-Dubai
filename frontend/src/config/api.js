@@ -6,15 +6,18 @@ const getApiBaseUrl = () => {
   
   // Production URLs - use same hostname with port 5000
   if (hostname === '137.184.14.198') {
-    return `${protocol}//137.184.14.198:5000`;
+    // IP address - use HTTP to avoid SSL certificate issues
+    return 'http://137.184.14.198:5000';
   }
   
   if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
+    // Domain names - use same protocol
     return `${protocol}//${hostname}:5000`;
   }
   
   // If not localhost, assume it's production and use same hostname with port 5000
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    // For other domains, use same protocol
     return `${protocol}//${hostname}:5000`;
   }
   
