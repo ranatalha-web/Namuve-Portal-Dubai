@@ -1,11 +1,24 @@
 // API Configuration
 const getApiBaseUrl = () => {
-  // Production URL
-  if (window.location.hostname === '137.184.14.198' || window.location.hostname === 'portal.namuve.com') {
-    return 'http://137.184.14.198:5000';
+  // Get hostname
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  // Production URLs - use same hostname with port 5000
+  if (hostname === '137.184.14.198') {
+    return `${protocol}//137.184.14.198:5000`;
   }
   
-  // Development or custom URL from environment
+  if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
+    return `${protocol}//${hostname}:5000`;
+  }
+  
+  // If not localhost, assume it's production and use same hostname with port 5000
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `${protocol}//${hostname}:5000`;
+  }
+  
+  // Development - use environment variable or localhost
   return process.env.REACT_APP_API_URL || "http://localhost:5000";
 };
 

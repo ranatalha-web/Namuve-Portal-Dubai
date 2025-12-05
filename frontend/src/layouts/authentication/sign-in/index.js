@@ -180,43 +180,77 @@ function Basic() {
 
     setLoginState({ loading: true, error: "", success: false });
 
-    try {
-      // Call authentication API
-      const response = await fetch(API_ENDPOINTS.LOGIN, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
-      });
+    // Retry logic for network failures
+    const maxRetries = 3;
+    let lastError = null;
 
-      const result = await response.json();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Call authentication API with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      if (result.success) {
-        // Use auth context to store login data
-        login(result.token, result.user);
+        const response = await fetch(API_ENDPOINTS.LOGIN, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: formData.username,
+            password: formData.password,
+          }),
+          signal: controller.signal,
+        });
 
-        // Login successful - logging removed for silent mode
+        clearTimeout(timeoutId);
 
-        setLoginState({ loading: false, error: "", success: true });
+        const result = await response.json();
 
-        // Small delay to show success message
-        setTimeout(() => {
-          // Always navigate to FDO panel regardless of role
-          navigate("/fdo-panel");
-        }, 1000);
-      } else {
-        // Login failed - logging removed for silent mode
-        setLoginState({ loading: false, error: result.message, success: false });
+        if (result.success) {
+          // Use auth context to store login data
+          login(result.token, result.user);
+
+          // Login successful - logging removed for silent mode
+
+          setLoginState({ loading: false, error: "", success: true });
+
+          // Small delay to show success message
+          setTimeout(() => {
+            // Always navigate to FDO panel regardless of role
+            navigate("/fdo-panel");
+          }, 1000);
+          return; // Success - exit retry loop
+        } else {
+          // Login failed - logging removed for silent mode
+          setLoginState({ loading: false, error: result.message, success: false });
+          return; // Authentication failed - don't retry
+        }
+      } catch (error) {
+        lastError = error;
+        
+        // Check if it's a network error worth retrying
+        const isNetworkError = error.name === 'AbortError' || 
+                              error.message.includes('Failed to fetch') ||
+                              error.message.includes('Connection refused');
+        
+        if (isNetworkError && attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue; // Retry
+        } else {
+          // Final error or non-network error
+          const errorMessage = attempt === maxRetries 
+            ? "Connection failed. Please ensure the server is running and try again."
+            : "Login failed. Please check your connection and try again.";
+          setLoginState({ loading: false, error: errorMessage, success: false });
+          return; // Exit retry loop
+        }
       }
-    } catch (error) {
-      // Login error - logging removed for silent mode
-      const errorMessage = "Login failed. Please check your connection and try again.";
-      setLoginState({ loading: false, error: errorMessage, success: false });
     }
+
+    // If we get here, all retries failed
+    const errorMessage = "Connection failed. Please ensure the server is running and try again.";
+    setLoginState({ loading: false, error: errorMessage, success: false });
   };
 
   return (
