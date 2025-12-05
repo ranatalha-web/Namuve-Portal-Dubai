@@ -1,6 +1,11 @@
 // API Configuration
 const getApiBaseUrl = () => {
-  // Always use localhost for development, production URL from env
+  // Production URL
+  if (window.location.hostname === '137.184.14.198' || window.location.hostname === 'portal.namuve.com') {
+    return 'http://137.184.14.198:5000';
+  }
+  
+  // Development or custom URL from environment
   return process.env.REACT_APP_API_URL || "http://localhost:5000";
 };
 
