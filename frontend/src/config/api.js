@@ -4,21 +4,21 @@ const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Production URLs - use same hostname with port 5000
+  // Production URLs - always use HTTP for port 5000 (no SSL on custom ports)
   if (hostname === '137.184.14.198') {
-    // IP address - use HTTP to avoid SSL certificate issues
+    // IP address - use HTTP
     return 'http://137.184.14.198:5000';
   }
   
   if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
-    // Domain names - use same protocol
-    return `${protocol}//${hostname}:5000`;
+    // Domain names - use HTTP for port 5000 (SSL certificate only on main port)
+    return `http://${hostname}:5000`;
   }
   
-  // If not localhost, assume it's production and use same hostname with port 5000
+  // If not localhost, assume it's production and use HTTP for port 5000
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // For other domains, use same protocol
-    return `${protocol}//${hostname}:5000`;
+    // For other domains, use HTTP for port 5000
+    return `http://${hostname}:5000`;
   }
   
   // Development - use environment variable or localhost
