@@ -4,22 +4,22 @@ const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Production URLs - use HTTPS for HTTPS pages, HTTP for HTTP pages
+  // Production URLs - use same domain without port (nginx handles routing)
   if (hostname === '137.184.14.198') {
-    // IP address - use HTTP
+    // IP address - use HTTP with port
     return 'http://137.184.14.198:5000';
   }
   
   if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
-    // Domain names - use same protocol as frontend
-    // If frontend is HTTPS, backend must be HTTPS too
-    return `${protocol}//${hostname}:5000`;
+    // Domain names - use same protocol and domain (no port)
+    // Nginx will route /api/* to backend
+    return `${protocol}//${hostname}`;
   }
   
   // If not localhost, assume it's production and use same protocol
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // For other domains, use same protocol as frontend
-    return `${protocol}//${hostname}:5000`;
+    // For other domains, use same protocol and domain
+    return `${protocol}//${hostname}`;
   }
   
   // Development - use environment variable or localhost
