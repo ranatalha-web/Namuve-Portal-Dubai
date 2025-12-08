@@ -1,24 +1,25 @@
 // API Configuration
 const getApiBaseUrl = () => {
-  // Get hostname
+  // Get hostname and protocol
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Production URLs - always use HTTP for port 5000 (no SSL on custom ports)
+  // Production URLs - use HTTPS for HTTPS pages, HTTP for HTTP pages
   if (hostname === '137.184.14.198') {
     // IP address - use HTTP
     return 'http://137.184.14.198:5000';
   }
   
   if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
-    // Domain names - use HTTP for port 5000 (SSL certificate only on main port)
-    return `http://${hostname}:5000`;
+    // Domain names - use same protocol as frontend
+    // If frontend is HTTPS, backend must be HTTPS too
+    return `${protocol}//${hostname}:5000`;
   }
   
-  // If not localhost, assume it's production and use HTTP for port 5000
+  // If not localhost, assume it's production and use same protocol
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // For other domains, use HTTP for port 5000
-    return `http://${hostname}:5000`;
+    // For other domains, use same protocol as frontend
+    return `${protocol}//${hostname}:5000`;
   }
   
   // Development - use environment variable or localhost
