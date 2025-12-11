@@ -2686,25 +2686,58 @@ function KanbanView() {
 
     try {
       const filter = {
-        conjunction: "and",
+        conjunction: "or",
         filterSet: [
           {
-            fieldId: "Arrival Date", // This must match EXACT field ID in Teable
-            operator: "isOnOrAfter",
-            value: {
-              mode: "exactDate",
-              exactDate: getStartOfDayUTC(startDate),
-              timeZone: "Asia/Karachi",
-            },
+            conjunction: "and",
+            filterSet: [
+              {
+                fieldId: "Arrival Date",
+                operator: "isOnOrAfter",
+                value: {
+                  mode: "exactDate",
+                  exactDate: getStartOfDayUTC(startDate),
+                  timeZone: "Asia/Karachi",
+                },
+              },
+              {
+                fieldId: "Arrival Date",
+                operator: "isOnOrBefore",
+                value: {
+                  mode: "exactDate",
+                  exactDate: getEndOfDayKarachiUTC(endDate),
+                  timeZone: "Asia/Karachi",
+                },
+              },
+            ],
           },
           {
-            fieldId: "Arrival Date",
-            operator: "isOnOrBefore",
-            value: {
-              mode: "exactDate",
-              exactDate: getEndOfDayKarachiUTC(endDate),
-              timeZone: "Asia/Karachi",
-            },
+            conjunction: "and",
+            filterSet: [
+              {
+                fieldId: "Departure Date",
+                operator: "isOnOrAfter",
+                value: {
+                  mode: "exactDate",
+                  exactDate: getStartOfDayUTC(startDate),
+                  timeZone: "Asia/Karachi",
+                },
+              },
+              {
+                fieldId: "Departure Date",
+                operator: "isOnOrBefore",
+                value: {
+                  mode: "exactDate",
+                  exactDate: getEndOfDayKarachiUTC(endDate),
+                  timeZone: "Asia/Karachi",
+                },
+              },
+            ],
+          },
+          {
+            fieldId: "Status",
+            operator: "is",
+            value: "Staying Guest",
           },
         ],
       };
