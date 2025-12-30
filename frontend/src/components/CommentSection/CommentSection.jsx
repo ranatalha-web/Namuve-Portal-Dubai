@@ -65,6 +65,32 @@ export default function CommentSection({ guest, bookingDate }) {
     } catch (err) {
       console.error("Network error:", err);
     }
+
+    // ✅ Send to Mattermost (UAE Comments Alert)
+    const mattermostMessage = `${userName} commented on reservation of ${guestName} (${aptName} 🏠)\n\n${message.trim()}\n\n**Reservation ID:** [${reservationId}](https://dashboard.hostaway.com/reservations/${reservationId})`;
+
+    try {
+      const res = await fetch("https://chat.team.namuve.com/api/v4/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer aiacw3yepjrepghcqs9uk9j8ya"
+        },
+        body: JSON.stringify({
+          channel_id: "bzfgc4geb7ff7enequamjc3fqy",
+          message: mattermostMessage
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Mattermost error:", res.status, err);
+      } else {
+        console.log("✅ Mattermost comment notification sent");
+      }
+    } catch (err) {
+      console.error("Mattermost network error:", err);
+    }
   };
 
   /* ------------------------------------------------- POST NOTIFICATION ------------------------------------------------- */

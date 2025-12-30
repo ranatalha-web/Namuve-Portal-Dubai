@@ -223,6 +223,32 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
     } catch (err) {
       console.error("Network error:", err);
     }
+
+    // ✅ Send to Mattermost (UAE Comments Alert)
+    const mattermostMessage = `${user.name} commented on reservation of ${guestName} (${aptName} 🏠)\n\n${message.trim()}\n\n**Reservation ID:** [${guest.reservationId}](https://dashboard.hostaway.com/reservations/${guest.reservationId})`;
+
+    try {
+      const res = await fetch("https://chat.team.namuve.com/api/v4/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer aiacw3yepjrepghcqs9uk9j8ya"
+        },
+        body: JSON.stringify({
+          channel_id: "bzfgc4geb7ff7enequamjc3fqy",
+          message: mattermostMessage
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Mattermost error:", res.status, err);
+      } else {
+        console.log("✅ Mattermost comment notification sent");
+      }
+    } catch (err) {
+      console.error("Mattermost network error:", err);
+    }
   };
 
   /* ------------------------------------------------- POST COMMENT ------------------------------------------------- */
@@ -467,6 +493,33 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           console.error("❌ Error sending message to Google Chat:", error);
         });
 
+      // ✅ Send message to Mattermost
+      const mattermostMessage = `📥 Check-In Alert – ${guest.guestName} for [${guest.reservationId}](https://dashboard.hostaway.com/reservations/${guest.reservationId})\n👤 Checked in to 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime}, processed by ${user?.name || "Unknown User"}`;
+
+      fetch(
+        "https://chat.team.namuve.com/api/v4/posts",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer p4ny3pdsmtns3f55an6o7gexow"
+          },
+          body: JSON.stringify({
+            channel_id: "1jy1o7zsupb63cijiasitd5fth",
+            message: mattermostMessage
+          }),
+        }
+      )
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || "Failed to send Mattermost message");
+          console.log("✅ Mattermost message sent successfully:", data);
+        })
+
+        .catch((error) => {
+          console.error("❌ Error sending message to Mattermost:", error);
+        });
+
       // ✅ Prepare Teable record
       const teablePayload = {
         records: [
@@ -653,6 +706,32 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         })
         .catch((error) => {
           console.error("❌ Error sending message to Google Chat:", error);
+        });
+
+      // ✅ Send message to Mattermost
+      const mattermostMessage = `📤 Check-Out Alert – ${guest.guestName} for [${guest.reservationId}](https://dashboard.hostaway.com/reservations/${guest.reservationId})\n👤 Checked out from 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime}, processed by ${user?.name || "Unknown User"}`;
+
+      fetch(
+        "https://chat.team.namuve.com/api/v4/posts",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer p4ny3pdsmtns3f55an6o7gexow"
+          },
+          body: JSON.stringify({
+            channel_id: "1jy1o7zsupb63cijiasitd5fth",
+            message: mattermostMessage
+          }),
+        }
+      )
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.message || "Failed to send Mattermost message");
+          console.log("✅ Mattermost message sent successfully:", data);
+        })
+        .catch((error) => {
+          console.error("❌ Error sending message to Mattermost:", error);
         });
 
       // ✅ Prepare Teable record
