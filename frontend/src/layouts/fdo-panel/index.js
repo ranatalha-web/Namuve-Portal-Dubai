@@ -496,6 +496,9 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       // ✅ Send message to Mattermost
       const mattermostMessage = `📥 Check-In Alert – ${guest.guestName} for [${guest.reservationId}](https://dashboard.hostaway.com/reservations/${guest.reservationId})\n👤 Checked in to 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime}, processed by ${user?.name || "Unknown User"}`;
 
+      console.log("🔔 Sending Mattermost check-in notification...");
+      console.log("Message:", mattermostMessage);
+
       fetch(
         "https://chat.team.namuve.com/api/v4/posts",
         {
@@ -512,7 +515,10 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       )
         .then(async (response) => {
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.message || "Failed to send Mattermost message");
+          if (!response.ok) {
+            console.error("❌ Mattermost response not OK:", response.status, data);
+            throw new Error(data.message || "Failed to send Mattermost message");
+          }
           console.log("✅ Mattermost message sent successfully:", data);
         })
 
@@ -711,6 +717,9 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       // ✅ Send message to Mattermost
       const mattermostMessage = `📤 Check-Out Alert – ${guest.guestName} for [${guest.reservationId}](https://dashboard.hostaway.com/reservations/${guest.reservationId})\n👤 Checked out from 🏠 ${guest.listingName || "Unknown Listing"} at 🕒 ${formattedDateTime}, processed by ${user?.name || "Unknown User"}`;
 
+      console.log("🔔 Sending Mattermost check-out notification...");
+      console.log("Message:", mattermostMessage);
+
       fetch(
         "https://chat.team.namuve.com/api/v4/posts",
         {
@@ -727,7 +736,10 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       )
         .then(async (response) => {
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.message || "Failed to send Mattermost message");
+          if (!response.ok) {
+            console.error("❌ Mattermost response not OK:", response.status, data);
+            throw new Error(data.message || "Failed to send Mattermost message");
+          }
           console.log("✅ Mattermost message sent successfully:", data);
         })
         .catch((error) => {
@@ -2383,8 +2395,17 @@ function KanbanView() {
   const [lastNotifiedId, setLastNotifiedId] = useState(null);
   const [latestNotification, setLatestNotification] = useState(null);
   const notifiedRecordIdsRef = useRef(new Set());
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const hasAutoLoaded = useRef(false);
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const handleFilterClick = (event) => setFilterAnchorEl(event.currentTarget);
@@ -2714,18 +2735,7 @@ function KanbanView() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // 1. On first mount → set default 7-day range (today → today+6)
-  useEffect(() => {
-    const today = new Date();
-    const start = today.toISOString().split("T")[0]; // e.g., "2025-11-20"
-
-    const end = new Date(today);
-    end.setDate(today.getDate() + 6); // +6 days = 7-day window
-    const endStr = end.toISOString().split("T")[0]; // e.g., "2025-11-26"
-
-    setStartDate(start);
-    setEndDate(endStr);
-  }, []); // Runs only once on mount
+  // Date range now defaults to today only (set in useState above)
 
   // 2. Auto-fetch when default dates are set (or when user clicks Start)
   useEffect(() => {
