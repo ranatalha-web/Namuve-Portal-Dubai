@@ -2696,9 +2696,9 @@ function KanbanView() {
       "&.dark": { backgroundColor: "rgba(124,45,18,0.3)", borderColor: "#9A3412" },
     },
     "Cancelled": {
-      backgroundColor: "#E0F2FE",
-      border: "1px solid #7DD3FC",
-      "&.dark": { backgroundColor: "rgba(7,89,133,0.3)", borderColor: "#0EA5E9" },
+      backgroundColor: "#D41F3A",
+      border: "1px solid #B91C1C",
+      "&.dark": { backgroundColor: "rgba(127,29,29,0.3)", borderColor: "#B91C1C" },
     },
     "Unknown": {
       backgroundColor: "#F9FAFB",
@@ -4615,8 +4615,8 @@ function KanbanView() {
                         <Card sx={{ ...(stackStyles[stack] || {}) }}>
                           <MDBox p={2}>
                             <MDBox display="flex" justifyContent="space-between" alignItems="center">
-                              <MDTypography variant="h6">{stack}</MDTypography>
-                              <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: "#28282B" }} />
+                              <MDTypography variant="h6" sx={{ color: stack === "Cancelled" ? "#FFFFFF" : "inherit" }}>{stack}</MDTypography>
+                              <Chip label={filteredGuests.length} color="primary" size="small" sx={{ fontWeight: "bold", backgroundColor: stack === "Cancelled" ? "#FFFFFF" : "#28282B", color: stack === "Cancelled" ? "#D41F3A" : "#FFFFFF" }} />
                             </MDBox>
                           </MDBox>
 
