@@ -36,6 +36,7 @@ frontend/.env
 */.vercel/
 backend/.vercel
 frontend/.vercel
+vercel.json
 
 # Logs
 npm-debug.log*
