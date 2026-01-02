@@ -3,25 +3,25 @@ const getApiBaseUrl = () => {
   // Get hostname and protocol
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  
+
   // Production URLs - use same domain without port (nginx handles routing)
   if (hostname === '137.184.14.198') {
     // IP address - use HTTP with port
     return 'http://137.184.14.198:5000';
   }
-  
+
   if (hostname === 'portal.namuve.com' || hostname === 'uaeportal.namuve.com') {
     // Domain names - use same protocol and domain (no port)
     // Nginx will route /api/* to backend
     return `${protocol}//${hostname}`;
   }
-  
+
   // If not localhost, assume it's production and use same protocol
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
     // For other domains, use same protocol and domain
     return `${protocol}//${hostname}`;
   }
-  
+
   // Development - use environment variable or localhost
   return process.env.REACT_APP_API_URL || "http://localhost:5000";
 };

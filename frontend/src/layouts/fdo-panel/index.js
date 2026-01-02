@@ -2651,6 +2651,7 @@ function KanbanView() {
     "Checked Out",
     "Same Day Check Out",
     "No Show",
+    "Cancelled",
     "Unknown",
   ];
 
@@ -2693,6 +2694,11 @@ function KanbanView() {
       backgroundColor: "#FFF7ED",
       border: "1px solid #FED7AA",
       "&.dark": { backgroundColor: "rgba(124,45,18,0.3)", borderColor: "#9A3412" },
+    },
+    "Cancelled": {
+      backgroundColor: "#E0F2FE",
+      border: "1px solid #7DD3FC",
+      "&.dark": { backgroundColor: "rgba(7,89,133,0.3)", borderColor: "#0EA5E9" },
     },
     "Unknown": {
       backgroundColor: "#F9FAFB",

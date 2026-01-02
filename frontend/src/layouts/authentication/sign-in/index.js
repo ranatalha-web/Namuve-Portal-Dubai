@@ -227,19 +227,19 @@ function Basic() {
         }
       } catch (error) {
         lastError = error;
-        
+
         // Check if it's a network error worth retrying
-        const isNetworkError = error.name === 'AbortError' || 
-                              error.message.includes('Failed to fetch') ||
-                              error.message.includes('Connection refused');
-        
+        const isNetworkError = error.name === 'AbortError' ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('Connection refused');
+
         if (isNetworkError && attempt < maxRetries) {
           // Wait before retrying (exponential backoff)
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           continue; // Retry
         } else {
           // Final error or non-network error
-          const errorMessage = attempt === maxRetries 
+          const errorMessage = attempt === maxRetries
             ? "Connection failed. Please ensure the server is running and try again."
             : "Login failed. Please check your connection and try again.";
           setLoginState({ loading: false, error: errorMessage, success: false });
@@ -318,9 +318,9 @@ function Basic() {
 
             {/* Error Alert */}
             {loginState.error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
+              <Alert
+                severity="error"
+                sx={{
                   mb: 3,
                   borderRadius: "8px",
                   "& .MuiAlert-message": {
@@ -336,9 +336,9 @@ function Basic() {
 
             {/* Success Alert */}
             {loginState.success && (
-              <Alert 
-                severity="success" 
-                sx={{ 
+              <Alert
+                severity="success"
+                sx={{
                   mb: 3,
                   borderRadius: "8px",
                   "& .MuiAlert-message": {
