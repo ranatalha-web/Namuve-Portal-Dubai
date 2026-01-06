@@ -37,6 +37,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import EventIcon from "@mui/icons-material/Event";
 import CommentIcon from "@mui/icons-material/Comment";
 import CommentSection from "components/CommentSection/CommentSection";
+import ReservationChat from "components/CommentSection/ReservationChat";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import Popover from "@mui/material/Popover";
@@ -1459,7 +1460,16 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         {/* User Selection Dropdown */}
         <MDBox mt={1} mb={1}>
           <FormControl fullWidth size="small">
-            <InputLabel id="user-select-label">Select Agent</InputLabel>
+            <InputLabel
+              id="user-select-label"
+              sx={{
+                "&.Mui-focused": {
+                  color: "#5e6b47",
+                },
+              }}
+            >
+              Select Agent
+            </InputLabel>
             <Select
               labelId="user-select-label"
               id="user-select"
@@ -1471,7 +1481,13 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                 borderRadius: "20px",
                 "& .MuiOutlinedInput-notchedOutline": {
                   borderRadius: "20px",
-                }
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#5e6b47",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#5e6b47",
+                },
               }}
               IconComponent={(props) => (
                 <KeyboardArrowDownIcon
@@ -1504,7 +1520,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           {/* INPUT WITH POST INSIDE */}
           <MDBox
             flex={1}
-            bgcolor="#f8f9fa"
+            bgcolor="transparent"
             borderRadius={2}
             sx={{ position: "relative" }}
           >
@@ -1534,7 +1550,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                     sx={{
                       fontWeight: "bold",
                       fontSize: "0.875rem",
-                      color: "#1976d2",
+                      color: "#5e6b47",
                       textDecoration: "underline",
                       cursor: loading ? "not-allowed" : "pointer",
                       userSelect: "none",
@@ -1557,12 +1573,18 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                   py: 0.75,               // ← Less height
                   lineHeight: 1.4,
                 },
-                "& .MuiInputBase-root": {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: "20px",
-                  bgcolor: "transparent",
-                  border: "none",
-                  "&:hover": { border: "none" },
-                  "&.Mui-focused": { border: "none", boxShadow: "none" },
+                  "& fieldset": {
+                    borderColor: "#d2d6da",
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "#5e6b47 !important", // Force green on hover
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "#5e6b47 !important", // Force green on focus
+                    borderWidth: "2px",
+                  },
                 },
                 "& .MuiInputBase-input::placeholder": {
                   fontSize: "0.75rem",     // ← SMALLER
@@ -1579,7 +1601,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
               <IconButton
                 size="small"
                 color="inherit"
-                onClick={() => setShowComments(true)}
+                onClick={handleOpen}
                 sx={{ p: 0.5 }}
                 data-comment-button="true"
               >
@@ -2001,18 +2023,18 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           }}
         >
           <span>
-            <span style={{ fontSize: "1rem", fontWeight: 400, color: "#555" }}>
+            <span style={{ fontSize: "1rem", fontWeight: 400, color: "#5e6b47" }}>
               Reservation Details Of{" "}
             </span>
-            <strong>{reservationDetails?.guestName}</strong>
+            <strong style={{ color: "#5e6b47" }}>{reservationDetails?.guestName}</strong>
           </span>
 
           <IconButton
             aria-label="close"
             onClick={handleClose}
             sx={{
-              color: "#555",
-              "&:hover": { color: "#000" },
+              color: "#5e6b47",
+              "&:hover": { color: "#5d7039" }, // darker shade for hover
             }}
           >
             <CloseIcon />
@@ -2042,17 +2064,19 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           ) : (
             <>
               <Row>
-                {/* Left Column */}
-                <Col md={6}>
-                  <Table striped bordered hover size="sm">
-                    <tbody>
-                      <tr>
-                        <td>
-                          <strong>Reservation ID:</strong>
-                        </td>
-                        <td>{guest.reservationId}</td>
-                      </tr>
-                      {/*<tr>
+                <Col md={7}>
+                  <Row>
+                    {/* Left Column */}
+                    <Col md={12}>
+                      <Table striped bordered hover size="sm">
+                        <tbody>
+                          <tr>
+                            <td>
+                              <strong>Reservation ID:</strong>
+                            </td>
+                            <td>{guest.reservationId}</td>
+                          </tr>
+                          {/*<tr>
                         <td>
                           <strong>CNIC</strong>
                         </td>
@@ -2062,37 +2086,37 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                           )?.value || "Not provided"}
                         </td>
                       </tr>*/}
-                      <tr>
-                        <td>
-                          <strong>Unit</strong>
-                        </td>
-                        <td>{guest.listingName || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Contact</strong>
-                        </td>
-                        <td>{reservationDetails?.phone || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Total Nights</strong>
-                        </td>
-                        <td>{reservationDetails?.nights || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-in Date</strong>
-                        </td>
-                        <td>{reservationDetails?.arrivalDate || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-out Date</strong>
-                        </td>
-                        <td>{reservationDetails?.departureDate || "N/A"}</td>
-                      </tr>
-                      {/*<tr>
+                          <tr>
+                            <td>
+                              <strong>Unit</strong>
+                            </td>
+                            <td>{guest.listingName || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Contact</strong>
+                            </td>
+                            <td>{reservationDetails?.phone || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Total Nights</strong>
+                            </td>
+                            <td>{reservationDetails?.nights || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Check-in Date</strong>
+                            </td>
+                            <td>{reservationDetails?.arrivalDate || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Check-out Date</strong>
+                            </td>
+                            <td>{reservationDetails?.departureDate || "N/A"}</td>
+                          </tr>
+                          {/*<tr>
                         <td>
                           <strong>Total Amount</strong>
                         </td>
@@ -2160,93 +2184,93 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                             "Not provided"}
                         </td>
                       </tr>*/}
-                    </tbody>
-                  </Table>
-                </Col>
+                        </tbody>
+                      </Table>
+                    </Col>
 
-                {/* Right Column */}
-                <Col md={6}>
-                  <Table striped bordered hover size="sm">
-                    <tbody>
-                      <tr>
-                        <td>
-                          <strong>Channel ID</strong>
-                        </td>
-                        <td>{reservationDetails?.channelName || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Email</strong>
-                        </td>
-                        <td>{reservationDetails?.guestEmail || "Not provided"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Adults</strong>
-                        </td>
-                        <td>{reservationDetails?.numberOfGuests || "N/A"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Children</strong>
-                        </td>
-                        <td>{reservationDetails?.children || "0"}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-in Time</strong>
-                        </td>
-                        <td>
-                          {reservationDetails?.checkInTime
-                            ? formatTime(reservationDetails.checkInTime)
-                            : guest.checkinTime
-                              ? formatTime(guest.checkinTime)
-                              : "N/A"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Check-out Time</strong>
-                        </td>
-                        <td>
-                          {reservationDetails?.checkOutTime
-                            ? formatTime(reservationDetails.checkOutTime)
-                            : guest.checkoutTime
-                              ? formatTime(guest.checkoutTime)
-                              : "N/A"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Payment Status</strong>
-                        </td>
-                        <td
-                          style={{
-                            color: (() => {
-                              const statusColors = {
-                                "Paid": "#28a745",
-                                "Partially paid": "#a3cca3",
-                                "Due": "#ae0814",
-                                "Unpaid": "#ccaa2f",
-                              };
+                    {/* Right Column */}
+                    <Col md={12}>
+                      <Table striped bordered hover size="sm">
+                        <tbody>
+                          <tr>
+                            <td>
+                              <strong>Channel ID</strong>
+                            </td>
+                            <td>{reservationDetails?.channelName || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Email</strong>
+                            </td>
+                            <td>{reservationDetails?.guestEmail || "Not provided"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Adults</strong>
+                            </td>
+                            <td>{reservationDetails?.numberOfGuests || "N/A"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Children</strong>
+                            </td>
+                            <td>{reservationDetails?.children || "0"}</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Check-in Time</strong>
+                            </td>
+                            <td>
+                              {reservationDetails?.checkInTime
+                                ? formatTime(reservationDetails.checkInTime)
+                                : guest.checkinTime
+                                  ? formatTime(guest.checkinTime)
+                                  : "N/A"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Check-out Time</strong>
+                            </td>
+                            <td>
+                              {reservationDetails?.checkOutTime
+                                ? formatTime(reservationDetails.checkOutTime)
+                                : guest.checkoutTime
+                                  ? formatTime(guest.checkoutTime)
+                                  : "N/A"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <strong>Payment Status</strong>
+                            </td>
+                            <td
+                              style={{
+                                color: (() => {
+                                  const statusColors = {
+                                    "Paid": "#28a745",
+                                    "Partially paid": "#a3cca3",
+                                    "Due": "#ae0814",
+                                    "Unpaid": "#ccaa2f",
+                                  };
 
-                              // Determine the displayed status text
-                              const status =
-                                reservationDetails?.paymentStatus === "Unknown"
-                                  ? "Due"
-                                  : reservationDetails?.paymentStatus || "N/A";
+                                  // Determine the displayed status text
+                                  const status =
+                                    reservationDetails?.paymentStatus === "Unknown"
+                                      ? "Due"
+                                      : reservationDetails?.paymentStatus || "N/A";
 
-                              return statusColors[status] || "#000"; // fallback black color
-                            })(),
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {reservationDetails?.paymentStatus === "Unknown"
-                            ? "Due"
-                            : reservationDetails?.paymentStatus || "N/A"}
-                        </td>
-                      </tr>
-                      {/*<tr>
+                                  return statusColors[status] || "#000"; // fallback black color
+                                })(),
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {reservationDetails?.paymentStatus === "Unknown"
+                                ? "Due"
+                                : reservationDetails?.paymentStatus || "N/A"}
+                            </td>
+                          </tr>
+                          {/*<tr>
                         <td>
                           <strong>Security Deposit</strong>
                         </td>
@@ -2258,8 +2282,18 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                           {reservationDetails?.currency || ""}
                         </td>
                       </tr>*/}
-                    </tbody>
-                  </Table>
+                        </tbody>
+                      </Table>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col md={5}>
+                  <MDBox sx={{ height: "100%", borderLeft: "1px solid #dee2e6", pl: 2, display: "flex", flexDirection: "column" }}>
+                    {/* Header removed as per request */}
+                    <Box sx={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+                      <ReservationChat guest={guest} bookingDate={bookingDate} />
+                    </Box>
+                  </MDBox>
                 </Col>
               </Row>
               {/* ✅ Full-width row at the end */}
@@ -2309,12 +2343,12 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
               textTransform: "none",
               fontWeight: "bold",
               boxShadow: "0 3px 6px rgba(0,0,0,0.1)",
-              backgroundColor: "#28282B",
+              backgroundColor: "#5e6b47",
               color: "#ffffff",
-              borderColor: "#28282B",
-              "&:hover": { backgroundColor: "#333333", borderColor: "#28282B" },
-              "&:focus": { backgroundColor: "#000000" },
-              "&:active": { backgroundColor: "#222222" },
+              borderColor: "#5e6b47",
+              "&:hover": { backgroundColor: "#5d7039", borderColor: "#5d7039" },
+              "&:focus": { backgroundColor: "#4b5a2e" },
+              "&:active": { backgroundColor: "#3d4925" },
             }}
           >
             Close

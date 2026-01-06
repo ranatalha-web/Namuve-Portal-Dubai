@@ -492,6 +492,8 @@ export default function CommentSection({ guest, bookingDate }) {
                       borderRadius: "8px",
                       fontSize: "0.85rem",
                       padding: "6px 16px",
+                      backgroundColor: "#748c48",
+                      borderColor: "#748c48",
                     }}
                   >
                     {loading ? "..." : "Post"}
@@ -556,6 +558,7 @@ export default function CommentSection({ guest, bookingDate }) {
                               className="btn btn-sm btn-primary"
                               onClick={() => handleUpdate(c.teableId)}
                               disabled={!editText.trim()}
+                              style={{ backgroundColor: "#748c48", borderColor: "#748c48" }}
                             >
                               Save
                             </button>
@@ -586,7 +589,8 @@ export default function CommentSection({ guest, bookingDate }) {
                               <>
                                 <a
                                   href="#"
-                                  className="text-primary small"
+                                  className="small"
+                                  style={{ color: "#748c48" }}
                                   onClick={(e) => {
                                     e.preventDefault();
                                     handleEdit(c);
@@ -666,6 +670,7 @@ export default function CommentSection({ guest, bookingDate }) {
                                       className="btn btn-sm btn-primary"
                                       onClick={() => handleUpdateReply(r.teableId)}
                                       disabled={!editReplyText.trim()}
+                                      style={{ backgroundColor: "#748c48", borderColor: "#748c48" }}
                                     >
                                       Save
                                     </button>
@@ -682,7 +687,8 @@ export default function CommentSection({ guest, bookingDate }) {
                                 ) : (
                                   <a
                                     href="#"
-                                    className="text-primary small"
+                                    className="small"
+                                    style={{ color: "#748c48" }}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       handleEditReply(r);
@@ -737,6 +743,7 @@ export default function CommentSection({ guest, bookingDate }) {
                                   className="btn btn-sm btn-primary"
                                   onClick={() => handleReply(c)}
                                   disabled={!replyText.trim() || replyingLoading}
+                                  style={{ backgroundColor: "#748c48", borderColor: "#748c48" }}
                                 >
                                   {replyingLoading ? "..." : "Post"}
                                 </button>

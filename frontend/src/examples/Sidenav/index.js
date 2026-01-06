@@ -60,7 +60,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const collapseName = location.pathname.replace("/", "");
-  
+
   // Check if screen is mobile (below 1200px)
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down(1200));
@@ -185,7 +185,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
       }}
       ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
     >
-      <MDBox pt={3} pb={1} px={4} textAlign="center">
+      <MDBox pt={0} pb={0} px={4} textAlign="center">
         <MDBox
           display={{ xs: "block", xl: "none" }}
           position="absolute"
@@ -201,21 +201,25 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         </MDBox>
         <MDBox component={NavLink} to="/" display="flex" alignItems="center" justifyContent="center">
           {brand && (
-            <MDBox 
-              component="img" 
-              src={brand} 
-              alt="Brand" 
-              width="7rem" 
-              height="7rem"
+            <MDBox
+              component="img"
+              src={brand}
+              alt="Brand"
+              width="100%"
               sx={{
                 borderRadius: '8px',
-                padding: '8px',
+                padding: '0px',
+                maxWidth: '180px', // Prevent it from being too huge on large screens
+                height: 'auto',
+                display: 'block',
+                margin: '0 auto',
               }}
             />
           )}
         </MDBox>
       </MDBox>
       <Divider
+        sx={{ mt: 0, mb: 1 }}
         light={
           (!darkMode && !whiteSidenav && !transparentSidenav) ||
           (darkMode && !transparentSidenav && whiteSidenav)

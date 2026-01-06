@@ -65,8 +65,8 @@ import ProtectedRoute from "components/ProtectedRoute";
 import { useMaterialUIController, setMiniSidenav, setOpenConfigurator } from "context";
 
 // Images
-import brandWhite from "assets/images/namuve-logo.png";
-import brandDark from "assets/images/namuve-logo.png";
+// Images
+import namuveLogo from "assets/images/NAMUVE LOGO-03.png";
 
 // Main App component with authentication
 function AppContent() {
@@ -201,7 +201,7 @@ function AppContent() {
           <>
             <Sidenav
               color={sidenavColor}
-              brand={(transparentSidenav && !darkMode) || whiteSidenav ? brandDark : brandWhite}
+              brand={namuveLogo}
               brandName=""
               routes={roleBasedRoutes}
               onMouseEnter={handleOnMouseEnter}
@@ -241,7 +241,7 @@ function AppContent() {
         <>
           <Sidenav
             color={sidenavColor}
-            brand={(transparentSidenav && !darkMode) || whiteSidenav ? brandDark : brandWhite}
+            brand={namuveLogo}
             brandName=""
             routes={roleBasedRoutes}
             onMouseEnter={handleOnMouseEnter}

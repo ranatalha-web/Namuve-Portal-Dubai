@@ -22,13 +22,9 @@ function collapseItem(theme, ownerState) {
   const { pxToRem, rgba, linearGradient } = functions;
 
   return {
-    background: active
-      ? linearGradient(gradients[sidenavColor].main, gradients[sidenavColor].state)
-      : transparent.main,
-    color:
-      (transparentSidenav && !darkMode && !active) || (whiteSidenav && !active)
-        ? "#1a202c" // Darker color for better contrast
-        : white.main,
+    background: transparent.main,
+    border: active ? `1px solid ${white.main}` : "none",
+    color: white.main,
     display: "flex",
     alignItems: "center",
     width: "100%",
@@ -74,10 +70,7 @@ function collapseIconBox(theme, ownerState) {
   return {
     minWidth: pxToRem(32),
     minHeight: pxToRem(32),
-    color:
-      (transparentSidenav && !darkMode && !active) || (whiteSidenav && !active)
-        ? "#1a202c" // Darker color for better contrast
-        : white.main,
+    color: white.main,
     borderRadius: borderRadius.md,
     display: "grid",
     placeItems: "center",
@@ -93,7 +86,7 @@ function collapseIconBox(theme, ownerState) {
 }
 
 const collapseIcon = ({ palette: { white, gradients } }, { active }) => ({
-  color: active ? white.main : gradients.dark.state,
+  color: white.main,
 });
 
 function collapseText(theme, ownerState) {

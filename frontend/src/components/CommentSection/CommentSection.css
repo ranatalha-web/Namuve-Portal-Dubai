@@ -55,7 +55,7 @@
 
 /* === Reply Link === */
 .comment-section-wrapper .reply-link {
-  color: #007bff;
+  color: #748c48;
   text-decoration: none;
   font-weight: 500;
   font-size: 0.9rem;
@@ -64,18 +64,18 @@
 }
 
 .comment-section-wrapper .reply-link svg {
-  fill: #007bff;
+  fill: #748c48;
   transition: fill 0.2s;
   margin-right: 5px;
 }
 
 .comment-section-wrapper .reply-link:hover {
   text-decoration: underline;
-  color: #0056b3;
+  color: #5d7039;
 }
 
 .comment-section-wrapper .reply-link:hover svg {
-  fill: #0056b3;
+  fill: #5d7039;
 }
 
 /* === Nested Replies === */

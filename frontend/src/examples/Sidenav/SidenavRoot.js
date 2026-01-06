@@ -28,7 +28,7 @@ export default styled(Drawer)(({ theme, ownerState }) => {
 
   let backgroundValue = darkMode
     ? background.sidenav
-    : linearGradient(gradients.dark.main, gradients.dark.state);
+    : "#5e6b47"; // Brighter Olive Green background
 
   if (transparentSidenav) {
     backgroundValue = transparent.main;

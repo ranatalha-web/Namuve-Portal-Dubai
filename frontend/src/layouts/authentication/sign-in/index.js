@@ -36,6 +36,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
+import Snackbar from "@mui/material/Snackbar";
 
 // @mui icons
 import FacebookIcon from "@mui/icons-material/Facebook";
@@ -316,40 +317,7 @@ function Basic() {
 
 
 
-            {/* Error Alert */}
-            {loginState.error && (
-              <Alert
-                severity="error"
-                sx={{
-                  mb: 3,
-                  borderRadius: "8px",
-                  "& .MuiAlert-message": {
-                    fontSize: "0.875rem",
-                    fontWeight: "500",
-                  },
-                }}
-                onClose={() => setLoginState({ ...loginState, error: "" })}
-              >
-                {loginState.error}
-              </Alert>
-            )}
 
-            {/* Success Alert */}
-            {loginState.success && (
-              <Alert
-                severity="success"
-                sx={{
-                  mb: 3,
-                  borderRadius: "8px",
-                  "& .MuiAlert-message": {
-                    fontSize: "0.875rem",
-                    fontWeight: "500",
-                  },
-                }}
-              >
-                Login successful! Redirecting...
-              </Alert>
-            )}
 
             {/* Form */}
             <MDBox component="form" onSubmit={handleSubmit}>
@@ -725,6 +693,36 @@ function Basic() {
           </MDButton>
         </DialogActions>
       </Dialog>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={!!loginState.error}
+        autoHideDuration={6000}
+        onClose={() => setLoginState({ ...loginState, error: "" })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setLoginState({ ...loginState, error: "" })}
+          severity="error"
+          sx={{ width: "100%", borderRadius: "8px" }}
+        >
+          {loginState.error}
+        </Alert>
+      </Snackbar>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={loginState.success}
+        autoHideDuration={6000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity="success"
+          sx={{ width: "100%", borderRadius: "8px" }}
+        >
+          Login successful! Redirecting...
+        </Alert>
+      </Snackbar>
 
     </MDBox>
   );
