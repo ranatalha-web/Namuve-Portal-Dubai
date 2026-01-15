@@ -3168,6 +3168,14 @@ function FDOPanel() {
     };
   }, [activeTab, user?.role]);
 
+  // Auto-run Sync on mount - MUST BE BEFORE CONDITIONAL RETURNS
+  useEffect(() => {
+    // const timer = setTimeout(() => {
+    //   performRevenueSync();
+    // }, 2000);
+    // return () => clearTimeout(timer);
+  }, []); // Run once on mount
+
   // Show loading while checking authentication
   if (authLoading) {
     return (
@@ -3359,13 +3367,7 @@ function FDOPanel() {
     }
   };
 
-  // Auto-run Sync on mount
-  useEffect(() => {
-    // const timer = setTimeout(() => {
-    //   performRevenueSync();
-    // }, 2000);
-    // return () => clearTimeout(timer);
-  }, []); // Run once on mount
+
 
   const handleSync = async () => {
     // Prevent view_only users and custom users without complete access from syncing
