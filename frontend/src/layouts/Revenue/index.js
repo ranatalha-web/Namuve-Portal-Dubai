@@ -33,8 +33,11 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+// FileDownloadIcon removed
 import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
+
+// Excel Export removed
 
 // React
 import React, { Component, useState, useEffect } from "react";
@@ -57,18 +60,19 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import { API_ENDPOINTS } from "config/api";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import ReservationsToolbar from "components/ReservationsToolbar";
 
 // Suppress 404 errors from console
 const originalError = console.error;
 const originalWarn = console.warn;
-console.error = function(...args) {
+console.error = function (...args) {
   const message = args[0]?.toString() || '';
   if (message.includes('404') || message.includes('Failed to load resource')) {
     return; // Suppress 404 errors
   }
   originalError.apply(console, args);
 };
-console.warn = function(...args) {
+console.warn = function (...args) {
   const message = args[0]?.toString() || '';
   if (message.includes('404') || message.includes('Failed to load resource')) {
     return; // Suppress 404 warnings
@@ -81,7 +85,7 @@ function SimpleChart({ chartData }) {
   if (!chartData || chartData.length === 0) {
     return (
       <div style={{ padding: "20px", textAlign: "center" }}>
-        <MDTypography variant="h6" color="text.secondary">
+        <MDTypography variant="h6" sx={{ color: "text.secondary" }}>
           No chart data available
         </MDTypography>
       </div>
@@ -89,21 +93,21 @@ function SimpleChart({ chartData }) {
   }
 
   const maxValue = Math.max(...chartData.map(item => item.value), 1);
-  
+
   // Custom scaling for better visual representation
   const getBarWidth = (value, maxVal) => {
     if (value === 0) return 5;
-    
+
     // Use cubic root scaling for more aggressive compression of small values
-    const cubicValue = Math.pow(value, 1/3);
-    const cubicMax = Math.pow(maxVal, 1/3);
+    const cubicValue = Math.pow(value, 1 / 3);
+    const cubicMax = Math.pow(maxVal, 1 / 3);
     const percentage = (cubicValue / cubicMax) * 100;
-    
+
     // More aggressive minimum reduction for small values
     if (percentage < 30) {
       return Math.max(percentage * 0.4, 8); // Reduce small bars by 60%
     }
-    
+
     return Math.min(percentage, 95);
   };
 
@@ -112,24 +116,24 @@ function SimpleChart({ chartData }) {
       <MDTypography variant="h6" sx={{ mb: 2, textAlign: "center", color: "#1e293b" }}>
         Revenue Analytics
       </MDTypography>
-      
+
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {chartData.map((item, index) => (
           <div key={index} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ 
-              minWidth: "120px", 
-              fontSize: "12px", 
-              fontWeight: "600", 
+            <div style={{
+              minWidth: "120px",
+              fontSize: "12px",
+              fontWeight: "600",
               color: "#374151",
               textAlign: "right"
             }}>
               {item.label}
             </div>
-            
-            <div style={{ 
-              flex: 1, 
-              height: "40px", 
-              backgroundColor: "#f1f5f9", 
+
+            <div style={{
+              flex: 1,
+              height: "40px",
+              backgroundColor: "#f1f5f9",
               borderRadius: "6px",
               position: "relative",
               overflow: "hidden"
@@ -383,11 +387,10 @@ class RevenueChartComponent extends Component {
                   style={{
                     height: "100%",
                     background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}dd 100%)`,
-                    width: `${
-                      index === 0
-                        ? Math.max((item.value / maxValue) * 100, 8)
-                        : Math.max((item.value / maxValue) * 100, 12)
-                    }%`,
+                    width: `${index === 0
+                      ? Math.max((item.value / maxValue) * 100, 8)
+                      : Math.max((item.value / maxValue) * 100, 12)
+                      }%`,
                     borderRadius: "6px",
                     display: "flex",
                     alignItems: "center",
@@ -542,7 +545,7 @@ RevenueChartComponent.propTypes = {
 function ImprovedListingRevenue({ revenueData, formatCurrency, formatCurrencyComplete }) {
   console.log('🏠 ImprovedListingRevenue received revenueData:', revenueData);
   console.log('🏠 categoryRevenue:', revenueData?.categoryRevenue);
-  
+
   const categories = revenueData?.categoryRevenue || {
     Studio: 0,
     "1BR": 0,
@@ -791,7 +794,7 @@ function ImprovedListingRevenue({ revenueData, formatCurrency, formatCurrencyCom
                   {category.name}
                 </MDTypography>
               </MDBox>
-              
+
               <MDBox mb={2} />
               {/* Revenue Amount */}
               <MDBox
@@ -883,27 +886,27 @@ function MobilePaymentCard({ reservation, index }) {
       }}
     >
       {/* Header with ID and Status */}
-      <MDBox 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
+      <MDBox
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
         mb={2}
         gap={1}
         sx={{ flexWrap: 'wrap' }}
       >
-        <MDBox 
-          display="flex" 
-          alignItems="baseline" 
+        <MDBox
+          display="flex"
+          alignItems="baseline"
           gap={1.5}
-          sx={{ 
-            minWidth: 0, 
+          sx={{
+            minWidth: 0,
             flex: '1 1 auto',
             maxWidth: '100%'
           }}
         >
-          <MDTypography 
-            variant="h6" 
-            fontWeight="bold" 
+          <MDTypography
+            variant="h6"
+            fontWeight="bold"
             color="primary"
             component="a"
             href={`https://dashboard.hostaway.com/reservations/${reservation.reservationId}`}
@@ -922,20 +925,19 @@ function MobilePaymentCard({ reservation, index }) {
           >
             #{reservation.reservationId}
           </MDTypography>
-          <MDTypography 
-            variant="caption" 
-            color="text.secondary"
-            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+          <MDTypography
+            variant="caption"
+            sx={{ color: "text.secondary", whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             Reservation ID
           </MDTypography>
         </MDBox>
-        <Chip 
+        <Chip
           label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
           color={getStatusColor(reservation.paymentStatus)}
           size="small"
-          sx={{ 
-            fontWeight: 600, 
+          sx={{
+            fontWeight: 600,
             fontSize: '0.7rem',
             flexShrink: 0
           }}
@@ -946,10 +948,10 @@ function MobilePaymentCard({ reservation, index }) {
       <MDBox mb={2}>
         <MDBox display="flex" alignItems="center" gap={1} mb={1}>
           <Icon sx={{ color: '#64748b', fontSize: '1.2rem', flexShrink: 0 }}>person</Icon>
-          <MDTypography 
-            variant="body2" 
+          <MDTypography
+            variant="body2"
             fontWeight="medium"
-            sx={{ 
+            sx={{
               wordBreak: 'break-word',
               overflow: 'hidden',
               flex: 1
@@ -960,10 +962,10 @@ function MobilePaymentCard({ reservation, index }) {
         </MDBox>
         <MDBox display="flex" alignItems="center" gap={1}>
           <Icon sx={{ color: '#64748b', fontSize: '1.2rem', flexShrink: 0 }}>home</Icon>
-          <MDTypography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ 
+          <MDTypography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
               wordBreak: 'break-word',
               overflow: 'hidden',
               flex: 1
@@ -975,7 +977,7 @@ function MobilePaymentCard({ reservation, index }) {
       </MDBox>
 
       {/* Dates and Amount */}
-      <MDBox 
+      <MDBox
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
@@ -987,20 +989,20 @@ function MobilePaymentCard({ reservation, index }) {
         }}
       >
         <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+          <MDTypography variant="caption" sx={{ color: "text.secondary" }} fontWeight="bold">
             Arrival Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
             {(() => {
               const date = reservation.arrivalDate || reservation.checkInDate;
-              return date && date !== 'N/A' 
+              return date && date !== 'N/A'
                 ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 : 'N/A';
             })()}
           </MDTypography>
         </MDBox>
         <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+          <MDTypography variant="caption" sx={{ color: "text.secondary" }} fontWeight="bold">
             Departure Date
           </MDTypography>
           <MDTypography variant="body2" fontWeight="medium">
@@ -1013,15 +1015,15 @@ function MobilePaymentCard({ reservation, index }) {
           </MDTypography>
         </MDBox>
         <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+          <MDTypography variant="caption" sx={{ color: "text.secondary" }} fontWeight="bold">
             Total Amount
           </MDTypography>
-          <MDTypography variant="body2" fontWeight="bold" color="success.main">
+          <MDTypography variant="body2" fontWeight="bold" sx={{ color: "success.main" }}>
             {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
           </MDTypography>
         </MDBox>
         <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+          <MDTypography variant="caption" sx={{ color: "text.secondary" }} fontWeight="bold">
             Paid Amount
           </MDTypography>
           <MDTypography variant="body2" fontWeight="bold" sx={{ color: '#10b981' }}>
@@ -1029,14 +1031,14 @@ function MobilePaymentCard({ reservation, index }) {
           </MDTypography>
         </MDBox>
         <MDBox>
-          <MDTypography variant="caption" color="text.secondary" fontWeight="bold">
+          <MDTypography variant="caption" sx={{ color: "text.secondary" }} fontWeight="bold">
             Remaining Amount
           </MDTypography>
-          <MDTypography 
-            variant="body2" 
-            fontWeight="bold" 
-            sx={{ 
-              color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280' 
+          <MDTypography
+            variant="body2"
+            fontWeight="bold"
+            sx={{
+              color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280'
             }}
           >
             {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
@@ -1083,8 +1085,8 @@ function PaymentKanbanView({ reservations }) {
       }}
     >
       <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <MDTypography 
-          variant="h5" 
+        <MDTypography
+          variant="h5"
           fontWeight="bold"
           sx={{
             color: '#1e293b',
@@ -1168,10 +1170,10 @@ function PaymentKanbanView({ reservations }) {
                   {/* Header with Reservation ID and Status Chips */}
                   <MDBox display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                     <MDBox>
-                      <MDTypography 
-                        variant="h6" 
-                        fontWeight="bold" 
-                        sx={{ 
+                      <MDTypography
+                        variant="h6"
+                        fontWeight="bold"
+                        sx={{
                           color: '#e91e63',
                           fontSize: '1.1rem',
                           mb: 0.5
@@ -1179,19 +1181,19 @@ function PaymentKanbanView({ reservations }) {
                       >
                         #{reservation.reservationId}
                       </MDTypography>
-                      <MDTypography variant="caption" color="text.secondary">
+                      <MDTypography variant="caption" sx={{ color: "text.secondary" }}>
                         Reservation ID
                       </MDTypography>
                     </MDBox>
-                    <Chip 
+                    <Chip
                       label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
                       sx={{
-                        backgroundColor: 
+                        backgroundColor:
                           reservation.paymentStatus === 'Paid' ? '#4caf50' :
-                          reservation.paymentStatus === 'Partially paid' ? '#ff9800' :
-                          reservation.paymentStatus === 'Unpaid' ? '#9e9e9e' :
-                          (reservation.paymentStatus === 'Unknown' || reservation.paymentStatus === 'Due') ? '#9c27b0' :
-                          '#9e9e9e',
+                            reservation.paymentStatus === 'Partially paid' ? '#ff9800' :
+                              reservation.paymentStatus === 'Unpaid' ? '#9e9e9e' :
+                                (reservation.paymentStatus === 'Unknown' || reservation.paymentStatus === 'Due') ? '#9c27b0' :
+                                  '#9e9e9e',
                         color: 'white',
                         fontWeight: 600,
                         fontSize: '0.7rem',
@@ -1204,7 +1206,7 @@ function PaymentKanbanView({ reservations }) {
                   {/* Guest Name with Icon */}
                   <MDBox display="flex" alignItems="center" gap={1} mb={1.5}>
                     <Icon sx={{ color: '#64748b', fontSize: '1.2rem' }}>person</Icon>
-                    <MDTypography variant="body1" fontWeight="600" color="#374151">
+                    <MDTypography variant="body1" sx={{ fontWeight: 600, color: "#374151" }}>
                       {reservation.guestName}
                     </MDTypography>
                   </MDBox>
@@ -1212,13 +1214,13 @@ function PaymentKanbanView({ reservations }) {
                   {/* Listing Name with Icon */}
                   <MDBox display="flex" alignItems="center" gap={1} mb={2}>
                     <Icon sx={{ color: '#64748b', fontSize: '1.2rem' }}>home</Icon>
-                    <MDTypography variant="body2" color="text.secondary">
+                    <MDTypography variant="body2" sx={{ color: "text.secondary" }}>
                       {reservation.listingName}
                     </MDTypography>
                   </MDBox>
 
                   {/* Date and Amount Grid */}
-                  <MDBox 
+                  <MDBox
                     sx={{
                       backgroundColor: '#f8fafc',
                       borderRadius: 2,
@@ -1227,13 +1229,13 @@ function PaymentKanbanView({ reservations }) {
                     }}
                   >
                     {/* Dates */}
-                    <MDBox 
-                      display="grid" 
-                      gridTemplateColumns="1fr 1fr" 
+                    <MDBox
+                      display="grid"
+                      gridTemplateColumns="1fr 1fr"
                       gap={2}
                       mb={2}
                     >
-                      <MDBox 
+                      <MDBox
                         sx={{
                           backgroundColor: '#e0f2fe',
                           borderRadius: '8px',
@@ -1241,9 +1243,9 @@ function PaymentKanbanView({ reservations }) {
                           border: '1px solid #bae6fd'
                         }}
                       >
-                        <MDTypography 
-                          variant="caption" 
-                          sx={{ 
+                        <MDTypography
+                          variant="caption"
+                          sx={{
                             display: 'block',
                             color: '#0369a1',
                             fontWeight: 700,
@@ -1255,9 +1257,9 @@ function PaymentKanbanView({ reservations }) {
                         >
                           📅 Arrival Date
                         </MDTypography>
-                        <MDTypography 
-                          variant="body2" 
-                          sx={{ 
+                        <MDTypography
+                          variant="body2"
+                          sx={{
                             display: 'block',
                             fontWeight: 700,
                             color: '#1e293b',
@@ -1266,13 +1268,13 @@ function PaymentKanbanView({ reservations }) {
                         >
                           {(() => {
                             const date = reservation.arrivalDate || reservation.checkInDate;
-                            return date && date !== 'N/A' 
+                            return date && date !== 'N/A'
                               ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                               : 'N/A';
                           })()}
                         </MDTypography>
                       </MDBox>
-                      <MDBox 
+                      <MDBox
                         sx={{
                           backgroundColor: '#fee2e2',
                           borderRadius: '8px',
@@ -1280,9 +1282,9 @@ function PaymentKanbanView({ reservations }) {
                           border: '1px solid #fecaca'
                         }}
                       >
-                        <MDTypography 
-                          variant="caption" 
-                          sx={{ 
+                        <MDTypography
+                          variant="caption"
+                          sx={{
                             display: 'block',
                             color: '#991b1b',
                             fontWeight: 700,
@@ -1294,9 +1296,9 @@ function PaymentKanbanView({ reservations }) {
                         >
                           📅 Departure Date
                         </MDTypography>
-                        <MDTypography 
-                          variant="body2" 
-                          sx={{ 
+                        <MDTypography
+                          variant="body2"
+                          sx={{
                             display: 'block',
                             fontWeight: 700,
                             color: '#1e293b',
@@ -1314,7 +1316,7 @@ function PaymentKanbanView({ reservations }) {
                     </MDBox>
 
                     {/* Payment Information */}
-                    <MDBox 
+                    <MDBox
                       sx={{
                         backgroundColor: '#f0fdf4',
                         borderRadius: '8px',
@@ -1322,16 +1324,16 @@ function PaymentKanbanView({ reservations }) {
                         border: '2px solid #86efac'
                       }}
                     >
-                      <MDBox 
-                        display="grid" 
-                        gridTemplateColumns="1fr 1fr" 
+                      <MDBox
+                        display="grid"
+                        gridTemplateColumns="1fr 1fr"
                         gap={2}
                         mb={1.5}
                       >
                         <MDBox>
-                          <MDTypography 
-                            variant="caption" 
-                            sx={{ 
+                          <MDTypography
+                            variant="caption"
+                            sx={{
                               display: 'block',
                               color: '#166534',
                               fontWeight: 700,
@@ -1343,9 +1345,9 @@ function PaymentKanbanView({ reservations }) {
                           >
                             💰 Total Amount
                           </MDTypography>
-                          <MDTypography 
-                            variant="body2" 
-                            sx={{ 
+                          <MDTypography
+                            variant="body2"
+                            sx={{
                               display: 'block',
                               fontWeight: 700,
                               color: '#1e293b',
@@ -1356,9 +1358,9 @@ function PaymentKanbanView({ reservations }) {
                           </MDTypography>
                         </MDBox>
                         <MDBox>
-                          <MDTypography 
-                            variant="caption" 
-                            sx={{ 
+                          <MDTypography
+                            variant="caption"
+                            sx={{
                               display: 'block',
                               color: '#166534',
                               fontWeight: 700,
@@ -1370,9 +1372,9 @@ function PaymentKanbanView({ reservations }) {
                           >
                             ✅ Paid Amount
                           </MDTypography>
-                          <MDTypography 
-                            variant="body2" 
-                            sx={{ 
+                          <MDTypography
+                            variant="body2"
+                            sx={{
                               display: 'block',
                               fontWeight: 700,
                               color: '#10b981',
@@ -1385,7 +1387,7 @@ function PaymentKanbanView({ reservations }) {
                       </MDBox>
 
                       {/* Remaining Amount */}
-                      <MDBox 
+                      <MDBox
                         sx={{
                           backgroundColor: reservation.remainingAmount > 0 ? '#fef2f2' : '#f9fafb',
                           borderRadius: '6px',
@@ -1393,9 +1395,9 @@ function PaymentKanbanView({ reservations }) {
                           border: reservation.remainingAmount > 0 ? '1px solid #fecaca' : '1px solid #e5e7eb'
                         }}
                       >
-                        <MDTypography 
-                          variant="caption" 
-                          sx={{ 
+                        <MDTypography
+                          variant="caption"
+                          sx={{
                             display: 'block',
                             color: reservation.remainingAmount > 0 ? '#991b1b' : '#6b7280',
                             fontWeight: 700,
@@ -1407,9 +1409,9 @@ function PaymentKanbanView({ reservations }) {
                         >
                           ⚠️ Remaining Amount
                         </MDTypography>
-                        <MDTypography 
-                          variant="body2" 
-                          sx={{ 
+                        <MDTypography
+                          variant="body2"
+                          sx={{
                             display: 'block',
                             fontWeight: 700,
                             color: reservation.remainingAmount > 0 ? '#ef4444' : '#10b981',
@@ -1423,7 +1425,7 @@ function PaymentKanbanView({ reservations }) {
                   </MDBox>
                 </Card>
               ))}
-              
+
               {statusReservations.length === 0 && (
                 <MDBox
                   display="flex"
@@ -1436,7 +1438,7 @@ function PaymentKanbanView({ reservations }) {
                     border: '2px dashed rgba(0,0,0,0.1)'
                   }}
                 >
-                  <MDTypography variant="body2" color="text.secondary" fontStyle="italic">
+                  <MDTypography variant="body2" sx={{ color: "text.secondary" }} fontStyle="italic">
                     No reservations
                   </MDTypography>
                 </MDBox>
@@ -1460,24 +1462,64 @@ function Revenue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [adminTargetData, setAdminTargetData] = useState({});
-  
+
   // New reservation state
   const [reservations, setReservations] = useState([]);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [reservationError, setReservationError] = useState(null);
   const [allDataReady, setAllDataReady] = useState(false); // Starts false, set to true only when Dubai data loads
-  
+
+  // Date state for Excel Export
+  // Date state for Excel Export (Defaults to First Day - Last Day of Current Month)
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const year = firstDay.getFullYear();
+    const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+    const day = String(firstDay.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const year = lastDay.getFullYear();
+    const month = String(lastDay.getMonth() + 1).padStart(2, '0');
+    const day = String(lastDay.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  const [initialDates] = useState(() => {
+    const today = new Date();
+    // Allow selecting from start of current year or at least start of current month
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startYear = startOfMonth.getFullYear();
+    const startMonth = String(startOfMonth.getMonth() + 1).padStart(2, '0');
+    const startDay = String(startOfMonth.getDate()).padStart(2, '0');
+
+    // Calculate last day of current month correctly
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const endYear = endOfMonth.getFullYear();
+    const endMonth = String(endOfMonth.getMonth() + 1).padStart(2, '0');
+    const endDay = String(endOfMonth.getDate()).padStart(2, '0');
+
+    return {
+      min: `${startYear}-${startMonth}-${startDay}`, // Allow past days in current month
+      max: `${endYear}-${endMonth}-${endDay}`       // Restrict future selection to end of current month
+    };
+  });
+
   // View toggle state for Payment Details
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'kanban'
-  
+
 
   // Add mobile detection
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md")); // Hide on tablets and mobile
-  
-  
-  
-  
+
+
+
+
 
   const shimmer = keyframes`
     0% { transform: translateX(-100%); }
@@ -1497,7 +1539,7 @@ function Revenue() {
         setLoading(true);
         console.log('⚡ Starting ultra-fast data fetch...');
         const startTime = Date.now();
-        
+
         // Fetch all data in parallel with timeouts
         const fetchWithTimeout = (url, timeout = 5000) => {
           return Promise.race([
@@ -1507,14 +1549,14 @@ function Revenue() {
             )
           ]).catch(() => null);
         };
-        
+
         console.log('📡 Fetching all data...');
         const [dubaiResponse, monthlyRevenueResponse, quarterlyRevenueResponse] = await Promise.all([
           fetchWithTimeout(API_ENDPOINTS.DUBAI_REVENUE, 5000),
           fetchWithTimeout(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE, 3000),
           fetchWithTimeout(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE, 3000)
         ]);
-        
+
         // Skip dashboard and monthly endpoints that don't exist
         const dashboardResponse = null;
         const monthlyResponse = null;
@@ -1525,7 +1567,7 @@ function Revenue() {
         let dubaiResult = { success: false };
         let monthlyRevenueResult = { success: false };
         let quarterlyRevenueResult = { success: false };
-        
+
         if (dashboardResponse) {
           try { dashboardResult = await dashboardResponse.json(); } catch (e) { console.warn('Dashboard parse error'); }
         }
@@ -1562,7 +1604,7 @@ function Revenue() {
             monthlyAchievedRevenue: monthlyRevenueResult?.data?.currentMonthRevenue || 0,
             dailyAchievedRevenue: dubaiResult.data.actualRevenue || 0
           };
-          
+
           setRevenueData(revenueWithCategories);
           console.log('✅ Revenue data set from Dubai endpoint');
         } else {
@@ -1573,10 +1615,10 @@ function Revenue() {
         if (monthlyResult.success) {
           setMonthlyData(monthlyResult.data);
         }
-        
+
         // Combine monthly and quarterly revenue data into single state update
         let combinedMonthlyData = { ...monthlyResult.data };
-        
+
         // Add monthly revenue data from Teable if available
         if (monthlyRevenueResult.success && monthlyRevenueResult.data) {
           console.log('📅 Monthly revenue data from Teable:', monthlyRevenueResult.data);
@@ -1590,7 +1632,7 @@ function Revenue() {
             ...monthlyRevenueResult.data
           };
         }
-        
+
         // Add quarterly revenue data from Teable if available
         if (quarterlyRevenueResult.success && quarterlyRevenueResult.data && quarterlyRevenueResult.data.data) {
           const quarterlyData = quarterlyRevenueResult.data.data;
@@ -1600,7 +1642,7 @@ function Revenue() {
           console.log('📊 Current year:', quarterlyData.currentYear);
           console.log('📊 Is current quarter complete:', quarterlyData.isCurrentQuarterComplete);
           console.log('📊 Quarter breakdown:', quarterlyData.quarterlyBreakdown);
-          
+
           // Add quarterly revenue data to combined data
           combinedMonthlyData = {
             ...combinedMonthlyData,
@@ -1611,7 +1653,7 @@ function Revenue() {
             quarterlyBreakdown: quarterlyData.quarterlyBreakdown
           };
         }
-        
+
         // Set all monthly data at once
         setMonthlyData(combinedMonthlyData);
 
@@ -1632,14 +1674,12 @@ function Revenue() {
     try {
       setReservationLoading(true);
       setReservationError(null);
-      
-      console.log('🇦🇪 Loading Dubai data from database (FAST)...');
       const startTime = Date.now();
-      
+
       // Step 1: Trigger sync in BACKGROUND (fire-and-forget, don't wait)
       console.log('🔄 Triggering sync in background...');
       fetch(API_ENDPOINTS.DUBAI_PAYMENT_TODAY_RESERVATIONS).catch(() => null);
-      
+
       // Step 2: Load ONLY database endpoints (skip monthly/quarterly for speed)
       console.log('📊 Fetching from database endpoints...');
       const [paymentResponse, achievedRevenueResponse, listingRevenueResponse] = await Promise.all([
@@ -1647,19 +1687,19 @@ function Revenue() {
         fetch(API_ENDPOINTS.DUBAI_REVENUE_DATABASE_ACHIEVED),
         fetch(API_ENDPOINTS.DUBAI_REVENUE_DATABASE_LISTING)
       ]);
-      
+
       // Step 3: Load monthly/quarterly with timeout (non-blocking)
       let monthlyRevenueResponse, quarterlyRevenueResponse;
       try {
         const monthlyPromise = fetch(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE).catch(() => null);
         const quarterlyPromise = fetch(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE).catch(() => null);
-        
+
         // Use Promise.race with timeout
         monthlyRevenueResponse = await Promise.race([
           monthlyPromise,
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
         ]).catch(() => new Response(JSON.stringify({ success: false, data: { currentMonthRevenue: 0 } })));
-        
+
         quarterlyRevenueResponse = await Promise.race([
           quarterlyPromise,
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
@@ -1669,33 +1709,33 @@ function Revenue() {
         monthlyRevenueResponse = new Response(JSON.stringify({ success: false, data: { currentMonthRevenue: 0 } }));
         quarterlyRevenueResponse = new Response(JSON.stringify({ success: false, data: { currentQuarterRevenue: 0 } }));
       }
-      
+
       const paymentData = await paymentResponse.json();
       const achievedRevenueData = await achievedRevenueResponse.json();
       const listingRevenueData = await listingRevenueResponse.json();
       const monthlyRevenueData = await monthlyRevenueResponse.json();
       const quarterlyRevenueData = await quarterlyRevenueResponse.json();
-      
+
       const loadTime = Date.now() - startTime;
-      
+
       // Check if requests were successful
       if (paymentData.success && achievedRevenueData.success && listingRevenueData.success) {
         console.log(`✅ Loaded all Dubai data from DATABASE in ${loadTime}ms`);
         console.log(`💰 Listing Revenue Breakdown:`, listingRevenueData.data);
         console.log(`💰 Achieved Revenue:`, achievedRevenueData.data);
         console.log(`✅ Loaded ${paymentData.data.length} Dubai payment reservations`);
-        
+
         // Update revenueData with category breakdown from database
         const categoryBreakdown = {
           'Studio': listingRevenueData.data?.studio || 0,
           '1BR': listingRevenueData.data?.oneBR || 0,
           '2BR': listingRevenueData.data?.twoBR || 0
         };
-        
+
         const totalRevenue = listingRevenueData.data?.total || 0;
-        
+
         console.log('🔍 Setting categoryRevenue:', categoryBreakdown);
-        
+
         setRevenueData(prev => {
           const updated = {
             ...(prev || {}),
@@ -1713,23 +1753,23 @@ function Revenue() {
           console.log('📊 Updated revenueData:', updated);
           return updated;
         });
-        
+
         // Set reservations from Dubai payment API
         setReservations(paymentData.data);
         console.log(`📝 Dubai data loaded successfully`);
-        
+
         // Mark all data as ready
         setAllDataReady(true);
-        
+
         console.log(`✅ Frontend loaded successfully in ${loadTime}ms`);
-        
+
         // Store to Teable in BACKGROUND (don't wait for it)
         console.log(`🔄 Background: Storing achieved revenue to database...`);
-        
+
         const dailyAchieved = achievedRevenueData.data?.dailyAchieved || 0;
         const monthlyAchieved = achievedRevenueData.data?.monthlyAchieved || 0;
         const quarterlyAchieved = achievedRevenueData.data?.quarterlyAchieved || 0;
-        
+
         const storePayload = {
           dailyAchieved: Math.round(parseFloat(dailyAchieved) * 100) / 100 || 0,
           monthlyAchieved: Math.round(parseFloat(monthlyAchieved) * 100) / 100 || 0,
@@ -1739,7 +1779,7 @@ function Revenue() {
           twoBR: Math.round(parseFloat(listingRevenueData.data?.twoBR || 0) * 100) / 100 || 0,
           total: Math.round(parseFloat(listingRevenueData.data?.total || 0) * 100) / 100 || 0
         };
-        
+
         // Fire and forget - don't await
         fetch(API_ENDPOINTS.DUBAI_REVENUE_STORE, {
           method: 'POST',
@@ -1749,7 +1789,7 @@ function Revenue() {
           console.warn(`⚠️ Background store error:`, err.message);
         });
       } else {
-        const errorMsg = !revenueData.success 
+        const errorMsg = !revenueData.success
           ? revenueData.message || 'Failed to fetch Dubai revenue data'
           : paymentData.message || 'Failed to fetch Dubai payment data';
         setReservationError(errorMsg);
@@ -1847,7 +1887,7 @@ function Revenue() {
     const monthlyTargetData = adminTargetData;
     const adminMonthlyTarget = monthlyTargetData.amount ? parseFloat(String(monthlyTargetData.amount).replace(/,/g, '')) : null;
     const adminDaysInMonth = monthlyTargetData.days ? parseInt(monthlyTargetData.days) : 30;
-    
+
     const dynamicDailyTarget = adminMonthlyTarget ? adminMonthlyTarget / adminDaysInMonth : null;
     const dynamicQuarterlyTarget = adminMonthlyTarget ? adminMonthlyTarget * 3 : null;
 
@@ -1888,20 +1928,20 @@ function Revenue() {
     // console.log("🔍 Admin Target Data from state:", adminTargetData);
     // console.log("🔍 Raw localStorage data:", localStorage.getItem('monthlyTargetData'));
     // console.log("🔍 Parsed monthlyTargetData:", monthlyTargetData);
-    
+
     const adminMonthlyTarget = monthlyTargetData.amount ? parseFloat(String(monthlyTargetData.amount).replace(/,/g, '')) : null;
     const adminDaysInMonth = monthlyTargetData.days ? parseInt(monthlyTargetData.days) : 30;
-    
+
     // console.log("🔍 Processed values:", {
     //   adminMonthlyTarget,
     //   adminDaysInMonth,
     //   originalAmount: monthlyTargetData.amount
     // });
-    
+
     // Calculate dynamic targets from admin form
     const dynamicDailyTarget = adminMonthlyTarget ? adminMonthlyTarget / adminDaysInMonth : null;
     const dynamicQuarterlyTarget = adminMonthlyTarget ? adminMonthlyTarget * 3 : null;
-    
+
     // Use dynamic targets if available, otherwise fallback to backend/default values
     const targetRevenue = dynamicDailyTarget || (revenueData ? parseFloat(revenueData.targetRevenue) || 0 : 0);
     const quarterlyTarget = dynamicQuarterlyTarget || (revenueData ? parseFloat(revenueData.quarterlyTarget) || 0 : 0);
@@ -1914,7 +1954,7 @@ function Revenue() {
     const currentMonthRevenueValue = monthlyData?.currentMonthRevenue || monthlyData?.data?.currentMonthRevenue || revenueData?.monthlyAchievedRevenue;
     const teableMonthlyRevenue = currentMonthRevenueValue ? parseFloat(currentMonthRevenueValue) : 0;
     const monthlyAchievedRevenue = teableMonthlyRevenue > 0 ? teableMonthlyRevenue : 0;
-    
+
     // Debug logging for monthly achieved revenue
     console.log('📊 Monthly Achieved Revenue Debug:', {
       monthlyData,
@@ -1922,9 +1962,9 @@ function Revenue() {
       teableMonthlyRevenue,
       monthlyAchievedRevenue
     });
-    
+
     const monthlyTarget = adminMonthlyTarget || (monthlyData ? monthlyData.monthlyTarget || 0 : 0); // Use admin form value first
-    
+
     // console.log("🎯 Dynamic Targets Debug:", {
     //   monthlyTargetData,
     //   adminMonthlyTarget,
@@ -1936,8 +1976,8 @@ function Revenue() {
     //   finalQuarterlyTarget: quarterlyTarget
     // });
     // Use quarterly revenue from Teable (sum of last 3 months)
-    const quarterlyAchievedRevenue = (monthlyData?.quarterlyRevenue 
-      ? parseFloat(monthlyData.quarterlyRevenue) 
+    const quarterlyAchievedRevenue = (monthlyData?.quarterlyRevenue
+      ? parseFloat(monthlyData.quarterlyRevenue)
       : (revenueData ? parseFloat(revenueData.quarterlyAchievedRevenue) || 0 : 0)) || 0;
     const occupancyRate = revenueData ? parseFloat(revenueData.occupancyRate) || 0 : 0;
 
@@ -1979,14 +2019,14 @@ function Revenue() {
 
     // Get Dubai revenue data if available
     const dubaiActualRevenue = revenueData?.dubaiRevenue?.actualRevenue ? parseFloat(revenueData.dubaiRevenue.actualRevenue) : 0;
-    
+
     // Debug logging
     console.log('🔍 Dubai Revenue Debug:', {
       dubaiRevenue: revenueData?.dubaiRevenue,
       actualRevenue: revenueData?.dubaiRevenue?.actualRevenue,
       dubaiActualRevenue
     });
-    
+
     // Debug logging for quarterly revenue
     console.log('📊 Quarterly Revenue Debug:', {
       monthlyData: monthlyData,
@@ -1999,14 +2039,14 @@ function Revenue() {
       isCurrentQuarterComplete: monthlyData?.isCurrentQuarterComplete,
       quarterlyBreakdown: monthlyData?.quarterlyBreakdown
     });
-    
+
     console.log('📊 QUARTERLY CARD VALUES:', {
       title: 'QUARTERLY REVENUE',
       actual: `Target: ${formatCurrency(quarterlyTarget)}`,
       achieved: `Achieved: ${formatCurrencyComplete(quarterlyAchievedRevenue)}`,
       progress: `${quarterlyProgress}%`
     });
-    
+
     // Build chart data inside this function so we have access to achieved values
     const chartDataArray = [
       {
@@ -2028,10 +2068,10 @@ function Revenue() {
         color: "#6B73B8", // Color 5
       },
     ];
-    
+
     // Store chart data in a way that can be accessed outside this function
     window.__chartData = chartDataArray;
-    
+
     return [
       {
         title: "Daily Revenue",
@@ -2076,7 +2116,7 @@ function Revenue() {
   };
 
   const revenueCards = getRevenueCards();
-  
+
   // Get chart data from window variable (set inside getRevenueCards)
   const chartData = window.__chartData || [];
   const maxValue = chartData.length > 0 ? Math.max(...chartData.map((item) => item.value), 1) : 1;
@@ -2101,18 +2141,18 @@ function Revenue() {
         >
           <MDBox textAlign="center">
             {/* Simple Clean Spinner */}
-            <CircularProgress 
-              size={60} 
+            <CircularProgress
+              size={60}
               thickness={4}
-              sx={{ 
+              sx={{
                 color: "#3b82f6",
                 mb: 3
-              }} 
+              }}
             />
-            
+
             {/* Clean Simple Text */}
-            <MDTypography 
-              variant="h4" 
+            <MDTypography
+              variant="h4"
               sx={{
                 color: "#1e293b",
                 fontWeight: 600,
@@ -2176,69 +2216,85 @@ function Revenue() {
           background: "#ffffff",
         }}
       >
+        {/* Reservations Toolbar - Added for Excel Export */}
+        <MDBox mb={3}>
+          <ReservationsToolbar
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            minDate={initialDates.min}
+            maxDate={initialDates.max}
+          />
+        </MDBox>
+
         {/* Today's Reservations Section */}
         <MDBox mb={4}>
-          <Card sx={{ 
-            p: { xs: 1.5, sm: 2, md: 3 }, 
+          <Card sx={{
+            p: { xs: 1.5, sm: 2, md: 3 },
             boxShadow: 3,
             overflow: 'hidden'
           }}>
-            <MDBox display="flex" justifyContent="space-between" alignItems="center" mb={2} 
-              sx={{ 
-                flexDirection: { xs: 'column', sm: 'row' }, 
-                gap: { xs: 2, sm: 0 } 
-              }}
-            >
-              <MDTypography variant="h5" fontWeight="bold" color="text.primary">
-                Payment Details
-              </MDTypography>
-              
-              {/* View Toggle Buttons - Only on desktop and disabled for view_only users */}
-              {reservations.length > 0 && (
-                <MDBox sx={{ display: { xs: 'none', md: 'block' } }}>
-                  <ToggleButtonGroup
-                    value={viewMode}
-                    exclusive
-                    disabled={isViewOnly()}
-                    onChange={(event, newView) => {
-                      if (newView !== null && !isViewOnly()) {
-                        setViewMode(newView);
-                      }
-                    }}
-                    sx={{
-                      '& .MuiToggleButton-root': {
-                        px: 2,
-                        py: 1,
-                        border: '1px solid #e0e0e0',
-                        '&.Mui-selected': {
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#1565c0',
+            {/* Main Header Container - Column Layout */}
+            <MDBox display="flex" flexDirection="column" gap={2} mb={2}>
+
+              {/* Row 1: Download Button Removed */}
+
+              {/* Row 2: Title (Left) + Toggles (Right) */}
+              <MDBox display="flex" justifyContent="space-between" alignItems="center" width="100%">
+                <MDBox display="flex" alignItems="center" gap={2}>
+                  <MDTypography variant="h5" fontWeight="bold" color="text.primary">
+                    Payment Details
+                  </MDTypography>
+                </MDBox>
+
+                {/* View Toggle Buttons */}
+                {reservations.length > 0 && (
+                  <MDBox sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <ToggleButtonGroup
+                      value={viewMode}
+                      exclusive
+                      disabled={isViewOnly()}
+                      onChange={(event, newView) => {
+                        if (newView !== null && !isViewOnly()) {
+                          setViewMode(newView);
+                        }
+                      }}
+                      sx={{
+                        '& .MuiToggleButton-root': {
+                          px: 2,
+                          py: 1,
+                          border: '1px solid #e0e0e0',
+                          '&.Mui-selected': {
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            '&:hover': {
+                              backgroundColor: '#1565c0',
+                            }
                           }
                         }
-                      }
-                    }}
-                  >
-                    <ToggleButton value="table" aria-label="table view">
-                      <ViewListIcon sx={{ mr: 1 }} />
-                      Table
-                    </ToggleButton>
-                    <ToggleButton value="kanban" aria-label="kanban view">
-                      <ViewModuleIcon sx={{ mr: 1 }} />
-                      Kanban
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </MDBox>
-              )}
+                      }}
+                    >
+                      <ToggleButton value="table" aria-label="table view">
+                        <ViewListIcon sx={{ mr: 1 }} />
+                        Table
+                      </ToggleButton>
+                      <ToggleButton value="kanban" aria-label="kanban view">
+                        <ViewModuleIcon sx={{ mr: 1 }} />
+                        Kanban
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </MDBox>
+                )}
+              </MDBox>
             </MDBox>
-            
+
             {reservationError && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {reservationError}
               </Alert>
             )}
-            
+
             {reservationLoading && reservations.length === 0 ? (
               <MDBox display="flex" justifyContent="center" alignItems="center" minHeight="200px">
                 <CircularProgress />
@@ -2249,16 +2305,16 @@ function Revenue() {
             ) : reservations.length > 0 ? (
               <>
                 {/* Mobile Card View - Always show on mobile */}
-                <MDBox sx={{ 
+                <MDBox sx={{
                   display: { xs: 'block', md: 'none' },
                   px: { xs: 0, sm: 1 },
                   width: '100%',
                   maxWidth: '100%',
                   overflow: 'hidden'
                 }}>
-                  <MDTypography 
-                    variant="h5" 
-                    fontWeight="bold" 
+                  <MDTypography
+                    variant="h5"
+                    fontWeight="bold"
                     mb={3}
                     sx={{
                       color: '#1e293b',
@@ -2270,16 +2326,16 @@ function Revenue() {
                   >
                     📱 Today's Reservations ({reservations.length})
                   </MDTypography>
-                  
+
                   {reservations.map((reservation, index) => (
-                    <MobilePaymentCard 
+                    <MobilePaymentCard
                       key={reservation.id || index}
                       reservation={reservation}
                       index={index}
                     />
                   ))}
                 </MDBox>
-                
+
                 {/* Desktop Conditional View Rendering */}
                 <MDBox sx={{ display: { xs: 'none', md: 'block' } }}>
                   {viewMode === 'kanban' ? (
@@ -2287,7 +2343,7 @@ function Revenue() {
                   ) : (
                     <>
                       {/* Desktop Table View */}
-                      <MDBox 
+                      <MDBox
                         sx={{
                           background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
                           borderRadius: 4,
@@ -2296,9 +2352,9 @@ function Revenue() {
                           boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
                         }}
                       >
-                        <MDTypography 
-                          variant="h5" 
-                          fontWeight="bold" 
+                        <MDTypography
+                          variant="h5"
+                          fontWeight="bold"
                           mb={3}
                           sx={{
                             color: '#1e293b',
@@ -2309,10 +2365,10 @@ function Revenue() {
                         >
                           📅 Today's Reservations ({reservations.length})
                         </MDTypography>
-                        
-                        <MDBox 
-                          sx={{ 
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
+
+                        <MDBox
+                          sx={{
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                             borderRadius: 3,
                             maxHeight: '600px',
                             overflow: 'auto',
@@ -2322,170 +2378,170 @@ function Revenue() {
                           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                             <thead>
                               <tr style={{ backgroundColor: 'white', borderBottom: '2px solid #e2e8f0' }}>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Reservation ID
-                              </th>
-                              <th style={{ width: '140px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Guest Name
-                              </th>
-                              <th style={{ width: '120px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Listing Name
-                              </th>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Arrival Date
-                              </th>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Departure Date
-                              </th>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Total Amount
-                              </th>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Paid Amount
-                              </th>
-                              <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Remaining Amount
-                              </th>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Payment Status
-                              </th>
-                              <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderLeft: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                Reservation Status
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                    
-                            {reservations.map((reservation, index) => (
-                              <tr 
-                                key={reservation.id}
-                                style={{
-                                  backgroundColor: index % 2 === 0 ? '#f8fafc' : 'white',
-                                  borderBottom: '1px solid #e2e8f0'
-                                }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#e0f2fe'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? '#f8fafc' : 'white'}
-                              >
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <a 
-                                    href={`https://dashboard.hostaway.com/reservations/${reservation.reservationId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ 
-                                      color: '#1976d2', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: 'bold',
-                                      textDecoration: 'none',
-                                      cursor: 'pointer'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                                  >
-                                    {reservation.reservationId}
-                                  </a>
-                                </td>
-                                
-                                <td style={{ width: '140px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.75rem' }}>
-                                    {reservation.guestName}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '120px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                    {reservation.listingName}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                                    {(() => {
-                                      const date = reservation.arrivalDate || reservation.checkInDate;
-                                      return date && date !== 'N/A' 
-                                        ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                        : 'N/A';
-                                    })()}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                                    {(() => {
-                                      const date = reservation.departureDate || reservation.checkOutDate;
-                                      return date && date !== 'N/A'
-                                        ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                        : 'N/A';
-                                    })()}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 'bold' }}>
-                                    {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 'bold' }}>
-                                    {reservation.currency} {reservation.paidAmount?.toLocaleString() || '0'}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ 
-                                    fontSize: '0.7rem', 
-                                    color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280', 
-                                    fontWeight: 'bold' 
-                                  }}>
-                                    {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
-                                  </span>
-                                </td>
-                                
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <Chip 
-                                    label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
-                                    color={
-                                      reservation.paymentStatus === 'Paid' ? 'success' :
-                                      reservation.paymentStatus === 'Partially paid' ? 'warning' :
-                                      reservation.paymentStatus === 'Unpaid' ? 'error' :
-                                      reservation.paymentStatus === 'Unknown' ? 'secondary' :
-                                      'default'
-                                    }
-                                    size="small"
-                                    sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '50px' }}
-                                  />
-                                </td>
-                                
-                                <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <Chip 
-                                    label={reservation.reservationStatus || 'Unknown'}
-                                    color={
-                                      reservation.reservationStatus === 'Check in' ? 'success' :
-                                      reservation.reservationStatus === 'Check out' ? 'warning' :
-                                      reservation.reservationStatus === 'Staying guest' ? 'info' :
-                                      reservation.reservationStatus === 'Upcoming stay' ? 'primary' :
-                                      'default'
-                                    }
-                                    size="small"
-                                    sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '70px' }}
-                                  />
-                                </td>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Reservation ID
+                                </th>
+                                <th style={{ width: '140px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Guest Name
+                                </th>
+                                <th style={{ width: '120px', textAlign: 'left', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Listing Name
+                                </th>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Arrival Date
+                                </th>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Departure Date
+                                </th>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Total Amount
+                                </th>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Paid Amount
+                                </th>
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderRight: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Remaining Amount
+                                </th>
+                                <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Payment Status
+                                </th>
+                                <th style={{ width: '100px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', color: '#1e293b', borderLeft: '1px solid #e2e8f0', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Reservation Status
+                                </th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+
+                              {reservations.map((reservation, index) => (
+                                <tr
+                                  key={reservation.id}
+                                  style={{
+                                    backgroundColor: index % 2 === 0 ? '#f8fafc' : 'white',
+                                    borderBottom: '1px solid #e2e8f0'
+                                  }}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#e0f2fe'}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? '#f8fafc' : 'white'}
+                                >
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <a
+                                      href={`https://dashboard.hostaway.com/reservations/${reservation.reservationId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: '#1976d2',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        textDecoration: 'none',
+                                        cursor: 'pointer'
+                                      }}
+                                      onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                      onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                                    >
+                                      {reservation.reservationId}
+                                    </a>
+                                  </td>
+
+                                  <td style={{ width: '140px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.75rem' }}>
+                                      {reservation.guestName}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '120px', textAlign: 'left', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                      {reservation.listingName}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                      {(() => {
+                                        const date = reservation.arrivalDate || reservation.checkInDate;
+                                        return date && date !== 'N/A'
+                                          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                          : 'N/A';
+                                      })()}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                      {(() => {
+                                        const date = reservation.departureDate || reservation.checkOutDate;
+                                        return date && date !== 'N/A'
+                                          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                          : 'N/A';
+                                      })()}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 'bold' }}>
+                                      {reservation.currency} {reservation.totalAmount?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 'bold' }}>
+                                      {reservation.currency} {reservation.paidAmount?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '80px', textAlign: 'center', padding: '12px 6px', borderRight: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{
+                                      fontSize: '0.7rem',
+                                      color: reservation.remainingAmount > 0 ? '#ef4444' : '#6b7280',
+                                      fontWeight: 'bold'
+                                    }}>
+                                      {reservation.currency} {reservation.remainingAmount?.toLocaleString() || '0'}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <Chip
+                                      label={reservation.paymentStatus === 'Unknown' ? 'Due' : reservation.paymentStatus}
+                                      color={
+                                        reservation.paymentStatus === 'Paid' ? 'success' :
+                                          reservation.paymentStatus === 'Partially paid' ? 'warning' :
+                                            reservation.paymentStatus === 'Unpaid' ? 'error' :
+                                              reservation.paymentStatus === 'Unknown' ? 'secondary' :
+                                                'default'
+                                      }
+                                      size="small"
+                                      sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '50px' }}
+                                    />
+                                  </td>
+
+                                  <td style={{ width: '100px', textAlign: 'center', padding: '12px 6px', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <Chip
+                                      label={reservation.reservationStatus || 'Unknown'}
+                                      color={
+                                        reservation.reservationStatus === 'Check in' ? 'success' :
+                                          reservation.reservationStatus === 'Check out' ? 'warning' :
+                                            reservation.reservationStatus === 'Staying guest' ? 'info' :
+                                              reservation.reservationStatus === 'Upcoming stay' ? 'primary' :
+                                                'default'
+                                      }
+                                      size="small"
+                                      sx={{ fontWeight: 600, fontSize: '0.65rem', minWidth: '70px' }}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </MDBox>
                       </MDBox>
-                    </MDBox>
-                  </>
+                    </>
                   )}
                 </MDBox>
-                
+
                 {/* Revenue Summary Cards */}
                 <MDBox mt={4}>
-                  <MDTypography 
-                    variant="h4" 
-                    fontWeight="bold" 
-                    color="text.primary" 
+                  <MDTypography
+                    variant="h4"
+                    fontWeight="bold"
+                    color="text.primary"
                     mb={3}
                     sx={{
                       background: 'linear-gradient(45deg, #1976d2, #42a5f5)',
@@ -2497,14 +2553,14 @@ function Revenue() {
                   >
                     Payment Details
                   </MDTypography>
-                  <MDBox 
-                    display="grid" 
-                    gridTemplateColumns="repeat(auto-fit, minmax(240px, 1fr))" 
+                  <MDBox
+                    display="grid"
+                    gridTemplateColumns="repeat(auto-fit, minmax(240px, 1fr))"
                     gap={3}
                   >
                     {/* Total Reservations */}
-                    <Card sx={{ 
-                      p: 3, 
+                    <Card sx={{
+                      p: 3,
                       background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
                       boxShadow: '0 8px 32px rgba(25, 118, 210, 0.15)',
                       borderRadius: 3,
@@ -2524,7 +2580,7 @@ function Revenue() {
                             {reservations.length}
                           </MDTypography>
                         </MDBox>
-                        <MDBox 
+                        <MDBox
                           sx={{
                             backgroundColor: '#1976d2',
                             borderRadius: '50%',
@@ -2536,10 +2592,10 @@ function Revenue() {
                         </MDBox>
                       </MDBox>
                     </Card>
-                    
+
                     {/* Paid Reservations */}
-                    <Card sx={{ 
-                      p: 3, 
+                    <Card sx={{
+                      p: 3,
                       background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
                       boxShadow: '0 8px 32px rgba(76, 175, 80, 0.15)',
                       borderRadius: 3,
@@ -2559,7 +2615,7 @@ function Revenue() {
                             {reservations.filter(r => r.paymentStatus === 'Paid').length}
                           </MDTypography>
                         </MDBox>
-                        <MDBox 
+                        <MDBox
                           sx={{
                             backgroundColor: '#4caf50',
                             borderRadius: '50%',
@@ -2571,10 +2627,10 @@ function Revenue() {
                         </MDBox>
                       </MDBox>
                     </Card>
-                    
+
                     {/* Partially Paid Reservations */}
-                    <Card sx={{ 
-                      p: 3, 
+                    <Card sx={{
+                      p: 3,
                       background: 'linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%)',
                       boxShadow: '0 8px 32px rgba(255, 152, 0, 0.15)',
                       borderRadius: 3,
@@ -2594,7 +2650,7 @@ function Revenue() {
                             {reservations.filter(r => r.paymentStatus === 'Partially paid').length}
                           </MDTypography>
                         </MDBox>
-                        <MDBox 
+                        <MDBox
                           sx={{
                             backgroundColor: '#ff9800',
                             borderRadius: '50%',
@@ -2606,10 +2662,10 @@ function Revenue() {
                         </MDBox>
                       </MDBox>
                     </Card>
-                    
+
                     {/* Unpaid Reservations */}
-                    <Card sx={{ 
-                      p: 3, 
+                    <Card sx={{
+                      p: 3,
                       background: 'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)',
                       boxShadow: '0 8px 32px rgba(97, 97, 97, 0.15)',
                       borderRadius: 3,
@@ -2629,7 +2685,7 @@ function Revenue() {
                             {reservations.filter(r => r.paymentStatus === 'Unpaid').length}
                           </MDTypography>
                         </MDBox>
-                        <MDBox 
+                        <MDBox
                           sx={{
                             backgroundColor: '#616161',
                             borderRadius: '50%',
@@ -2641,10 +2697,10 @@ function Revenue() {
                         </MDBox>
                       </MDBox>
                     </Card>
-                    
+
                     {/* Due Reservations */}
-                    <Card sx={{ 
-                      p: 3, 
+                    <Card sx={{
+                      p: 3,
                       background: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
                       boxShadow: '0 8px 32px rgba(156, 39, 176, 0.15)',
                       borderRadius: 3,
@@ -2664,7 +2720,7 @@ function Revenue() {
                             {reservations.filter(r => r.paymentStatus === 'Due').length}
                           </MDTypography>
                         </MDBox>
-                        <MDBox 
+                        <MDBox
                           sx={{
                             backgroundColor: '#9c27b0',
                             borderRadius: '50%',
@@ -2680,10 +2736,10 @@ function Revenue() {
                 </MDBox>
               </>
             ) : (
-              <MDBox 
-                display="flex" 
-                justifyContent="center" 
-                alignItems="center" 
+              <MDBox
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
                 minHeight="200px"
                 flexDirection="column"
               >
@@ -2800,9 +2856,8 @@ function Revenue() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: `radial-gradient(circle at top right, ${
-                    item.gradient.split("(")[1].split(",")[0]
-                  }12 0%, transparent 80%)`,
+                  background: `radial-gradient(circle at top right, ${item.gradient.split("(")[1].split(",")[0]
+                    }12 0%, transparent 80%)`,
                   pointerEvents: "none",
                   zIndex: 0,
                 },
@@ -2837,15 +2892,14 @@ function Revenue() {
                         sx={{
                           display: "inline-flex",
                           alignItems: "center",
-                          background: `linear-gradient(135deg, ${
-                            item.gradient.split("(")[1].split(",")[0]
-                          }15 0%, ${item.gradient.split("(")[1].split(",")[0]}08 100%)`,
+                          background: `linear-gradient(135deg, ${item.gradient.split("(")[1].split(",")[0]
+                            }15 0%, ${item.gradient.split("(")[1].split(",")[0]}08 100%)`,
                           borderRadius: 3,
                           px: 2,
                           py: 1,
                           mb: 2,
                           border: `1px solid ${item.gradient.split("(")[1].split(",")[0]}20`,
-                          
+
                           // Normal container for laptop
                           "@media (max-width: 1199px) and (min-width: 1024px)": {
                             display: "flex",
@@ -2978,7 +3032,7 @@ function Revenue() {
                                   },
                                 }}
                               >
-                                Expected 
+                                Expected
                               </MDTypography>
                               <MDTypography
                                 sx={{
@@ -3114,214 +3168,214 @@ function Revenue() {
                           </MDBox>
                         </MDBox>
                       </MDBox>
-        ) : typeof item.amount === "object" && item.amount.type === "category" ? (
-          <MDBox>
-            {/* Improved 5-Column Layout for All Categories */}
-            <MDBox display="grid" gridTemplateColumns="repeat(5, 1fr)" gap={1} mb={0.5}>
-              {/* Studio */}
-              {(() => {
-                const revenue = item.amount.categories.Studio || 0;
-                const categoryTarget = 0; // No hardcoded targets - use dynamic only
-                const categoryProgress = Math.min(
-                  (parseFloat(revenue) / categoryTarget) * 100,
-                  100
-                );
-                const color = "#3b82f6";
+                    ) : typeof item.amount === "object" && item.amount.type === "category" ? (
+                      <MDBox>
+                        {/* Improved 5-Column Layout for All Categories */}
+                        <MDBox display="grid" gridTemplateColumns="repeat(5, 1fr)" gap={1} mb={0.5}>
+                          {/* Studio */}
+                          {(() => {
+                            const revenue = item.amount.categories.Studio || 0;
+                            const categoryTarget = 0; // No hardcoded targets - use dynamic only
+                            const categoryProgress = Math.min(
+                              (parseFloat(revenue) / categoryTarget) * 100,
+                              100
+                            );
+                            const color = "#3b82f6";
 
-                return (
-                  <MDBox
-                    p={0.8}
-                    sx={{
-                      background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
-                      borderRadius: 2,
-                      border: `2px solid ${color}30`,
-                      boxShadow: `0 4px 12px ${color}20`,
-                      transition: "all 0.3s ease-in-out",
-                      position: "relative",
-                      overflow: "hidden",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: `0 8px 20px ${color}30`,
-                        border: `2px solid ${color}50`,
-                      },
-                      "&::before": {
-                        content: '""',
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: "2px",
-                        background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                        borderRadius: "2px 2px 0 0",
-                      },
-                    }}
-                  >
-                    <MDBox textAlign="center" mb={0.5}>
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.7rem",
-                          fontWeight: 700,
-                          color: "#1e293b",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.3px",
-                          mb: 0.3,
-                        }}
-                      >
-                        Studio
-                      </MDTypography>
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.85rem",
-                          fontWeight: 800,
-                          color: color,
-                          textShadow: `0 2px 4px ${color}30`,
-                        }}
-                      >
-                        {formatCurrency(parseFloat(revenue) || 0)}
-                      </MDTypography>
-                    </MDBox>
-                    <MDBox
-                      sx={{
-                        height: 4,
-                        borderRadius: 2,
-                        background: "#e2e8f0",
-                        overflow: "hidden",
-                        mb: 0.5,
-                        boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
-                      }}
-                    >
-                      <MDBox
-                        sx={{
-                          height: "100%",
-                          width: `${categoryProgress}%`,
-                          background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                          borderRadius: 2,
-                          transition: "width 2s ease-in-out",
-                          boxShadow: `0 0 6px ${color}50`,
-                        }}
-                      />
-                    </MDBox>
-                    <MDBox textAlign="center">
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          color: "#3b82f6",
-                          background: "#3b82f615",
-                          padding: "1px 6px",
-                          borderRadius: 1,
-                          display: "inline-block",
-                        }}
-                      >
-                        {categoryProgress.toFixed(1)}%
-                      </MDTypography>
-                    </MDBox>
-                  </MDBox>
-                );
-              })()}
+                            return (
+                              <MDBox
+                                p={0.8}
+                                sx={{
+                                  background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+                                  borderRadius: 2,
+                                  border: `2px solid ${color}30`,
+                                  boxShadow: `0 4px 12px ${color}20`,
+                                  transition: "all 0.3s ease-in-out",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                  "&:hover": {
+                                    transform: "translateY(-2px)",
+                                    boxShadow: `0 8px 20px ${color}30`,
+                                    border: `2px solid ${color}50`,
+                                  },
+                                  "&::before": {
+                                    content: '""',
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: "2px",
+                                    background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+                                    borderRadius: "2px 2px 0 0",
+                                  },
+                                }}
+                              >
+                                <MDBox textAlign="center" mb={0.5}>
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      color: "#1e293b",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.3px",
+                                      mb: 0.3,
+                                    }}
+                                  >
+                                    Studio
+                                  </MDTypography>
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.85rem",
+                                      fontWeight: 800,
+                                      color: color,
+                                      textShadow: `0 2px 4px ${color}30`,
+                                    }}
+                                  >
+                                    {formatCurrency(parseFloat(revenue) || 0)}
+                                  </MDTypography>
+                                </MDBox>
+                                <MDBox
+                                  sx={{
+                                    height: 4,
+                                    borderRadius: 2,
+                                    background: "#e2e8f0",
+                                    overflow: "hidden",
+                                    mb: 0.5,
+                                    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
+                                  }}
+                                >
+                                  <MDBox
+                                    sx={{
+                                      height: "100%",
+                                      width: `${categoryProgress}%`,
+                                      background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+                                      borderRadius: 2,
+                                      transition: "width 2s ease-in-out",
+                                      boxShadow: `0 0 6px ${color}50`,
+                                    }}
+                                  />
+                                </MDBox>
+                                <MDBox textAlign="center">
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.6rem",
+                                      fontWeight: 700,
+                                      color: "#3b82f6",
+                                      background: "#3b82f615",
+                                      padding: "1px 6px",
+                                      borderRadius: 1,
+                                      display: "inline-block",
+                                    }}
+                                  >
+                                    {categoryProgress.toFixed(1)}%
+                                  </MDTypography>
+                                </MDBox>
+                              </MDBox>
+                            );
+                          })()}
 
-              {/* 2BR */}
-              {(() => {
-                const revenue = item.amount.categories["2BR"] || 0;
-                const categoryTarget = 0; // No hardcoded targets - use dynamic only
-                const categoryProgress = Math.min(
-                  (parseFloat(revenue) / categoryTarget) * 100,
-                  100
-                );
-                const color = "#06d6a0";
+                          {/* 2BR */}
+                          {(() => {
+                            const revenue = item.amount.categories["2BR"] || 0;
+                            const categoryTarget = 0; // No hardcoded targets - use dynamic only
+                            const categoryProgress = Math.min(
+                              (parseFloat(revenue) / categoryTarget) * 100,
+                              100
+                            );
+                            const color = "#06d6a0";
 
-                return (
-                  <MDBox
-                    p={0.8}
-                    sx={{
-                      background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
-                      borderRadius: 2,
-                      border: `2px solid ${color}30`,
-                      boxShadow: `0 4px 12px ${color}20`,
-                      transition: "all 0.3s ease-in-out",
-                      position: "relative",
-                      overflow: "hidden",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: `0 8px 20px ${color}30`,
-                        border: `2px solid ${color}50`,
-                      },
-                      "&::before": {
-                        content: '""',
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: "2px",
-                        background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                        borderRadius: "2px 2px 0 0",
-                      },
-                    }}
-                  >
-                    <MDBox textAlign="center" mb={0.5}>
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.7rem",
-                          fontWeight: 700,
-                          color: "#1e293b",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.3px",
-                          mb: 0.3,
-                        }}
-                      >
-                        2BR
-                      </MDTypography>
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.85rem",
-                          fontWeight: 800,
-                          color: color,
-                          textShadow: `0 2px 4px ${color}30`,
-                        }}
-                      >
-                        {formatCurrency(parseFloat(revenue) || 0)}
-                      </MDTypography>
-                    </MDBox>
-                    <MDBox
-                      sx={{
-                        height: 4,
-                        borderRadius: 2,
-                        background: "#e2e8f0",
-                        overflow: "hidden",
-                        mb: 0.5,
-                        boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
-                      }}
-                    >
-                      <MDBox
-                        sx={{
-                          height: "100%",
-                          width: `${categoryProgress}%`,
-                          background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                          borderRadius: 2,
-                          transition: "width 2s ease-in-out",
-                          boxShadow: `0 0 6px ${color}50`,
-                        }}
-                      />
-                    </MDBox>
-                    <MDBox textAlign="center">
-                      <MDTypography
-                        sx={{
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          color: "#06d6a0",
-                          background: "#06d6a015",
-                          padding: "1px 6px",
-                          borderRadius: 1,
-                          display: "inline-block",
-                        }}
-                      >
-                        {categoryProgress.toFixed(1)}%
-                      </MDTypography>
-                    </MDBox>
-                  </MDBox>
-                );
-              })()}
-            </MDBox>
+                            return (
+                              <MDBox
+                                p={0.8}
+                                sx={{
+                                  background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+                                  borderRadius: 2,
+                                  border: `2px solid ${color}30`,
+                                  boxShadow: `0 4px 12px ${color}20`,
+                                  transition: "all 0.3s ease-in-out",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                  "&:hover": {
+                                    transform: "translateY(-2px)",
+                                    boxShadow: `0 8px 20px ${color}30`,
+                                    border: `2px solid ${color}50`,
+                                  },
+                                  "&::before": {
+                                    content: '""',
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: "2px",
+                                    background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+                                    borderRadius: "2px 2px 0 0",
+                                  },
+                                }}
+                              >
+                                <MDBox textAlign="center" mb={0.5}>
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      color: "#1e293b",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.3px",
+                                      mb: 0.3,
+                                    }}
+                                  >
+                                    2BR
+                                  </MDTypography>
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.85rem",
+                                      fontWeight: 800,
+                                      color: color,
+                                      textShadow: `0 2px 4px ${color}30`,
+                                    }}
+                                  >
+                                    {formatCurrency(parseFloat(revenue) || 0)}
+                                  </MDTypography>
+                                </MDBox>
+                                <MDBox
+                                  sx={{
+                                    height: 4,
+                                    borderRadius: 2,
+                                    background: "#e2e8f0",
+                                    overflow: "hidden",
+                                    mb: 0.5,
+                                    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
+                                  }}
+                                >
+                                  <MDBox
+                                    sx={{
+                                      height: "100%",
+                                      width: `${categoryProgress}%`,
+                                      background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+                                      borderRadius: 2,
+                                      transition: "width 2s ease-in-out",
+                                      boxShadow: `0 0 6px ${color}50`,
+                                    }}
+                                  />
+                                </MDBox>
+                                <MDBox textAlign="center">
+                                  <MDTypography
+                                    sx={{
+                                      fontSize: "0.6rem",
+                                      fontWeight: 700,
+                                      color: "#06d6a0",
+                                      background: "#06d6a015",
+                                      padding: "1px 6px",
+                                      borderRadius: 1,
+                                      display: "inline-block",
+                                    }}
+                                  >
+                                    {categoryProgress.toFixed(1)}%
+                                  </MDTypography>
+                                </MDBox>
+                              </MDBox>
+                            );
+                          })()}
+                        </MDBox>
 
                         {/* Second row with 2BR Premium and 3BR */}
                         <MDBox display="grid" gridTemplateColumns="1fr 1fr 1fr" gap={1} mb={0.5}>
@@ -3569,16 +3623,14 @@ function Revenue() {
                     sx={{
                       background: item.gradient,
                       color: "white",
-                      boxShadow: `0 12px 32px -8px ${
-                        item.gradient.split("(")[1].split(",")[0]
-                      }40, 0 0 0 3px rgba(255,255,255,0.8)`,
+                      boxShadow: `0 12px 32px -8px ${item.gradient.split("(")[1].split(",")[0]
+                        }40, 0 0 0 3px rgba(255,255,255,0.8)`,
                       position: "relative",
                       transition: "all 0.3s ease",
                       "&:hover": {
                         transform: "scale(1.1) rotate(5deg)",
-                        boxShadow: `0 16px 40px -8px ${
-                          item.gradient.split("(")[1].split(",")[0]
-                        }50, 0 0 0 4px rgba(255,255,255,0.9)`,
+                        boxShadow: `0 16px 40px -8px ${item.gradient.split("(")[1].split(",")[0]
+                          }50, 0 0 0 4px rgba(255,255,255,0.9)`,
                       },
                       "&::before": {
                         content: '""',
@@ -3636,9 +3688,8 @@ function Revenue() {
                     >
                       <MDBox
                         sx={{
-                          background: `linear-gradient(135deg, ${
-                            item.gradient.split("(")[1].split(",")[0]
-                          }08 0%, transparent 100%)`,
+                          background: `linear-gradient(135deg, ${item.gradient.split("(")[1].split(",")[0]
+                            }08 0%, transparent 100%)`,
                           borderRadius: 3,
                           p: 2,
                           border: `1px solid ${item.gradient.split("(")[1].split(",")[0]}15`,
@@ -3684,35 +3735,23 @@ function Revenue() {
                       >
                         Progress
                       </MDTypography>
-                      <MDTypography
-                        variant="body2"
-                        sx={{
-                          color: "#94a3b8",
-                          fontWeight: 400,
-                          fontSize: "0.6rem",
-                        }}
-                      >
-                        
-                      </MDTypography>
+
                     </MDBox>
                     <MDBox
                       sx={{
-                        background: `linear-gradient(135deg, ${
-                          item.gradient
-                        } 0%, ${item.gradient.replace("0%", "20%")} 100%)`,
+                        background: `linear-gradient(135deg, ${item.gradient
+                          } 0%, ${item.gradient.replace("0%", "20%")} 100%)`,
                         borderRadius: 4,
                         px: 2.5,
                         py: 1,
-                        boxShadow: `0 8px 20px ${
-                          item.gradient.split("(")[1].split(",")[0]
-                        }30, 0 0 0 2px rgba(255,255,255,0.9)`,
+                        boxShadow: `0 8px 20px ${item.gradient.split("(")[1].split(",")[0]
+                          }30, 0 0 0 2px rgba(255,255,255,0.9)`,
                         position: "relative",
                         transition: "all 0.3s ease",
                         "&:hover": {
                           transform: "translateY(-2px) scale(1.05)",
-                          boxShadow: `0 12px 28px ${
-                            item.gradient.split("(")[1].split(",")[0]
-                          }40, 0 0 0 3px rgba(255,255,255,0.95)`,
+                          boxShadow: `0 12px 28px ${item.gradient.split("(")[1].split(",")[0]
+                            }40, 0 0 0 3px rgba(255,255,255,0.95)`,
                         },
                         "&::before": {
                           content: '""',
@@ -3741,10 +3780,10 @@ function Revenue() {
                       <MDTypography
                         variant="h4"
                         sx={{
-                          color: index === 0 ? "#3b82f6" : 
-                                 index === 1 ? "#8b5cf6" : 
-                                 index === 2 ? "#06d6a0" : 
-                                 index === 3 ? "#f59e0b" : "#ef4444",
+                          color: index === 0 ? "#3b82f6" :
+                            index === 1 ? "#8b5cf6" :
+                              index === 2 ? "#06d6a0" :
+                                index === 3 ? "#f59e0b" : "#ef4444",
                           fontWeight: 500,
                           fontSize: "1.4rem",
                           position: "relative",
@@ -3771,6 +3810,8 @@ function Revenue() {
             </Card>
           ))}
         </MDBox>
+
+
 
         {/* New Improved Listing Revenue Section */}
         <MDBox mt={4}>
@@ -3854,7 +3895,7 @@ function Revenue() {
             </Card>
           </MDBox>
         )}
-        
+
       </MDBox>
       <Footer />
     </DashboardLayout>

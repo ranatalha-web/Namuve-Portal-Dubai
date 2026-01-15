@@ -14,7 +14,7 @@ class OccupancyService {
   async fetchActualCheckedInReservations() {
     try {
       console.log('🏨 Fetching TODAY\'S check-ins from DUBAI LISTINGS ONLY from Hostaway...');
-      
+
       if (!this.hostawayAuthToken) {
         throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
       }
@@ -22,8 +22,8 @@ class OccupancyService {
       // Get current date in Dubai timezone (UTC+4)
       const now = new Date();
       const dubaiTime = new Date(now.getTime() + (4 * 60 * 60 * 1000));
-      const formattedToday = dubaiTime.getFullYear() + '-' + 
-        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' + 
+      const formattedToday = dubaiTime.getFullYear() + '-' +
+        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' +
         String(dubaiTime.getDate()).padStart(2, '0');
 
       console.log(`📍 Dubai timezone date: ${formattedToday}`);
@@ -82,7 +82,7 @@ class OccupancyService {
 
       while (hasMore) {
         const baseReservationsUrl = `https://api.hostaway.com/v1/reservations?includeResources=1&limit=${limit}&offset=${offset}`;
-        
+
         const response = await axios.get(baseReservationsUrl, {
           headers: {
             Authorization: this.hostawayAuthToken,
@@ -92,12 +92,12 @@ class OccupancyService {
         });
 
         const reservations = response.data.result || [];
-        
+
         // Filter for Dubai listings only (dynamically identified)
-        const dubaiReservations = reservations.filter(res => 
+        const dubaiReservations = reservations.filter(res =>
           dubaiListingIds.includes(res.listingMapId)
         );
-        
+
         allReservations = allReservations.concat(dubaiReservations);
 
         // If we got fewer than limit, we've reached the end
@@ -109,7 +109,7 @@ class OccupancyService {
       }
 
       console.log(`📊 Fetched ${allReservations.length} total DUBAI reservations from Hostaway`);
-      
+
       let actualCheckedInCount = 0;
       const checkedInListings = [];
 
@@ -118,25 +118,25 @@ class OccupancyService {
         const reservations = allReservations.filter(res => {
           if (!res.arrivalDate || !res.departureDate) return false;
           if (!['new', 'modified'].includes(res.status)) return false;
-          
+
           const arrival = new Date(res.arrivalDate);
           const departure = new Date(res.departureDate);
           const todayDate = new Date(formattedToday);
-          
+
           // Include reservations where today is within the stay period (arrival <= today < departure)
           const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
-          
+
           if (!isWithinStayPeriod) return false;
-            
+
           // Check for test guests
-          const guestName = res.guestName || res.firstName || res.lastName || 
-                           res.guest?.firstName || res.guest?.lastName || 
-                           res.guestFirstName || res.guestLastName || '';
+          const guestName = res.guestName || res.firstName || res.lastName ||
+            res.guest?.firstName || res.guest?.lastName ||
+            res.guestFirstName || res.guestLastName || '';
           const isTestGuest = !guestName ||
             /test|testing|guests|new guest|test guest|new/i.test(guestName) ||
             (res.comment && /test|testing|new guest/i.test(res.comment)) ||
             (res.guestNote && /test|testing|new guest/i.test(res.guestNote));
-            
+
           return !isTestGuest;
         });
 
@@ -145,11 +145,11 @@ class OccupancyService {
           const arrival = new Date(res.arrivalDate);
           const departure = new Date(res.departureDate);
           const todayDate = new Date(formattedToday);
-          
+
           // Process reservations where today is within the stay period (including staying guests)
           if (todayDate >= arrival && todayDate < departure) {
             actualCheckedInCount++;
-            
+
             // Log ALL fields in the first reservation to see what's available
             if (actualCheckedInCount === 1) {
               console.log(`🔍 === FIRST RESERVATION STRUCTURE ===`);
@@ -157,16 +157,16 @@ class OccupancyService {
               console.log(`Full reservation object:`, JSON.stringify(res, null, 2));
               console.log(`=== END FIRST RESERVATION ===`);
             }
-            
+
             // Determine if this is today's check-in or staying guest
             const isCheckInToday = arrival.toDateString() === todayDate.toDateString();
             const guestType = isCheckInToday ? 'Today\'s Check-in' : 'Staying Guest';
-            
+
             // Extract guest name from various possible fields
             const guestName = res.guestName || res.firstName || res.lastName || res.guest?.firstName || res.guest?.lastName || 'Unknown Guest';
-            
+
             console.log(`👤 Processing reservation - ID: ${res.id}, ListingID: ${res.listingMapId}, Guest: "${guestName}", Arrival: ${res.arrivalDate}`);
-            
+
             checkedInListings.push({
               listingId: res.listingMapId,
               guestName: guestName,
@@ -185,7 +185,7 @@ class OccupancyService {
       } else {
         console.warn(`⚠️ NO GUEST RECORDS FOUND!`);
       }
-      
+
       // Fetch all listings to get their names for mapping (DUBAI ONLY)
       let hostawayListings = [];
       let hostawayOffset = 0;
@@ -204,18 +204,18 @@ class OccupancyService {
           });
 
           const listings = listingsResponse.data.result || [];
-          
+
           // Filter for DUBAI listings only (exclude Pakistani listings)
           const dubaiListings = listings.filter(listing => {
             const city = listing.city || listing.location || listing.address || '';
             const country = listing.country || '';
             const cityLower = city.toLowerCase();
             const countryLower = country.toLowerCase();
-            
+
             // Include only Dubai/UAE listings
             return cityLower.includes('dubai') || countryLower.includes('uae') || countryLower.includes('emirates');
           });
-          
+
           hostawayListings = hostawayListings.concat(dubaiListings);
 
           if (listings.length < hostawayLimit) {
@@ -228,7 +228,7 @@ class OccupancyService {
           hostawayHasMore = false;
         }
       }
-      
+
       return {
         actualCheckedInCount,
         checkedInListings,
@@ -250,7 +250,7 @@ class OccupancyService {
   async fetchOccupancyData() {
     try {
       console.log('🏨 Fetching occupancy data using TODAY\'S actual check-in times...');
-      
+
       // Get actual checked-in reservations from Hostaway
       const checkedInData = await this.fetchActualCheckedInReservations();
       console.log(`📊 checkedInData returned:`, {
@@ -258,7 +258,7 @@ class OccupancyService {
         checkedInListingsCount: checkedInData.checkedInListings?.length || 0,
         allListingsCount: checkedInData.allListings?.length || 0
       });
-      
+
       // Get room inventory from Teable for total room count
       const response = await axios.get(this.teableApiUrl, {
         headers: {
@@ -271,7 +271,7 @@ class OccupancyService {
       });
 
       console.log('📊 Raw Teable response:', response.data);
-      
+
       if (response.data && response.data.records) {
         const processedData = await this.processOccupancyData(response.data.records, checkedInData);
         return processedData;
@@ -299,9 +299,9 @@ class OccupancyService {
   async processOccupancyData(records, checkedInData = { actualCheckedInCount: 0, checkedInListings: [] }) {
     try {
       const currentDate = new Date().toISOString().split('T')[0];
-      const currentTime = new Date().toLocaleTimeString('en-US', { 
-        hour12: false, 
-        timeZone: 'Asia/Karachi' 
+      const currentTime = new Date().toLocaleTimeString('en-US', {
+        hour12: false,
+        timeZone: 'Asia/Karachi'
       });
 
       // Initialize room types
@@ -326,40 +326,40 @@ class OccupancyService {
       } else {
         console.warn('⚠️ No Dubai listings available from Hostaway - will process all Teable records');
       }
-      
+
       console.log(`📍 Dubai Listing IDs: ${dubaiListingIds.join(', ')}`);
       console.log(`📍 Total listings to process: ${records.length}`);
-      
+
       // Filter records for Dubai only FIRST
       const dubaiRecords = records.filter(record => {
         const fields = record.fields || record;
         const listingId = fields['Listing IDs'] || fields.listingId || fields.id;
         const isDubai = dubaiListingIds.includes(parseInt(listingId));
-        
+
         if (!isDubai) {
           const listingName = fields['Listing Name'] || fields.listingName || fields.name;
           console.log(`🚫 FILTERED OUT: ${listingName} (ID: ${listingId}) - Not a Dubai listing`);
         }
         return isDubai;
       });
-      
+
       console.log(`✅ Dubai records after filtering: ${dubaiRecords.length} out of ${records.length}`);
-      
+
       // Process each Dubai record to get room inventory and match with actual check-ins
       dubaiRecords.forEach((record, index) => {
         console.log(`🔍 Processing Dubai record ${index + 1}:`, JSON.stringify(record, null, 2));
-        
+
         const fields = record.fields || record;
-        
+
         // Extract room type from "Listing Name" field (e.g., "9F-85 (3B)" -> "3BR")
         const listingName = fields['Listing Name'] || fields.listingName || fields.name;
         const listingId = fields['Listing IDs'] || fields.listingId || fields.id;
-        
+
         console.log(`📋 Dubai Record ${index + 1} - Listing: ${listingName}, ID: ${listingId}`);
-        
+
         // Extract room type based on listing name (fully dynamic, no hardcoding)
         let roomType = null;
-        
+
         if (listingName) {
           // Use listing name for other room types
           if (listingName.includes('(3B)') || listingName.includes('3BR')) {
@@ -372,7 +372,7 @@ class OccupancyService {
             roomType = 'Studio';
           }
         }
-        
+
         // Determine if room is occupied based on Activity field from Teable
         const activity = fields['Activity'] || 'Vacant';
         const isOccupied = activity === 'Occupied';
@@ -386,7 +386,7 @@ class OccupancyService {
           if (isOccupied) {
             roomTypes[roomType].reserved++;
             totalReserved++;
-            const checkedInGuest = checkedInData.checkedInListings.find(checkedIn => 
+            const checkedInGuest = checkedInData.checkedInListings.find(checkedIn =>
               String(checkedIn.listingId) === String(listingId)
             );
             reservedRoomsList.push(`${listingName} (${roomType}) - Guest: "${checkedInGuest?.guestName || 'Unknown'}"`);
@@ -402,24 +402,24 @@ class OccupancyService {
       });
 
       console.log(`📊 Final totals - Total Rooms: ${totalRooms}, Occupied (with actual check-ins): ${totalReserved}`);
-      
+
       // Debug: Show final breakdown by room type
       console.log('📊 FINAL BREAKDOWN BY ROOM TYPE (BASED ON ACTUAL CHECK-INS):');
       Object.entries(roomTypes).forEach(([type, data]) => {
         console.log(`   ${type}: Total=${data.total}, Available=${data.available}, Occupied=${data.reserved}`);
       });
-      
+
       // Calculate total occupied from room types to verify
       const calculatedOccupied = Object.values(roomTypes).reduce((sum, data) => sum + data.reserved, 0);
       console.log(`🔍 Calculated Occupied from room types: ${calculatedOccupied}`);
       console.log(`🔍 Tracked Occupied from counter: ${totalReserved}`);
       console.log(`🔍 Hostaway check-ins count: ${checkedInData.actualCheckedInCount}`);
-      
+
       if (calculatedOccupied !== totalReserved) {
         console.log(`⚠️ MISMATCH DETECTED! Using calculated value: ${calculatedOccupied}`);
         totalReserved = calculatedOccupied;
       }
-      
+
       // Create a map of listing IDs to listing names from Hostaway FIRST (before processing rooms)
       const hostawayListingMap = new Map();
       if (checkedInData.allListings && Array.isArray(checkedInData.allListings)) {
@@ -433,7 +433,7 @@ class OccupancyService {
       } else {
         console.warn('⚠️ No Hostaway listings available for mapping');
       }
-      
+
       // Use guest data that was already fetched in fetchOccupancyData
       // Map checkedInListings to include listing names from Teable records or Hostaway
       console.log(`📊 Processing ${checkedInData.checkedInListings?.length || 0} guest records from checkedInData`);
@@ -444,26 +444,26 @@ class OccupancyService {
       } else {
         console.warn(`⚠️ NO GUEST RECORDS IN checkedInData!`);
       }
-      
+
       const reservedRoomsDetails = (checkedInData.checkedInListings || []).map((checkedIn, idx) => {
         // Find the listing name from Teable records
         const teableRecord = records.find(r => {
           const listingId = r.fields?.['Listing IDs'] || r.fields?.listingId || r.id;
           return String(listingId) === String(checkedIn.listingId);
         });
-        
+
         const teableListingName = teableRecord?.fields?.['Listing Name'];
         const hostawayListingName = hostawayListingMap.get(String(checkedIn.listingId));
         const finalListingName = teableListingName || hostawayListingName || `Unit ${checkedIn.listingId}`;
-        
+
         console.log(`👤 Guest record mapping - ID: ${checkedIn.listingId}, Guest: "${checkedIn.guestName}", ResID: "${checkedIn.reservationId}", CheckInDate: "${checkedIn.originalCheckInDate}", Teable: "${teableListingName}", Hostaway: "${hostawayListingName}", Final: "${finalListingName}"`);
-        
+
         const finalGuestName = checkedIn.guestName || 'Unknown Guest';
         const finalReservationId = checkedIn.reservationId || 'N/A';
         const finalCheckInDate = checkedIn.originalCheckInDate || 'N/A';
-        
+
         console.log(`📝 Final values - Guest: "${finalGuestName}", ResID: "${finalReservationId}", CheckInDate: "${finalCheckInDate}"`);
-        
+
         return {
           guestName: finalGuestName,
           listingName: finalListingName,
@@ -474,10 +474,10 @@ class OccupancyService {
           checkInDate: finalCheckInDate
         };
       });
-      
+
       // Add occupied rooms from Teable that don't have guest check-in data
       const occupiedListingIds = new Set(reservedRoomsDetails.map(r => r.listingId));
-      
+
       const occupiedTeableRooms = records
         .filter(r => {
           const activity = r.fields?.['Activity'] || 'Vacant';
@@ -489,9 +489,9 @@ class OccupancyService {
           const teableListingName = r.fields?.['Listing Name'];
           const hostawayListingName = hostawayListingMap.get(String(listingId));
           const finalListingName = teableListingName || hostawayListingName || `Unit ${listingId}`;
-          
+
           console.log(`🏠 Occupied room mapping - ID: ${listingId}, Teable: "${teableListingName}", Hostaway: "${hostawayListingName}", Final: "${finalListingName}"`);
-          
+
           return {
             guestName: r.fields?.['(T) Guest Name'] || 'N/A',
             listingName: finalListingName,
@@ -502,19 +502,19 @@ class OccupancyService {
             checkInDate: r.fields?.['(T) Check-In Date'] || 'N/A'
           };
         });
-      
+
       // Combine both lists - ONLY DUBAI ROOMS
       // Keep only guest records (which are Dubai) + Dubai occupied rooms from Teable
       // Filter out Pakistani apartments (those from Teable without guest data)
       const allReservedRooms = reservedRoomsDetails; // Only guest records (Dubai with names)
-      
+
       console.log(`✅ Using ${reservedRoomsDetails.length} guest records from checkedInData`);
       console.log(`✅ Adding ${occupiedTeableRooms.length} occupied rooms from Teable without guest data`);
       console.log(`✅ Total reserved rooms: ${allReservedRooms.length}`);
       console.log(`📅 Sample check-in dates:`, allReservedRooms.slice(0, 3).map(r => ({ guestName: r.guestName, checkInDate: r.checkInDate })));
       console.log(`📋 FINAL RESERVED ROOMS DATA (first 3):`, JSON.stringify(allReservedRooms.slice(0, 3), null, 2));
       console.log(`📋 FINAL RESERVED ROOMS DATA (all):`, JSON.stringify(allReservedRooms, null, 2));
-      
+
       // Using all reserved rooms count (guest records + occupied rooms from Teable)
       const actualReservedCount = reservedRoomsDetails.length;
       const allReservedRoomsCount = allReservedRooms.length;
@@ -522,16 +522,16 @@ class OccupancyService {
       console.log(`📊 Actual guest records count: ${actualReservedCount}`);
       console.log(`📊 All reserved rooms count (including Teable): ${allReservedRoomsCount}`);
       console.log(`📊 Hostaway check-ins count (for reference): ${checkedInData.actualCheckedInCount}`);
-      
+
       // Use the total count of all reserved rooms (not just guest records)
       totalReserved = allReservedRoomsCount;
-      
+
       // Show all occupied rooms (with actual check-ins)
       console.log(`📋 LIST OF ALL ${reservedRoomsList.length} OCCUPIED ROOMS (WITH ACTUAL CHECK-INS):`);
       reservedRoomsList.forEach((room, index) => {
         console.log(`   ${index + 1}. ${room}`);
       });
-      
+
       console.log(`\n=== OCCUPANCY CALCULATION SUMMARY ===`);
       console.log(`🏨 Total Rooms: ${totalRooms}`);
       console.log(`✅ Actual Checked-In Count: ${checkedInData.actualCheckedInCount}`);
@@ -555,14 +555,14 @@ class OccupancyService {
           error: 'No room data found in Teable API response'
         };
       }
-      
+
       // If we have reserved rooms from guest data, use that count
       if (totalRooms === 0 && allReservedRooms.length > 0) {
         console.log(`✅ No Teable inventory data, but using ${allReservedRooms.length} guest records as reserved rooms`);
         totalReserved = allReservedRooms.length;
         // Don't set totalRooms yet - we'll calculate it below
       }
-      
+
       // Calculate available rooms dynamically from room types (only if we have Teable data)
       let calculatedTotalAvailable = 0;
       if (totalRooms > 0) {
@@ -577,14 +577,14 @@ class OccupancyService {
         calculatedTotalAvailable = 0;
         console.log(`📊 No Teable data - using only guest records: ${totalReserved} reserved, 0 available (frontend will calculate)`);
       }
-      
+
       // Calculate occupancy rate AFTER updating totalRooms
       // If totalRooms is 0 (no Teable data), set occupancy rate to 0 and let frontend calculate
       const occupancyRate = totalRooms > 0 ? ((totalReserved / totalRooms) * 100).toFixed(2) : 0;
-      
+
       console.log(`📊 Final calculation: ${totalReserved} reserved / ${totalRooms} total (${calculatedTotalAvailable} available)`);
       const totalAvailable = calculatedTotalAvailable;
-      
+
       return {
         reportDate: currentDate,
         reportTime: currentTime,
@@ -612,7 +612,7 @@ class OccupancyService {
    */
   generateReport(data) {
     const { reportDate, reportTime, occupancyRate, totalReserved, totalRooms, roomTypes } = data;
-    
+
     let report = `Daily Occupancy & Revenue Report (${reportDate})\n\n`;
     report += `🕒 Report Period: ${reportDate}, 12:00 AM - ${reportTime}\n`;
     report += `📈 Occupancy Rate: ${occupancyRate}% (Reserved: ${totalReserved} / Total: ${totalRooms})\n\n`;
@@ -631,12 +631,13 @@ class OccupancyService {
   async getCurrentOccupancy() {
     try {
       const data = await this.fetchOccupancyData();
-      
+
       // Fetch room types data from Room API
       let roomTypes = {};
       try {
         const fetch = require('node-fetch') || globalThis.fetch;
-        const roomTypesResponse = await fetch('http://localhost:5000/api/rooms/availability', {
+        const apiUrl = process.env.API_URL || 'http://localhost:5000';
+        const roomTypesResponse = await fetch(`${apiUrl}/api/rooms/availability`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -644,7 +645,7 @@ class OccupancyService {
           },
           timeout: 30000
         });
-        
+
         if (roomTypesResponse.ok) {
           const roomTypesData = await roomTypesResponse.json();
           if (roomTypesData.data && roomTypesData.data.roomTypes) {
@@ -667,10 +668,10 @@ class OccupancyService {
       } catch (err) {
         console.warn('⚠️ Error fetching room types:', err.message);
       }
-      
+
       // Add roomTypes to the data
       data.roomTypes = roomTypes;
-      
+
       return {
         success: true,
         data,
@@ -691,7 +692,7 @@ class OccupancyService {
   async getTodayCheckinsDetails() {
     try {
       console.log('🏨 Fetching detailed today\'s check-ins from DUBAI LISTINGS ONLY...');
-      
+
       if (!this.hostawayAuthToken) {
         throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
       }
@@ -699,8 +700,8 @@ class OccupancyService {
       // Get current date in Dubai timezone (UTC+4)
       const now = new Date();
       const dubaiTime = new Date(now.getTime() + (4 * 60 * 60 * 1000));
-      const formattedToday = dubaiTime.getFullYear() + '-' + 
-        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' + 
+      const formattedToday = dubaiTime.getFullYear() + '-' +
+        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' +
         String(dubaiTime.getDate()).padStart(2, '0');
 
       console.log(`📍 Dubai timezone date: ${formattedToday}`);
@@ -749,7 +750,7 @@ class OccupancyService {
       console.log(`✅ Found ${dubaiListingIds.length} Dubai listings dynamically`);
 
       const baseReservationsUrl = 'https://api.hostaway.com/v1/reservations?includeResources=1';
-      
+
       const response = await axios.get(baseReservationsUrl, {
         headers: {
           Authorization: this.hostawayAuthToken,
@@ -770,33 +771,33 @@ class OccupancyService {
           listingNameMap.set(listing.id, listingName);
           console.log(`📍 Listing ${listing.id}: internalName="${listing.internalListingName}", title="${listing.title}", name="${listing.name}" → Using: "${listingName}"`);
         });
-        
+
         // Filter reservations: Dubai listings + within stay period
         const reservations = allReservations.filter(res => {
           if (!res.arrivalDate || !res.departureDate) return false;
           if (!['new', 'modified'].includes(res.status)) return false;
-          
+
           // Only include Dubai listings
           if (!dubaiListingIds.includes(res.listingMapId)) return false;
-          
+
           const arrival = new Date(res.arrivalDate);
           const departure = new Date(res.departureDate);
           const todayDate = new Date(formattedToday);
-          
+
           // Include reservations where today is within the stay period
           const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
-          
+
           if (!isWithinStayPeriod) return false;
-            
+
           // Check for test guests
-          const guestName = res.guestName || res.firstName || res.lastName || 
-                           res.guest?.firstName || res.guest?.lastName || 
-                           res.guestFirstName || res.guestLastName || '';
+          const guestName = res.guestName || res.firstName || res.lastName ||
+            res.guest?.firstName || res.guest?.lastName ||
+            res.guestFirstName || res.guestLastName || '';
           const isTestGuest = !guestName ||
             /test|testing|guests|new guest|test guest|new/i.test(guestName) ||
             (res.comment && /test|testing|new guest/i.test(res.comment)) ||
             (res.guestNote && /test|testing|new guest/i.test(res.guestNote));
-            
+
           return !isTestGuest;
         });
 
@@ -805,16 +806,16 @@ class OccupancyService {
           const arrival = new Date(res.arrivalDate);
           const departure = new Date(res.departureDate);
           const todayDate = new Date(formattedToday);
-          
+
           // Process reservations where today is within the stay period (including staying guests)
           if (todayDate >= arrival && todayDate < departure) {
             // Determine if this is today's check-in or staying guest
             const isCheckInToday = arrival.toDateString() === todayDate.toDateString();
             const guestType = isCheckInToday ? 'Today\'s Check-in' : 'Staying Guest';
-            
+
             // Get listing name from the map, fallback to Unit ID
             const listingName = listingNameMap.get(res.listingMapId) || `Unit ${res.listingMapId}`;
-            
+
             todayCheckinsDetails.push({
               guestName: res.guestName || res.firstName || res.lastName || 'Unknown Guest',
               listingName: listingName,
@@ -829,7 +830,7 @@ class OccupancyService {
 
       console.log(`✅ Found ${todayCheckinsDetails.length} detailed reservations (check-ins + staying guests) for today`);
       console.log(`📋 Current occupancy details:`, todayCheckinsDetails);
-      
+
       return {
         success: true,
         data: todayCheckinsDetails
@@ -852,7 +853,7 @@ class OccupancyService {
   async getYesterdayTodayReservations() {
     try {
       console.log('📋 Fetching yesterday\'s and today\'s reservations for Dubai listings...');
-      
+
       if (!this.hostawayAuthToken) {
         throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
       }
@@ -860,15 +861,15 @@ class OccupancyService {
       // Get current date in Dubai timezone (UTC+4)
       const now = new Date();
       const dubaiTime = new Date(now.getTime() + (4 * 60 * 60 * 1000));
-      const todayStr = dubaiTime.getFullYear() + '-' + 
-        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' + 
+      const todayStr = dubaiTime.getFullYear() + '-' +
+        String(dubaiTime.getMonth() + 1).padStart(2, '0') + '-' +
         String(dubaiTime.getDate()).padStart(2, '0');
-      
+
       // Calculate yesterday
       const yesterdayDate = new Date(dubaiTime);
       yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayStr = yesterdayDate.getFullYear() + '-' + 
-        String(yesterdayDate.getMonth() + 1).padStart(2, '0') + '-' + 
+      const yesterdayStr = yesterdayDate.getFullYear() + '-' +
+        String(yesterdayDate.getMonth() + 1).padStart(2, '0') + '-' +
         String(yesterdayDate.getDate()).padStart(2, '0');
 
       console.log(`📍 Yesterday: ${yesterdayStr}, Today: ${todayStr}`);
@@ -930,7 +931,7 @@ class OccupancyService {
 
       while (hasMore) {
         const baseReservationsUrl = `https://api.hostaway.com/v1/reservations?includeResources=1&limit=${limit}&offset=${offset}`;
-        
+
         const response = await axios.get(baseReservationsUrl, {
           headers: {
             Authorization: this.hostawayAuthToken,
@@ -971,13 +972,13 @@ class OccupancyService {
         if (!isYesterday && !isToday) continue;
 
         // Skip test guests
-        const guestName = res.guestName || res.firstName || res.lastName || 
-                         res.guest?.firstName || res.guest?.lastName || '';
+        const guestName = res.guestName || res.firstName || res.lastName ||
+          res.guest?.firstName || res.guest?.lastName || '';
         const isTestGuest = !guestName ||
           /test|testing|guests|new guest|test guest|new/i.test(guestName) ||
           (res.comment && /test|testing|new guest/i.test(res.comment)) ||
           (res.guestNote && /test|testing|new guest/i.test(res.guestNote));
-        
+
         if (isTestGuest) continue;
 
         const listingId = res.listingMapId;
@@ -995,9 +996,9 @@ class OccupancyService {
           reservationId: res.id,
           arrivalDate: res.arrivalDate,
           departureDate: res.departureDate,
-          status: isYesterday && !isToday ? 'Checked Out' : 
-                  isToday && !isYesterday ? 'Upcoming Stay' :
-                  'Staying Guest'
+          status: isYesterday && !isToday ? 'Checked Out' :
+            isToday && !isYesterday ? 'Upcoming Stay' :
+              'Staying Guest'
         };
 
         if (isYesterday && !isToday) {
@@ -1019,7 +1020,7 @@ class OccupancyService {
 
       const result = Object.values(reservationsByListing);
       console.log(`✅ Organized ${result.length} listings with yesterday/today reservations`);
-      
+
       return {
         success: true,
         data: result

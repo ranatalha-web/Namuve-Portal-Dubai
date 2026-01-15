@@ -9,17 +9,17 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  
+
   // CORS headers for API requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
+
   next();
 });
 
@@ -40,8 +40,8 @@ app.use(express.static(path.join(__dirname, 'frontend/build'), {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'frontend-server'
   });
@@ -65,10 +65,45 @@ app.use('/api', createProxyMiddleware({
   }
 }));
 
+// Hostaway API proxy (to avoid CORS issues)
+app.use('/hostaway', createProxyMiddleware({
+  target: 'https://api.hostaway.com',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/hostaway': '' // Remove /hostaway prefix when forwarding
+  },
+  timeout: 30000,
+  onError: (err, req, res) => {
+    console.error('Hostaway proxy error:', err.message);
+    res.status(502).json({
+      success: false,
+      error: 'Hostaway API unavailable',
+      message: 'Unable to connect to Hostaway API'
+    });
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    console.log(`Proxying ${req.method} ${req.url} to Hostaway API`);
+  }
+}));
+
+// CRON ENDPOINT: Trigger Charges Sync
+const runDubaiChargesSync = require('./backend/api/cron-dubai-charges');
+
+app.get('/api/cron/charges', async (req, res) => {
+  console.log('Manual Trigger: Dubai Charges Sync');
+  try {
+    await runDubaiChargesSync();
+    res.json({ success: true, message: 'Sync job finished successfully' });
+  } catch (error) {
+    console.error('Sync Job Failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Handle React routing - MUST be last
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'frontend/build', 'index.html');
-  
+
   // Check if index.html exists
   const fs = require('fs');
   if (!fs.existsSync(indexPath)) {
@@ -78,7 +113,7 @@ app.get('*', (req, res) => {
       path: indexPath
     });
   }
-  
+
   // Set proper content type for HTML
   res.setHeader('Content-Type', 'text/html');
   res.sendFile(indexPath);

@@ -7,7 +7,7 @@
 
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined
   ? process.env.ENABLE_LOGS === 'true'
-  : true; // Default: logs disabled
+  : false; // Default: logs disabled
 
 // Store original console methods
 const originalConsole = {
@@ -208,6 +208,7 @@ const monthlyTargetHandler = require("../api/monthly-target");
 const dubaiDailyRevenueGetRoutes = require("../api/dubai-daily-revenue-get");
 const cronDubaiRevenueHandler = require("../api/cron-dubai-revenue");
 const cronDubaiMonthlyRevenueHandler = require("../api/cron-dubai-monthly-revenue");
+const cronTeableReservationsHandler = require("../api/teable-reservations");
 let hostawayCleaningStatusRoutes;
 try {
   hostawayCleaningStatusRoutes = require("../api/hostawayCleaningStatusApi");
@@ -362,6 +363,7 @@ app.post("/api/cron/post-dubai-revenue", cronDubaiRevenueHandler);
 
 // Cron job endpoint for Dubai monthly revenue posting
 app.post("/api/cron/post-dubai-monthly-revenue", cronDubaiMonthlyRevenueHandler);
+app.all("/api/cron/teable-reservations", cronTeableReservationsHandler);
 
 // RevenueTable API routes
 //app.use("/api/revenue-table", RevenueTableService.createAPIRoutes());

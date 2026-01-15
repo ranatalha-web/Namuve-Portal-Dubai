@@ -13,16 +13,16 @@ const fetchAllRoomDetailRecords = async () => {
   try {
     console.log('🔗 Fetching from Teable URL:', `${TEABLE_BASE_URL}/table/${TABLE_ID}/record`);
     console.log('🔑 Using token:', TEABLE_TOKEN ? 'YES' : 'NO');
-    
+
     // Fetch with pagination to get all records with field data
     let allRecords = [];
     let skip = 0;
     const take = 100;
     let hasMore = true;
-    
+
     while (hasMore) {
       console.log(`📄 Fetching page: skip=${skip}, take=${take}`);
-      
+
       const response = await axios.get(
         `${TEABLE_BASE_URL}/table/${TABLE_ID}/record?skip=${skip}&take=${take}`,
         {
@@ -32,11 +32,11 @@ const fetchAllRoomDetailRecords = async () => {
           }
         }
       );
-      
+
       console.log('✅ Teable API response status:', response.status);
       const records = response.data.records || [];
       console.log(`📊 Fetched ${records.length} records in this page`);
-      
+
       if (records.length > 0) {
         console.log('📋 First record sample:', {
           id: records[0].id,
@@ -44,9 +44,9 @@ const fetchAllRoomDetailRecords = async () => {
           hasFields: !!records[0].fields && Object.keys(records[0].fields).length > 0
         });
       }
-      
+
       allRecords = allRecords.concat(records);
-      
+
       // If we got fewer records than requested, we've reached the end
       if (records.length < take) {
         hasMore = false;
@@ -54,7 +54,7 @@ const fetchAllRoomDetailRecords = async () => {
         skip += take;
       }
     }
-    
+
     console.log(`✅ Total records fetched: ${allRecords.length}`);
     return allRecords;
   } catch (error) {
@@ -84,9 +84,9 @@ const createRoomDetailRecord = async (roomDetail) => {
         }
       ]
     };
-    
+
     console.log('📤 Sending room detail request to Teable:', JSON.stringify(requestBody, null, 2));
-    
+
     const response = await axios.post(
       `${TEABLE_BASE_URL}/table/${TABLE_ID}/record`,
       requestBody,
@@ -174,15 +174,15 @@ const deleteRoomDetailRecord = async (recordId) => {
 // Room types are now determined dynamically from the room-availability table
 const determineRoomType = (apartmentName) => {
   if (!apartmentName) return '';
-  
+
   // Try to extract from name patterns
   const nameUpper = apartmentName.toUpperCase();
-  
+
   if (nameUpper.includes('STUDIO') || nameUpper.includes('(S)')) return 'Studio';
   if (nameUpper.includes('3BR') || nameUpper.includes('3 BR') || nameUpper.includes('(3B)')) return '3BR';
   if (nameUpper.includes('2BR') || nameUpper.includes('2 BR') || nameUpper.includes('(2B)')) return '2BR';
   if (nameUpper.includes('1BR') || nameUpper.includes('1 BR') || nameUpper.includes('(1B)')) return '1BR';
-  
+
   return '';
 };
 
@@ -190,24 +190,24 @@ const determineRoomType = (apartmentName) => {
 const autoPopulateRoomTypes = async () => {
   try {
     console.log('🔄 Starting auto-populate room types...');
-    
+
     const records = await fetchAllRoomDetailRecords();
     console.log(`📊 Found ${records.length} records to process`);
-    
+
     let updated = 0;
     let skipped = 0;
-    
+
     for (const record of records) {
       const apartmentName = record.fields["Apartment Name "] || '';
       const currentRoomType = record.fields["Room Type"] || '';
-      
+
       // Determine the correct room type
       const correctRoomType = determineRoomType(apartmentName);
-      
+
       // Only update if room type is missing or incorrect
       if (correctRoomType && correctRoomType !== currentRoomType) {
         console.log(`📝 Updating ${apartmentName}: "${currentRoomType}" → "${correctRoomType}"`);
-        
+
         await updateRoomDetailRecord(record.id, {
           apartmentName: apartmentName,
           roomType: correctRoomType,
@@ -220,7 +220,7 @@ const autoPopulateRoomTypes = async () => {
         skipped++;
       }
     }
-    
+
     console.log(`✅ Auto-populate complete: ${updated} updated, ${skipped} skipped`);
     return { updated, skipped, total: records.length };
   } catch (error) {
@@ -240,7 +240,7 @@ const syncRoomDetailsToTeable = async (roomDetails) => {
 
   try {
     console.log('📊 Starting room details sync to Teable...');
-    
+
     if (!TEABLE_TOKEN) {
       throw new Error('TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not configured in .env');
     }
@@ -251,7 +251,7 @@ const syncRoomDetailsToTeable = async (roomDetails) => {
 
     // Process room details
     console.log('📊 Processing room details data:', JSON.stringify(roomDetails, null, 2));
-    
+
     // Create a map of existing records by apartment name
     const existingMap = new Map();
     existingRecords.forEach(record => {
@@ -282,7 +282,7 @@ const syncRoomDetailsToTeable = async (roomDetails) => {
           });
           updated++;
           console.log(`✅ Updated with PATCH: ${apartmentName}`);
-          
+
           // Mark as processed and remove from map
           processedRecords.add(existingRecord.id);
           existingMap.delete(apartmentName);
@@ -329,7 +329,7 @@ const syncRoomDetailsToTeable = async (roomDetails) => {
   } catch (error) {
     console.error('❌ Error syncing room details to Teable:', error.message);
     errors++;
-    
+
     const syncTime = Date.now() - startTime;
     return {
       success: false,
@@ -353,7 +353,7 @@ router.get('/data', async (req, res) => {
     console.log('🔑 Token configured:', !!TEABLE_TOKEN);
     console.log('📊 Table ID:', TABLE_ID);
     console.log('🔗 Teable Base URL:', TEABLE_BASE_URL);
-    
+
     if (!TEABLE_TOKEN) {
       console.error('❌ TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not configured');
       return res.status(500).json({
@@ -361,12 +361,12 @@ router.get('/data', async (req, res) => {
         error: 'TEABLE_DUBAI_RESERVATIONS_BEARER_TOKEN not configured in .env'
       });
     }
-    
+
     console.log('🔄 Calling fetchAllRoomDetailRecords...');
     const records = await fetchAllRoomDetailRecords();
     console.log(`✅ Fetched ${records.length} records from Teable`);
     console.log('📋 First record sample:', records[0]);
-    
+
     res.json({
       success: true,
       data: records,
@@ -375,7 +375,7 @@ router.get('/data', async (req, res) => {
   } catch (error) {
     console.error('❌ Error in GET /data:', error.message);
     console.error('❌ Error details:', error.response?.data || error);
-    
+
     res.status(500).json({
       success: false,
       error: error.message,
@@ -388,7 +388,7 @@ router.get('/data', async (req, res) => {
 router.post('/sync', async (req, res) => {
   try {
     const { roomDetails } = req.body;
-    
+
     if (!roomDetails || !Array.isArray(roomDetails)) {
       return res.status(400).json({
         success: false,
@@ -411,21 +411,21 @@ router.put('/update-status/:recordId', async (req, res) => {
   try {
     const { recordId } = req.params;
     const { statusType, newStatus } = req.body;
-    
+
     console.log(`🔄 Updating ${statusType} status for record ${recordId} to: ${newStatus}`);
-    
+
     if (!recordId || !statusType || !newStatus) {
       return res.status(400).json({
         success: false,
         error: 'Missing required parameters: recordId, statusType, newStatus'
       });
     }
-    
+
     // Note: Room Details Teable only has Available/Reserved/Blocked fields
     // HW/HK status updates should go to the main cleaning status table
     // For now, we'll return success but log that this needs proper implementation
     console.log('⚠️ HW/HK status updates need to be implemented in cleaning status table');
-    
+
     res.json({
       success: true,
       message: 'Status update received (implementation pending for cleaning status table)',
@@ -446,11 +446,11 @@ router.put('/update-status/:recordId', async (req, res) => {
 router.get('/test', async (req, res) => {
   try {
     console.log('🧪 Testing room details Teable connection...');
-    
+
     // Test 1: Fetch existing records
     const records = await fetchAllRoomDetailRecords();
     console.log(`✅ Successfully fetched ${records.length} records`);
-    
+
     // Test 2: Create a sample record
     const testData = {
       apartmentName: 'Test Apartment 101',
@@ -458,10 +458,10 @@ router.get('/test', async (req, res) => {
       reserved: 0,
       blocked: 0
     };
-    
+
     const newRecord = await createRoomDetailRecord(testData);
     console.log('✅ Successfully created test record:', newRecord.id);
-    
+
     res.json({
       success: true,
       message: 'Teable connection test successful',
@@ -483,7 +483,7 @@ router.post('/auto-populate-room-types', async (req, res) => {
   try {
     console.log('🚀 Auto-populate room types endpoint called');
     const result = await autoPopulateRoomTypes();
-    
+
     res.json({
       success: true,
       message: 'Room types auto-populated successfully',
@@ -503,24 +503,25 @@ router.post('/auto-populate-room-types', async (req, res) => {
 router.post('/manual-sync', async (req, res) => {
   try {
     console.log('🚀 Manual room details sync endpoint called');
-    
+
     // Fetch occupancy data
-    const occupancyResponse = await fetch('http://localhost:5000/api/occupancy/current', {
+    const apiUrl = process.env.API_URL || 'http://localhost:5000';
+    const occupancyResponse = await fetch(`${apiUrl}/api/occupancy/current`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
     if (!occupancyResponse.ok) {
       throw new Error(`Failed to fetch occupancy data: ${occupancyResponse.status}`);
     }
-    
+
     const occupancyData = await occupancyResponse.json();
     const availabilityData = occupancyData.data || occupancyData;
-    
+
     if (!availabilityData.roomTypes) {
       throw new Error('No roomTypes data in occupancy response');
     }
-    
+
     // Collect apartments
     const allApartments = [];
     for (const roomType of availabilityData.roomTypes) {
@@ -530,7 +531,7 @@ router.post('/manual-sync', async (req, res) => {
           ...(roomType.apartments.reserved || []),
           ...(roomType.apartments.blocked || [])
         ];
-        
+
         apartments.forEach(apt => {
           allApartments.push({
             apartmentName: apt.internalName || apt.name,
@@ -542,12 +543,12 @@ router.post('/manual-sync', async (req, res) => {
         });
       }
     }
-    
+
     console.log(`📤 Syncing ${allApartments.length} apartments to Teable...`);
-    
+
     // Sync to Teable
     const syncResult = await syncRoomDetailsToTeable(allApartments);
-    
+
     res.json({
       success: true,
       message: 'Manual sync completed',

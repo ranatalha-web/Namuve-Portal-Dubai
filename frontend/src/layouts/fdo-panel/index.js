@@ -2398,7 +2398,8 @@ ReservationCard.propTypes = {
   hasPermission: PropTypes.func.isRequired,
 };
 
-function KanbanView() {
+// Restore Component Definition
+function FDOPanel() {
   const { user, isAuthenticated, loading: authLoading, isViewOnly, isCustom, hasPermission } = useAuth();
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav } = controller;
@@ -2409,7 +2410,7 @@ function KanbanView() {
   const [syncing, setSyncing] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
   const [prevCount, setPrevCount] = useState(0);
 
   // 🔔 Notification Stack State
@@ -2758,11 +2759,7 @@ function KanbanView() {
     agent: "Agent",
   };
 
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "info", // "success", "error", "warning", "info"
-  });
+  // Duplicate snackbar removed
 
   // 🕒 Countdown Timer for Cooldown
   useEffect(() => {
@@ -3197,9 +3194,178 @@ function KanbanView() {
 
 
   const refresh = () => {
-    // your actual card refresh logic (API call, reload, etc.)
     window.location.reload();
   };
+
+  // 🔥 SYNC LOGIC (Ported from Daily Revenue.js)
+  const performRevenueSync = async () => {
+    // Only run if not already syncing or recently synced (simple debounce ref could be used, but state is fine here)
+    if (syncing) return;
+    setSyncing(true);
+
+    try {
+      const HOSTAWAY_API = "https://api.hostaway.com/v1";
+      const HOSTAWAY_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI4MDA2NiIsImp0aSI6ImNhYzRlNzlkOWVmZTBiMmZmOTBiNzlkNTEzYzIyZTU1MDhiYWEwNWM2OGEzYzJhNTU1ZmMzNDI4OTQ1OTg2YWI0NTVjNmJjOWViZjFkIiwiaWF0IjoxNzM2MTY3ODExLjgzNTUyNCwibmJmIjoxNzM2MTY3ODExLjgzNTUyNiwiZXhwIjoyMDUxNzAwNjExLjgzNTUzMSwic3ViIjoiIiwic2NvcGVzIjpbImdlbmVyYWwiXSwic2VjcmV0SWQiOjUzOTUyfQ.Mmqfwt5R4CK5AHwNQFfe-m4PXypLLbAPtzCD7CxgjmagGa0AWfLzPM_panH9fCbYbC1ilNpQ-51KOQjRtaFT3vR6YKEJAUkUSOKjZupQTwQKf7QE8ZbLQDi0F951WCPl9uKz1nELm73V30a8rhDN-97I43FWfrGyqBgt7F8wPkE";
+      const TEABLE_ID = "tblPy1RCMsG6ENSR51P";
+      const TEABLE_TOKEN = "teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=";
+      const GOOGLE_CHAT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAQAJTz5pOE/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=AoVCv_wZE_MTAcVmQyepspMe1yUeXt2EEFod15iqzg";
+
+      console.log("FDO Sync: Starting...");
+
+      // 1. Fetch Listings (for UAE filter)
+      const listingsRes = await fetch(`${HOSTAWAY_API}/listings`, {
+        headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` }
+      });
+      const listingsData = await listingsRes.json();
+      const listingsMap = (listingsData.result || []).reduce((acc, l) => ({ ...acc, [l.id]: l }), {});
+      console.log("FDO Debug: Listings fetched:", Object.keys(listingsMap).length);
+
+      // 2. Fetch Reservations
+      const todayStr = dayjs().format("YYYY-MM-DD");
+      const todayDate = dayjs(todayStr); // 00:00:00 local
+      console.log("FDO Debug: Today Date:", todayStr);
+
+      const endDate = dayjs().add(60, 'days').format("YYYY-MM-DD");
+
+      const res = await fetch(`${HOSTAWAY_API}/reservations?includeResources=1&departureDate=${todayStr}&departureDateTo=${endDate}&limit=1000`, {
+        headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` }
+      });
+      const data = await res.json();
+      let reservations = data.result || [];
+      console.log("FDO Debug: Raw Reservations:", reservations.length);
+
+      // 3. Filter Reservations (Standardized Logic - MATCHING TEST PAGE)
+      const filtered = reservations.filter(r => {
+        // Time Filter (String Comparison - Tested & Working)
+        const arrival = r.arrivalDate; // YYYY-MM-DD
+        const departure = r.departureDate; // YYYY-MM-DD
+
+        const isWithinStayPeriod = (todayStr >= arrival && todayStr < departure);
+        const isDepartureToday = (todayStr === departure);
+        const isTimeMatch = isWithinStayPeriod || isDepartureToday;
+
+        // Status Filter
+        const status = (r.status || "").toLowerCase();
+        const isStatusMatch = (status === "new" || status === "modified");
+
+        // UAE Filter
+        const listing = listingsMap[r.listingMapId] || {};
+        const isUAE = (listing.countryCode || "").toUpperCase() === "AE";
+
+        // Debug failure reason for first few
+        if (reservations.indexOf(r) < 3) console.log("FDO Debug: Item Check:", { id: r.id, today: todayStr, arr: arrival, dep: departure, match: isTimeMatch, status: isStatusMatch, country: listing.countryCode });
+
+        return isTimeMatch && isStatusMatch && isUAE;
+      });
+      console.log(`FDO Sync: Found ${filtered.length} applicable reservations`);
+
+      // 4. Fetch Finance Data
+      const financePromises = filtered.map(async (r) => {
+        try {
+          const finRes = await fetch(`${HOSTAWAY_API}/financeStandardField/reservation/${r.id}`, {
+            headers: { Authorization: `Bearer ${HOSTAWAY_TOKEN}` }
+          });
+          const finData = await finRes.json();
+          return {
+            ...r,
+            baseRate: parseFloat(finData.result?.baseRate || 0) // Exact Test Page Logic
+          };
+        } catch (e) { return { ...r, baseRate: 0 }; }
+      });
+      const enrichedReservations = await Promise.all(financePromises);
+      console.log("FDO Debug: Enriched Bases:", enrichedReservations.map(r => r.baseRate));
+
+      // 5. Calculate Totals
+      let totalBase = 0;
+      let totalDailyRevenue = 0;
+      enrichedReservations.forEach(r => {
+        totalBase += r.baseRate;
+
+        // Use reservation.nights if available (Test Page Logic), otherwise calculate
+        let nights = r.nights || 0;
+        if (nights <= 0) {
+          nights = Math.max(1, dayjs(r.departureDate).diff(dayjs(r.arrivalDate), 'day'));
+        }
+        const dailyRate = (nights > 0) ? (r.baseRate / nights) : 0;
+        totalDailyRevenue += dailyRate;
+      });
+
+      // 6. Sync to Teable
+      let currentRecordId = localStorage.getItem("teable_sync_id");
+      const storedDate = localStorage.getItem("teable_sync_date");
+      if (storedDate !== todayStr) currentRecordId = null; // Reset if new day
+
+      let wasPatchSuccessful = false;
+
+      // Payload Fields
+      const fields = {
+        "Base Rate Total": totalBase.toFixed(2),
+        "Daily Revenue Total ": totalDailyRevenue.toFixed(2)
+      };
+
+      if (currentRecordId) {
+        // Try PATCH
+        const patchRes = await fetch(`https://teable.namuve.com/api/table/${TEABLE_ID}/record/${currentRecordId}`, {
+          method: "PATCH",
+          headers: { "Authorization": `Bearer ${TEABLE_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ record: { fields } })
+        });
+        if (patchRes.ok) wasPatchSuccessful = true;
+        else if (patchRes.status === 404) {
+          currentRecordId = null;
+          localStorage.removeItem("teable_sync_id");
+        }
+      }
+
+      if (!currentRecordId && !wasPatchSuccessful) {
+        // POST
+        const postRes = await fetch(`https://teable.namuve.com/api/table/${TEABLE_ID}/record`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${TEABLE_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ records: [{ fields }] })
+        });
+        const postData = await postRes.json();
+        if (postData.records?.[0]?.id) {
+          currentRecordId = postData.records[0].id;
+          localStorage.setItem("teable_sync_date", todayStr);
+          localStorage.setItem("teable_sync_id", currentRecordId);
+        }
+      }
+
+      // 7. Webhook Alert - DISABLED
+      // await fetch(GOOGLE_CHAT_WEBHOOK, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //      text: `✅ **Daily Revenue Synced (FDO Panel)!**\n\n**Date:** ${todayStr}\n**Base Rate:** ${totalBase.toFixed(2)}\n**Revenue:** ${totalDailyRevenue.toFixed(2)}\n**Status:** ${wasPatchSuccessful ? "Updated" : "Created"}`
+      //   })
+      // });
+
+      setSnackbar({
+        open: true,
+        message: "Synced Successfully!",
+        severity: "success"
+      });
+
+    } catch (err) {
+      console.error("FDO Sync Error:", err);
+      setSnackbar({
+        open: true,
+        message: `Sync Error: ${err.message}`,
+        severity: "warning"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Auto-run Sync on mount
+  useEffect(() => {
+    // const timer = setTimeout(() => {
+    //   performRevenueSync();
+    // }, 2000);
+    // return () => clearTimeout(timer);
+  }, []); // Run once on mount
 
   const handleSync = async () => {
     // Prevent view_only users and custom users without complete access from syncing
@@ -3283,11 +3449,6 @@ function KanbanView() {
           open: true,
           message: "Network error: Please check your internet connection.",
           severity: "error",
-        });
-      } else if (error.message.includes("Webhook failed")) {
-        setSnackbar({
-          open: true,
-          message: "Server error: Webhook failed. Please try again later.",
           severity: "error",
         });
       } else {
@@ -3297,10 +3458,8 @@ function KanbanView() {
           severity: "error",
         });
       }
-    } finally {
-      console.log("✅ Sync finished — resetting syncing state.");
-      setSyncing(false);
     }
+
   };
 
 
@@ -4803,4 +4962,4 @@ function KanbanView() {
   );
 }
 
-export default KanbanView;
+export default FDOPanel;

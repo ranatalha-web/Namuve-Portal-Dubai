@@ -120,6 +120,20 @@ function AppContent() {
     };
   }, []);
 
+  // Automatic URL Cleanup: Remove duplicate hash fragments (e.g. /path#/path)
+  useEffect(() => {
+    if (window.location.hash) {
+      const currentPath = window.location.pathname;
+      const hash = window.location.hash.substring(1); // Remove '#'
+
+      // If the hash is essentially the same as the path (common with Router switching artifact)
+      if (currentPath === hash || hash.includes(currentPath) || currentPath.includes(hash)) {
+        // Clean the URL by removing the hash
+        window.history.replaceState(null, "", currentPath);
+      }
+    }
+  }, [pathname]);
+
   // Check if current route is authentication page
   const isAuthPage = pathname.includes("/authentication/");
 
@@ -224,6 +238,7 @@ function AppContent() {
           <Routes>
             {getRoutes(roleBasedRoutes)}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+            <Route path="*" element={<Navigate to={getDefaultRedirect()} replace />} />
           </Routes>
         ) : (
           <Routes>
@@ -264,6 +279,7 @@ function AppContent() {
         <Routes>
           {getRoutes(roleBasedRoutes)}
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+          <Route path="*" element={<Navigate to={getDefaultRedirect()} replace />} />
         </Routes>
       ) : (
         <Routes>

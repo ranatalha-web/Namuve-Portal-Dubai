@@ -1,14 +1,21 @@
 // Material Dashboard 2 React layouts
+import { Navigate } from "react-router-dom";
 import FDOPanel from "layouts/fdo-panel";
 import Dashboard from "layouts/dashboard";
 import Tables from "layouts/tables";
 import Revenue from "layouts/Revenue";
+import DailyRevenue from "layouts/Revenue/Daily Revenue";
+import Test from "layouts/test";
 import RTL from "layouts/rtl";
 import Profile from "layouts/Rooms";
 import SignIn from "layouts/authentication/sign-in";
 import ForgotPassword from "layouts/forgot-password";
 import AdminPanel from "layouts/admin-panel";
 import Payments from "layouts/payments";
+import Listing from "layouts/listing";
+import Charges from "layouts/charges";
+import Reservations from "layouts/reservations";
+
 
 // @mui icons
 import Icon from "@mui/material/Icon";
@@ -178,6 +185,7 @@ const routes = [
     route: "/rooms",
     component: <Profile />,
   },
+
   // 4. Admin Panel (Fourth in sidebar)
   {
     type: "collapse",
@@ -187,7 +195,16 @@ const routes = [
     route: "/admin-panel",
     component: <AdminPanel />,
   },
-  // 5. Reset Password (Fifth in sidebar)
+  // 5. Reservations (Fifth in sidebar)
+  {
+    type: "hidden",
+    name: "Reservations",
+    key: "reservations",
+    icon: <Icon fontSize="small">event</Icon>,
+    route: "/reservations",
+    component: <Navigate to="/fdo-panel" replace />,
+  },
+  // 6. Reset Password (Sixth in sidebar)
   {
     type: "collapse",
     name: "Reset Password",
@@ -205,6 +222,28 @@ const routes = [
     route: "/logout",
     component: null, // This will be handled by the sidebar component
   },
+  /*
+  // 7. Listings (Hidden)
+  {
+    type: "hidden",
+    name: "Listings",
+    key: "listings",
+    icon: <Icon fontSize="small">apartment</Icon>,
+    route: "/listings",
+    component: <Listing />,
+  },
+  */
+  /*
+  // 8. Charges (Hidden)
+  {
+    type: "hidden",
+    name: "Charges",
+    key: "charges",
+    icon: <Icon fontSize="small">receipt</Icon>,
+    route: "/charges",
+    component: <Charges />,
+  },
+  */
   // Hidden routes (not shown in sidebar)
   {
     type: "hidden",
@@ -214,6 +253,17 @@ const routes = [
     route: "/dashboard",
     component: <Dashboard />,
   },
+  /*
+  {
+    type: "hidden",
+    name: "Test",
+    key: "test",
+    icon: <Icon fontSize="small">science</Icon>,
+    route: "/test",
+    component: <Test />,
+    // role: ["admin", "super-admin"], // Restricted to admins
+  },
+  */
   {
     type: "hidden",
     name: "Tables",
@@ -237,6 +287,14 @@ const routes = [
     icon: <Icon fontSize="small">login</Icon>,
     route: "/authentication/sign-in",
     component: <SignIn />,
+  },
+  {
+    type: "hidden",
+    name: "Daily Revenue",
+    key: "daily-revenue",
+    icon: <Icon fontSize="small">receipt</Icon>,
+    route: "/daily-revenue",
+    component: <DailyRevenue />,
   },
 ];
 

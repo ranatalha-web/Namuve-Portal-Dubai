@@ -7,7 +7,7 @@ class TeableSchedulerService {
     this.intervals = [];
     this.isRunning = false;
     this.SYNC_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
-    this.BASE_URL = 'http://localhost:5000';
+    this.BASE_URL = process.env.API_URL || 'http://localhost:5000';
     this.HOSTAWAY_AUTH_TOKEN = config.HOSTAWAY_AUTH_TOKEN;
   }
 
@@ -52,7 +52,7 @@ class TeableSchedulerService {
     // Check Airbnb summary
     if (listingDetails?.airbnbSummary) {
       const summary = listingDetails.airbnbSummary.toLowerCase();
-      
+
       if (summary.includes('studio') || summary.includes('0 bedroom')) {
         return 'Studio';
       } else if (summary.includes('3 bedroom') || summary.includes('3-bedroom')) {
@@ -96,7 +96,7 @@ class TeableSchedulerService {
   async syncRooms() {
     try {
       console.log('🏠 Fetching occupancy data...');
-      
+
       const response = await fetch(`${this.BASE_URL}/api/occupancy/current`, {
         method: 'GET',
         headers: {
@@ -135,7 +135,7 @@ class TeableSchedulerService {
   async syncRoomAvailability() {
     try {
       console.log('📊 Fetching room availability data...');
-      
+
       const response = await fetch(`${this.BASE_URL}/api/rooms/availability`, {
         method: 'GET',
         headers: {
@@ -148,7 +148,7 @@ class TeableSchedulerService {
       }
 
       const data = await response.json();
-      
+
       if (!data.success || !data.data) {
         throw new Error('Invalid availability data format');
       }
@@ -181,7 +181,7 @@ class TeableSchedulerService {
 
       const syncResult = await syncResponse.json();
       console.log('✅ Room availability synced:', syncResult);
-      
+
       // Return both the sync result and the full data for room details sync
       return { syncResult, fullData: data.data };
 
@@ -195,14 +195,14 @@ class TeableSchedulerService {
   async syncRoomDetails(availabilityData) {
     try {
       console.log('🏢 Syncing room details to Teable...');
-      
+
       if (!availabilityData || !availabilityData.roomTypes) {
         throw new Error('No availability data provided for room details sync');
       }
 
       // Collect all apartments from all room types
       const allApartments = [];
-      
+
       for (const roomType of availabilityData.roomTypes) {
         if (roomType.apartments) {
           // Combine available, reserved, and blocked apartments
@@ -211,14 +211,14 @@ class TeableSchedulerService {
             ...(roomType.apartments.reserved || []),
             ...(roomType.apartments.blocked || [])
           ];
-          
+
           for (const apt of apartments) {
             const apartmentName = apt.internalName || apt.name;
-            
+
             // Use the room type from availability data
             // This is already correctly determined from bedroomsNumber in the occupancy API
             const category = roomType.roomType;
-            
+
             allApartments.push({
               apartmentName: apartmentName,
               category: category,
@@ -259,7 +259,7 @@ class TeableSchedulerService {
   async syncYesterdayTodayReservations() {
     try {
       console.log('📅 Syncing yesterday/today reservations...');
-      
+
       const response = await fetch(`${this.BASE_URL}/api/teable-room/sync`, {
         method: 'POST',
         headers: {

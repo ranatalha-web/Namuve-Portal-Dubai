@@ -24,6 +24,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Verify Captcha (Skip for admin bypass or if not required in dev)
+    if (req.body.captchaToken) {
+      await authService.verifyCaptcha(req.body.captchaToken);
+    } else if (process.env.NODE_ENV === 'production') {
+      // In production, captcha is mandatory
+      return res.status(400).json({
+        success: false,
+        message: 'Captcha verification is required'
+      });
+    }
+
     console.log(`🔑 Login attempt for user: ${username}`);
 
     // Authenticate user
@@ -39,7 +50,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Password Reset Route
+// Password Reset Route (Old Method)
 router.post('/reset-password', async (req, res) => {
   try {
     const { username, newPassword, verifyPassword } = req.body;
@@ -60,6 +71,58 @@ router.post('/reset-password', async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error('❌ Password reset error:', error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Request Password Reset Link
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username is required'
+      });
+    }
+
+    const origin = req.get('origin');
+    const result = await authService.requestPasswordReset(username, origin);
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Forgot Password Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Reset Password with Token
+router.post('/reset-password-with-token', async (req, res) => {
+  try {
+    const { token, code, newPassword } = req.body;
+
+    // Accept both 'token' and 'code' for backwards compatibility
+    const resetToken = token || code;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token and new password are required'
+      });
+    }
+
+    const result = await authService.resetPasswordWithToken(resetToken, newPassword);
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Reset Password Token Error:', error.message);
     res.status(400).json({
       success: false,
       message: error.message
@@ -351,7 +414,7 @@ router.put('/admin/update-username', async (req, res) => {
   try {
     // Get parameters
     const { adminPassword, oldUsername, newUsername } = req.body;
-    
+
     // Skip admin verification if bypass is used
     if (adminPassword !== "bypass") {
       const isValidAdmin = await authService.verifyAdminPassword(adminPassword);

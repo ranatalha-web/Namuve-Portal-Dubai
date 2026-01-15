@@ -25,20 +25,20 @@ const originalConsole = {
  * Disable all console methods
  */
 export const disableConsole = () => {
-  console.log = () => {};
-  console.error = () => {};
-  console.warn = () => {};
-  console.info = () => {};
-  console.debug = () => {};
-  console.trace = () => {};
-  console.table = () => {};
-  console.group = () => {};
-  console.groupEnd = () => {};
-  console.groupCollapsed = () => {};
-  console.time = () => {};
-  console.timeEnd = () => {};
-  console.count = () => {};
-  console.assert = () => {};
+  console.log = () => { };
+  console.error = () => { };
+  console.warn = () => { };
+  console.info = () => { };
+  console.debug = () => { };
+  console.trace = () => { };
+  console.table = () => { };
+  console.group = () => { };
+  console.groupEnd = () => { };
+  console.groupCollapsed = () => { };
+  console.time = () => { };
+  console.timeEnd = () => { };
+  console.count = () => { };
+  console.assert = () => { };
 };
 
 /**
@@ -62,6 +62,7 @@ export const enableConsole = () => {
 };
 
 // Auto-disable console on import (for silent mode)
+// TEMPORARILY DISABLED FOR DEBUGGING
 disableConsole();
 
 export default { disableConsole, enableConsole };

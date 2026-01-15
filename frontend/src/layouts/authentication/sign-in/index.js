@@ -21,6 +21,7 @@ import { Link, useNavigate } from "react-router-dom";
 // Authentication context
 import { useAuth } from "context/AuthContext";
 import { API_ENDPOINTS } from "config/api";
+import ReCAPTCHA from "react-google-recaptcha";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -74,6 +75,16 @@ function Basic() {
     error: "",
     success: false,
   });
+
+  const [captchaValue, setCaptchaValue] = useState(null);
+
+  const handleCaptchaChange = (value) => {
+    setCaptchaValue(value);
+    // Clear error if present
+    if (loginState.error === "Please complete the captcha verification") {
+      setLoginState({ ...loginState, error: "" });
+    }
+  };
 
   const handleInputChange = (field) => (event) => {
     setFormData({
@@ -179,6 +190,11 @@ function Basic() {
       return;
     }
 
+    if (!captchaValue) {
+      setLoginState({ ...loginState, error: "Please complete the captcha verification" });
+      return;
+    }
+
     setLoginState({ loading: true, error: "", success: false });
 
     // Retry logic for network failures
@@ -199,6 +215,7 @@ function Basic() {
           body: JSON.stringify({
             username: formData.username,
             password: formData.password,
+            captchaToken: captchaValue,
           }),
           signal: controller.signal,
         });
@@ -441,6 +458,13 @@ function Basic() {
                 >
                   {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                 </IconButton>
+              </MDBox>
+
+              <MDBox mb={3} display="flex" justifyContent="center">
+                <ReCAPTCHA
+                  sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || "6LdLyUcsAAAAAEtgOk5bl0E-7pzRRk1Exku1kqV5"}
+                  onChange={handleCaptchaChange}
+                />
               </MDBox>
 
               {/* Login Button */}
