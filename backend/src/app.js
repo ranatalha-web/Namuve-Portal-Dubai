@@ -7,7 +7,7 @@
 
 const ENABLE_LOGS = process.env.ENABLE_LOGS !== undefined
   ? process.env.ENABLE_LOGS === 'true'
-  : true; // Default: logs disabled
+  : false; // Default: logs disabled
 
 // Store original console methods
 const originalConsole = {

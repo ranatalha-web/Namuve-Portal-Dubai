@@ -63,6 +63,6 @@ export const enableConsole = () => {
 
 // Auto-disable console on import (for silent mode)
 // TEMPORARILY DISABLED FOR DEBUGGING
-// disableConsole(); // ← DISABLED to enable console logs for debugging
+disableConsole();
 
 export default { disableConsole, enableConsole };
