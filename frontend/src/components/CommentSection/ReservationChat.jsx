@@ -74,7 +74,7 @@ export default function ReservationChat({ guest, bookingDate }) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": "Bearer aiacw3yepjrepghcqs9uk9j8ya"
+                    "Authorization": "Bearer 1rsw5cn8s7rzzjj3r9je87hmme"
                 },
                 body: JSON.stringify({
                     channel_id: "bzfgc4geb7ff7enequamjc3fqy",
