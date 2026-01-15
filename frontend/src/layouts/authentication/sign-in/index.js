@@ -462,7 +462,7 @@ function Basic() {
 
               <MDBox mb={3} display="flex" justifyContent="center">
                 <ReCAPTCHA
-                  sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY || "6LdLyUcsAAAAAEtgOk5bl0E-7pzRRk1Exku1kqV5"}
+                  sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY}
                   onChange={handleCaptchaChange}
                 />
               </MDBox>
