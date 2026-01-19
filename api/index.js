@@ -22,6 +22,18 @@ try {
 // Vercel serverless function handler
 module.exports = (req, res) => {
     console.log(`📨 Request received: ${req.method} ${req.url}`);
+
+    // Vercel might strip the /api prefix for index.js routes
+    // Ensure the URL starts with /api so Express router matches it
+    if (!req.url.startsWith('/api/') && req.url.startsWith('/')) {
+        req.url = '/api' + req.url;
+        console.log(`🔧 Fixed URL to: ${req.url}`);
+    } else if (!req.url.startsWith('/')) {
+        // If it's just "auth/login", fix it
+        req.url = '/api/' + req.url;
+        console.log(`🔧 Fixed URL (no slash) to: ${req.url}`);
+    }
+
     // Pass to Express app
     return app(req, res);
 };
