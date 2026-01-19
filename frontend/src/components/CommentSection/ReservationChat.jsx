@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "context/AuthContext";
 import "./CommentSection.css";
 import dayjs from "dayjs";
+import { useMediaQuery } from "@mui/material";
 
 export default function ReservationChat({ guest, bookingDate }) {
     const { user } = useAuth();
@@ -402,6 +403,8 @@ export default function ReservationChat({ guest, bookingDate }) {
         return dayjs(date).format("MMM D, YYYY [at] h:mm A");
     };
 
+    const isMobile = useMediaQuery("(max-width:600px)");
+
     /* ------------------------------------------------- RENDER ------------------------------------------------- */
     return (
         <div className="d-flex flex-column h-100" style={{ backgroundColor: "#ffffff" }}>
@@ -422,7 +425,7 @@ export default function ReservationChat({ guest, bookingDate }) {
             </div>
 
             {/* 2) SCROLLABLE LIST */}
-            <div className="flex-grow-1 px-3 py-3" style={{ overflowY: "auto", minHeight: 0 }}>
+            <div className="flex-grow-1 pr-3 pl-0 py-3" style={{ overflowY: "auto", minHeight: 0, paddingBottom: isMobile ? "140px" : "16px" }}>
                 {fetching ? (
                     <div className="d-flex justify-content-center align-items-center h-50">
                         <span className="spinner-border spinner-border-sm text-muted mr-2"></span>
@@ -638,7 +641,22 @@ export default function ReservationChat({ guest, bookingDate }) {
             </div>
 
             {/* 3) FIXED BOTTOM INPUT */}
-            <div className="px-3 pt-2 pb-3 bg-white border-top">
+            <div
+                className="px-3 pt-2 pb-3 bg-white border-top"
+                style={isMobile ? {
+                    position: "fixed",
+                    bottom: "65px",
+                    left: 0,
+                    right: 0,
+                    zIndex: 9999,
+                    borderTop: "1px solid #dee2e6",
+                    boxShadow: "0 -2px 10px rgba(0,0,0,0.05)"
+                } : {
+                    position: "sticky",
+                    bottom: 0,
+                    zIndex: 20
+                }}
+            >
                 <div className="d-flex align-items-center w-100 position-relative">
                     <input
                         type="text"

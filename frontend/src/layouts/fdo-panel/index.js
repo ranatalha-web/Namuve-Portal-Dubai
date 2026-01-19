@@ -2014,7 +2014,23 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         </MDBox>
       </MDBox >
       {/* Preview Dialog */}
-      < Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth >
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            // Full screen on mobile
+            width: { xs: "100%", sm: "auto" },
+            height: { xs: "100%", sm: "auto" },
+            margin: { xs: 0, sm: 3 },
+            maxWidth: { xs: "100%", sm: "lg" },
+            maxHeight: { xs: "100%", sm: "calc(100% - 64px)" },
+            borderRadius: { xs: 0, sm: 4 }, // Remove border radius on mobile
+          }
+        }}
+      >
         <DialogTitle
           sx={{
             display: "flex",
