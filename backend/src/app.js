@@ -57,6 +57,31 @@ const { getSafeError } = require("./utils/sanitizer");
 
 const app = express();
 
+// DEBUG: Log all requests matching Vercel handling
+app.use((req, res, next) => {
+  console.log(`🔍 EXPRESS RECEIVED: ${req.method} ${req.url}`);
+  next();
+});
+
+// DEBUG: List all routes
+app.get('/api/debug-routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) { // routes registered directly on the app
+      routes.push(middleware.route.path);
+    } else if (middleware.name === 'router') { // router middleware 
+      // This is a bit complex to unroll, just showing we have routers
+      routes.push(`Router matching ${middleware.regexp}`);
+    }
+  });
+  res.json({
+    message: "Route List",
+    routes: routes,
+    url_received: req.url,
+    original_url: req.originalUrl
+  });
+});
+
 // Environment-based CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
