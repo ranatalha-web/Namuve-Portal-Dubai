@@ -16,9 +16,17 @@ const getApiBaseUrl = () => {
     return `${protocol}//${hostname}`;
   }
 
+  // Vercel Deployments - MUST point to the external backend
+  if (hostname.includes('vercel.app')) {
+    // Return the production backend URL
+    // NOTE: Mixed content (HTTP backend on HTTPS frontend) might be an issue
+    // Ideally backend should be HTTPS
+    return 'http://137.184.14.198:5000';
+  }
+
   // If not localhost, assume it's production and use same protocol
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // For other domains, use same protocol and domain
+    // For other domains (like portal.namuve.com), use same protocol and domain
     return `${protocol}//${hostname}`;
   }
 
