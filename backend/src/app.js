@@ -482,12 +482,15 @@ app.use((error, req, res, next) => {
 });
 
 // Start the schedulers automatically when the app is loaded
-setTimeout(() => {
-  console.log('🚀 Starting Teable hourly scheduler automatically...');
-  schedulerService.start();
+// BUT skip this on Vercel to prevent frozen functions or timeouts
+if (!process.env.VERCEL) {
+  setTimeout(() => {
+    console.log('🚀 Starting Teable hourly scheduler automatically...');
+    schedulerService.start();
 
-  console.log('🚀 Starting Teable 10-minute auto-sync scheduler...');
-  teableScheduler.start();
-}, 2000); // Wait 2 seconds after app initialization
+    console.log('🚀 Starting Teable 10-minute auto-sync scheduler...');
+    teableScheduler.start();
+  }, 2000); // Wait 2 seconds after app initialization
+}
 
 module.exports = app;
