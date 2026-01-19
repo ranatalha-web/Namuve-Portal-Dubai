@@ -614,7 +614,8 @@ export default function ReservationChat({ guest, bookingDate }) {
                                                     borderColor: "#5e6b47",
                                                     right: "6px",
                                                     top: "50%",
-                                                    transform: "translateY(-50%)"
+                                                    transform: "translateY(-50%)",
+                                                    zIndex: 10,
                                                 }}
                                             >
                                                 {replyingLoading ? (
