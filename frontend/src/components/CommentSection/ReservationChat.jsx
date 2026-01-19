@@ -585,9 +585,16 @@ export default function ReservationChat({ guest, bookingDate }) {
 
                                     {/* REPLY INPUT FIELD */}
                                     {replyingTo === c.id && (
-                                        <div className="mt-3 position-relative">
+                                        <div
+                                            className="mt-3 d-flex align-items-center bg-white"
+                                            style={{
+                                                border: "1px solid #5e6b47",
+                                                borderRadius: "12px",
+                                                padding: "4px 8px"
+                                            }}
+                                        >
                                             <textarea
-                                                className="form-control form-control-sm"
+                                                className="form-control form-control-sm border-0 shadow-none bg-transparent"
                                                 rows="1"
                                                 placeholder="Write a reply..."
                                                 value={replyText}
@@ -596,13 +603,10 @@ export default function ReservationChat({ guest, bookingDate }) {
                                                 style={{
                                                     resize: "none",
                                                     fontSize: "0.85rem",
-                                                    borderRadius: "12px",
-                                                    borderColor: "#5e6b47",
-                                                    paddingRight: "40px"
                                                 }}
                                             />
                                             <button
-                                                className="btn btn-primary d-flex align-items-center justify-content-center p-0 position-absolute"
+                                                className="btn btn-primary d-flex align-items-center justify-content-center p-0 flex-shrink-0"
                                                 onClick={() => handleReply(c)}
                                                 disabled={!replyText.trim() || replyingLoading}
                                                 style={{
@@ -612,10 +616,7 @@ export default function ReservationChat({ guest, bookingDate }) {
                                                     minWidth: "32px",
                                                     backgroundColor: "#5e6b47",
                                                     borderColor: "#5e6b47",
-                                                    right: "6px",
-                                                    top: "50%",
-                                                    transform: "translateY(-50%)",
-                                                    zIndex: 10,
+                                                    marginLeft: "8px"
                                                 }}
                                             >
                                                 {replyingLoading ? (
