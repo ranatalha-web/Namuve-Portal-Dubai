@@ -293,7 +293,16 @@ class AuthService {
   async logLoginAttempt(username, enteredPassword, status) {
     try {
       // Encrypt the entered password before storing
-      const encryptedPassword = enteredPassword ? passwordEncryption.encryptPasswordReversible(enteredPassword) : '';
+      let encryptedPassword = '';
+
+      try {
+        encryptedPassword = enteredPassword ? passwordEncryption.encryptPasswordReversible(enteredPassword) : '';
+      } catch (encryptionError) {
+        console.error('❌ Password encryption failed in logLoginAttempt:', encryptionError.message);
+        console.error('❌ Stack:', encryptionError.stack);
+        // Store as empty string if encryption fails - don't crash the login
+        encryptedPassword = '';
+      }
 
       const loginData = {
         records: [{
@@ -536,8 +545,19 @@ class AuthService {
   async logPasswordReset(username, newPassword, verifyPassword, status) {
     try {
       // Encrypt passwords before storing (using reversible encryption for decryption capability)
-      const encryptedNewPassword = newPassword ? passwordEncryption.encryptPasswordReversible(newPassword) : '';
-      const encryptedVerifyPassword = verifyPassword ? passwordEncryption.encryptPasswordReversible(verifyPassword) : '';
+      let encryptedNewPassword = '';
+      let encryptedVerifyPassword = '';
+
+      try {
+        encryptedNewPassword = newPassword ? passwordEncryption.encryptPasswordReversible(newPassword) : '';
+        encryptedVerifyPassword = verifyPassword ? passwordEncryption.encryptPasswordReversible(verifyPassword) : '';
+      } catch (encryptionError) {
+        console.error('❌ Password encryption failed in logPasswordReset:', encryptionError.message);
+        console.error('❌ Stack:', encryptionError.stack);
+        // Store as empty string if encryption fails
+        encryptedNewPassword = '';
+        encryptedVerifyPassword = '';
+      }
 
       const resetData = {
         records: [{
