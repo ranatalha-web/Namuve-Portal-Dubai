@@ -19,9 +19,8 @@ const getApiBaseUrl = () => {
   // Vercel Deployments - MUST point to the external backend
   if (hostname.includes('vercel.app')) {
     // Return the production backend URL
-    // NOTE: Mixed content (HTTP backend on HTTPS frontend) might be an issue
-    // Ideally backend should be HTTPS
-    return 'http://137.184.14.198:5000';
+    // MUST be HTTPS to avoid Mixed Content errors
+    return 'https://portal.namuve.com';
   }
 
   // If not localhost, assume it's production and use same protocol
