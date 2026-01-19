@@ -344,11 +344,11 @@ function Basic() {
                     fontSize: "0.875rem",
                   }}
                 >
-                  Username
+                  Username or email address
                 </MDTypography>
                 <MDInput
                   type="text"
-                  placeholder="Username"
+                  placeholder="Username or email address"
                   fullWidth
                   autoComplete="username"
                   value={formData.username}

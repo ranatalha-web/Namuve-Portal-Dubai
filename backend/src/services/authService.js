@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const config = require('../config/config');
 const { getSafeError } = require('../utils/sanitizer');
+const passwordEncryption = require('../utils/passwordEncryption');
 
 class AuthService {
   constructor() {
@@ -291,11 +292,23 @@ class AuthService {
   // Log login attempt
   async logLoginAttempt(username, enteredPassword, status) {
     try {
+      // Encrypt the entered password before storing
+      let encryptedPassword = '';
+
+      try {
+        encryptedPassword = enteredPassword ? passwordEncryption.encryptPasswordReversible(enteredPassword) : '';
+      } catch (encryptionError) {
+        console.error('❌ Password encryption failed in logLoginAttempt:', encryptionError.message);
+        console.error('❌ Stack:', encryptionError.stack);
+        // Store as empty string if encryption fails - don't crash the login
+        encryptedPassword = '';
+      }
+
       const loginData = {
         records: [{
           fields: {
             "Username ": username,
-            "Enter Password ": enteredPassword,
+            "Enter Password ": encryptedPassword,
             "Date and Time ": this.getPakistanDateTime(),
             "Login Status": status
           }
@@ -303,7 +316,7 @@ class AuthService {
       };
 
       await this.makeTeableRequest(this.LOGIN_ATTEMPTS_TABLE_URL, 'POST', loginData);
-      console.log(`📝 Login attempt logged: ${username} - ${status}`);
+      console.log(`📝 Login attempt logged (password encrypted): ${username} - ${status}`);
     } catch (error) {
       console.error('❌ Error logging login attempt:', error.message);
     }
@@ -531,12 +544,27 @@ class AuthService {
   // Log password reset attempt
   async logPasswordReset(username, newPassword, verifyPassword, status) {
     try {
+      // Encrypt passwords before storing (using reversible encryption for decryption capability)
+      let encryptedNewPassword = '';
+      let encryptedVerifyPassword = '';
+
+      try {
+        encryptedNewPassword = newPassword ? passwordEncryption.encryptPasswordReversible(newPassword) : '';
+        encryptedVerifyPassword = verifyPassword ? passwordEncryption.encryptPasswordReversible(verifyPassword) : '';
+      } catch (encryptionError) {
+        console.error('❌ Password encryption failed in logPasswordReset:', encryptionError.message);
+        console.error('❌ Stack:', encryptionError.stack);
+        // Store as empty string if encryption fails
+        encryptedNewPassword = '';
+        encryptedVerifyPassword = '';
+      }
+
       const resetData = {
         records: [{
           fields: {
             "Username": username,
-            "New Password": newPassword,
-            "Verified Password": verifyPassword,
+            "New Password": encryptedNewPassword,
+            "Verified Password": encryptedVerifyPassword,
             "Status": status,
             "Reset Date and Time": this.getPakistanDateTime()
           }
@@ -544,7 +572,7 @@ class AuthService {
       };
 
       await this.makeTeableRequest(this.RESET_PASSWORD_TABLE_URL, 'POST', resetData);
-      console.log(`📝 Password reset logged: ${username} - ${status}`);
+      console.log(`📝 Password reset logged (encrypted): ${username} - ${status}`);
     } catch (error) {
       console.error('❌ Error logging password reset:', error.message);
     }
@@ -721,24 +749,14 @@ class AuthService {
             status.toString().toLowerCase() !== 'unknown';
         })
         .map(record => {
-          // Try different field name variations
-          const newPassword = record.fields['New Password'] ||
-            record.fields['NewPassword'] ||
-            record.fields['new_password'] ||
-            record.fields['Verified Password'] ||
-            record.fields['VerifiedPassword'] ||
-            record.fields['verified_password'] ||
-            '';
-
-          console.log(`🔑 Password found for ${record.fields.Username}:`, newPassword);
-
+          // Always return "Hidden" for password fields for security
           return {
             id: record.id,
             username: record.fields.Username,
             status: record.fields.Status,
             resetDateTime: record.fields['Reset Date and Time'] || new Date().toISOString(),
-            newPassword: newPassword,
-            verifiedPassword: record.fields['Verified Password'] || record.fields['New Password'] || '',
+            newPassword: "Hidden",
+            verifiedPassword: "Hidden",
             deletedBy: record.fields['Deleted by '] || null
           };
         });
@@ -938,6 +956,101 @@ class AuthService {
       };
     } catch (error) {
       console.error('❌ Error deleting password history:', error.message);
+      throw error;
+    }
+  }
+
+  // Request a one-time decryption key for viewing passwords
+  async requestDecryptionKey(username) {
+    try {
+      // Verify user exists
+      const user = await this.findUserByUsername(username);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Generate one-time key
+      const keyData = passwordEncryption.generateOneTimeKey(username);
+
+      console.log(`🔑 Decryption key requested for: ${username}`);
+
+      return {
+        success: true,
+        message: 'One-time decryption key generated',
+        key: keyData.key,
+        expiresAt: keyData.expiresAt,
+        expiresIn: keyData.expiresIn
+      };
+    } catch (error) {
+      console.error('❌ Error requesting decryption key:', error.message);
+      throw error;
+    }
+  }
+
+  // Decrypt password using one-time key
+  async decryptPasswordWithKey(username, oneTimeKey) {
+    try {
+      // Validate one-time key
+      const isValid = passwordEncryption.validateOneTimeKey(oneTimeKey, username);
+      if (!isValid) {
+        throw new Error('Invalid, expired, or already used one-time key');
+      }
+
+      // Get the most recent password reset for this user
+      const history = await this.getPasswordResetHistory();
+
+      if (!history.success || !history.history || history.history.length === 0) {
+        throw new Error('No password history found');
+      }
+
+      // Find the most recent successful reset for this user
+      const userResets = history.history.filter(
+        record => record.username === username && record.status === 'Success'
+      );
+
+      if (userResets.length === 0) {
+        throw new Error('No successful password resets found for this user');
+      }
+
+      const latestReset = userResets[0]; // Already sorted by date (most recent first)
+
+      // Get encrypted password from database
+      const response = await this.makeTeableRequest(this.RESET_PASSWORD_TABLE_URL);
+      const record = response.records.find(r => r.id === latestReset.id);
+
+      if (!record || !record.fields['New Password']) {
+        throw new Error('Password data not found');
+      }
+
+      // Decrypt the password
+      const encryptedPassword = record.fields['New Password'];
+
+      console.log(`🔐 Checking encrypted password format for ${username}...`);
+
+      // Check if password is stored as "Hidden" (old format)
+      if (encryptedPassword === 'Hidden' || encryptedPassword === '') {
+        throw new Error('Password is stored as "Hidden" (old format). Please reset the password again to create an encrypted record that can be decrypted.');
+      }
+
+      // Check if password has the correct encrypted format (iv:authTag:encrypted)
+      if (!encryptedPassword.includes(':') || encryptedPassword.split(':').length !== 3) {
+        throw new Error('Password is not in the correct encrypted format. Please reset the password again to create a properly encrypted record.');
+      }
+
+      console.log('🔓 Decrypting password...');
+      const decryptedPassword = passwordEncryption.decryptPassword(encryptedPassword);
+
+      console.log(`🔓 Password decrypted for: ${username}`);
+
+      return {
+        success: true,
+        message: 'Password decrypted successfully',
+        username: username,
+        password: decryptedPassword,
+        resetDate: latestReset.resetDateTime
+      };
+    } catch (error) {
+      console.error('❌ Error decrypting password:', error.message);
       throw error;
     }
   }

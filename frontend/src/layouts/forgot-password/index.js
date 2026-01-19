@@ -285,7 +285,7 @@ function ForgotPassword() {
                   }}
                 >
                   {!linkExpired && (step === 1
-                    ? "Enter your username to get the password reset instructions"
+                    ? "Enter your username or email to get the password reset instructions"
                     : "Enter your new password below")}
                 </MDTypography>
               </MDBox>
