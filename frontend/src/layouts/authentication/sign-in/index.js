@@ -275,19 +275,14 @@ function Basic() {
     <MDBox
       sx={{
         minHeight: "100vh",
-        width: "100vw",
+        width: "100%",
         background: "#f8fafc",
         display: "flex",
-        alignItems: "center",
         justifyContent: "center",
         p: 2,
-        position: "fixed",
-        top: 0,
-        left: 0,
-        zIndex: 1000,
       }}
     >
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ my: "auto" }}>
         {/* Main Card */}
         <Card
           sx={{
