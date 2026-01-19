@@ -40,6 +40,14 @@ async function main() {
     console.log('║     🔐 Password Decryption Tool (One-Time Key)       ║');
     console.log('╚════════════════════════════════════════════════════════╝\n');
 
+    // Strict Security Check: Block execution on non-Windows servers (Production is Linux)
+    if (process.platform !== 'win32') {
+        console.log('🛑 SECURITY ALERT: This tool is BLOCKED on this server.');
+        console.log('Reason: Decryption is only allowed on authorized LOCAL Windows machines.');
+        console.log('Your OS: ' + process.platform);
+        process.exit(1);
+    }
+
     try {
         // Step 1: Get username
         const username = await question('Enter username or email: ');
