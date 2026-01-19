@@ -65,11 +65,11 @@ function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeTab, setActiveTab] = useState("users"); // users, history, monthly-target
-  
+
   // Set default tab based on user permissions after component mounts
   useEffect(() => {
     if (!user || authLoading) return; // Wait for user data to load
-    
+
     if (isAdmin()) {
       setActiveTab("users");
     } else if (isCustom()) {
@@ -91,11 +91,11 @@ function AdminPanel() {
   const [editingName, setEditingName] = useState(null);
   const [editName, setEditName] = useState("");
   const [originalName, setOriginalName] = useState("");
-  
+
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Permission editing state
   const [editingPermissions, setEditingPermissions] = useState(null);
   const [editPermissions, setEditPermissions] = useState({
@@ -107,7 +107,7 @@ function AdminPanel() {
     monthlyTarget: { view: false, complete: false },
     resetPassword: true
   });
-  
+
   // Monthly Target state
   const [monthlyTarget, setMonthlyTarget] = useState({
     amount: "",
@@ -183,19 +183,19 @@ function AdminPanel() {
       ...monthlyTarget,
       [field]: value,
     };
-    
+
     // Auto-calculate days in selected month
     if (field === 'selectedMonth' || field === 'selectedYear') {
       const year = field === 'selectedYear' ? value : updatedTarget.selectedYear;
       const month = field === 'selectedMonth' ? value : updatedTarget.selectedMonth;
       const daysInMonth = new Date(year, month, 0).getDate();
       updatedTarget.days = daysInMonth.toString();
-      
+
       // Set default start and end dates for the month
       updatedTarget.startDate = new Date(year, month - 1, 1);
       updatedTarget.endDate = new Date(year, month - 1, daysInMonth);
     }
-    
+
     setMonthlyTarget(updatedTarget);
     calculateTargets(updatedTarget);
   };
@@ -204,10 +204,10 @@ function AdminPanel() {
   const calculateTargets = (targetData) => {
     if (targetData.amount) {
       const amount = parseFloat(targetData.amount.replace(/,/g, ''));
-      
+
       if (!isNaN(amount) && amount > 0) {
         let workingDays = 0;
-        
+
         // Calculate working days based on date range or month selection
         if (targetData.startDate && targetData.endDate) {
           // Calculate days between start and end date
@@ -219,11 +219,11 @@ function AdminPanel() {
           // Calculate days in selected month
           workingDays = new Date(targetData.selectedYear, targetData.selectedMonth, 0).getDate();
         }
-        
+
         if (workingDays > 0) {
           const dailyTarget = amount / workingDays;
           const quarterlyTarget = amount * 3;
-          
+
           setCalculatedTargets({
             dailyTarget: dailyTarget,
             quarterlyTarget: quarterlyTarget,
@@ -268,30 +268,30 @@ function AdminPanel() {
   // Handle Monthly Target form submission
   const handleMonthlyTargetSubmit = (event) => {
     event.preventDefault();
-    
+
     // Check permissions - only allow users with complete access to submit
     if (isCustom() && !hasPermission('monthlyTarget', 'complete')) {
       setMessage({ type: "error", text: "You do not have permission to modify monthly targets!" });
       return;
     }
-    
+
     if (!monthlyTarget.amount) {
       setMessage({ type: "error", text: "Please enter target amount!" });
       return;
     }
-    
+
     const amount = parseFloat(monthlyTarget.amount.replace(/,/g, ''));
-    
+
     if (isNaN(amount) || amount <= 0) {
       setMessage({ type: "error", text: "Please enter a valid amount!" });
       return;
     }
-    
+
     if (calculatedTargets.workingDays <= 0) {
       setMessage({ type: "error", text: "Please select valid dates or month!" });
       return;
     }
-    
+
     // Store in localStorage for now (frontend only implementation)
     const targetData = {
       amount: amount,
@@ -306,12 +306,12 @@ function AdminPanel() {
       workingDays: calculatedTargets.workingDays,
       createdAt: new Date().toISOString()
     };
-    
+
     localStorage.setItem('monthlyTargetData', JSON.stringify(targetData));
-    
-    setMessage({ 
-      type: "success", 
-      text: `Monthly Revenue set successfully! Daily: AED ${formatNumber(calculatedTargets.dailyTarget)}, Quarterly: AED ${formatNumber(calculatedTargets.quarterlyTarget)}` 
+
+    setMessage({
+      type: "success",
+      text: `Monthly Revenue set successfully! Daily: AED ${formatNumber(calculatedTargets.dailyTarget)}, Quarterly: AED ${formatNumber(calculatedTargets.quarterlyTarget)}`
     });
   };
 
@@ -321,8 +321,8 @@ function AdminPanel() {
     try {
       const user = users.find(u => u.username === username);
       if (user && user.permissions) {
-        const permissions = typeof user.permissions === 'string' 
-          ? JSON.parse(user.permissions) 
+        const permissions = typeof user.permissions === 'string'
+          ? JSON.parse(user.permissions)
           : user.permissions;
         setEditPermissions(permissions);
       } else {
@@ -384,7 +384,7 @@ function AdminPanel() {
           type: "success",
           text: `Permissions updated successfully for ${editingPermissions}!`
         });
-        
+
         // Reset editing state
         setEditingPermissions(null);
         setEditPermissions({
@@ -396,10 +396,10 @@ function AdminPanel() {
           monthlyTarget: { view: false, complete: false },
           resetPassword: true
         });
-        
+
         // Refresh user list to show updated permissions
         fetchUsers();
-        
+
         // console.log(`✅ Permissions updated in database for user: ${editingPermissions}`);
       } else {
         setMessage({ type: "error", text: result.message });
@@ -465,7 +465,7 @@ function AdminPanel() {
       if (result.success) {
         // Permissions are now stored in database automatically by backend
         // console.log(`✅ User created with database-stored permissions: ${createUserForm.username}`);
-        
+
         setMessage({
           type: "success",
           text: `User "${createUserForm.username}" created successfully!`,
@@ -576,7 +576,7 @@ function AdminPanel() {
   // Execute update username without admin verification
   const executeUpdateUsername = async (oldUsername, newUsername) => {
     setLoading(true);
-    
+
     try {
       const response = await fetch(API_ENDPOINTS.UPDATE_USERNAME, {
         method: "PUT",
@@ -614,7 +614,7 @@ function AdminPanel() {
   // Execute update name without admin verification
   const executeUpdateName = async (username, newName) => {
     setLoading(true);
-    
+
     try {
       const response = await fetch(API_ENDPOINTS.UPDATE_USER_NAME, {
         method: "PUT",
@@ -866,7 +866,7 @@ function AdminPanel() {
     hasPermission('passwordHistory', 'complete') ||
     hasPermission('monthlyTarget', 'view') || hasPermission('monthlyTarget', 'complete')
   ));
-  
+
   if (!hasAdminAccess) {
     window.location.href = "/fdo-panel";
     return null;
@@ -1018,7 +1018,7 @@ function AdminPanel() {
                     <MDBox mb={3}>
                       <MDInput
                         type="text"
-                        label="Username"
+                        label="Username or Email"
                         fullWidth
                         value={createUserForm.username}
                         onChange={handleInputChange("username")}
@@ -1043,7 +1043,7 @@ function AdminPanel() {
                               <IconButton
                                 onClick={handleTogglePasswordVisibility}
                                 edge="end"
-                                sx={{ 
+                                sx={{
                                   color: "#6b7280",
                                   padding: "8px",
                                   marginRight: "4px"
@@ -1075,7 +1075,7 @@ function AdminPanel() {
                               <IconButton
                                 onClick={handleToggleConfirmPasswordVisibility}
                                 edge="end"
-                                sx={{ 
+                                sx={{
                                   color: "#6b7280",
                                   padding: "8px",
                                   marginRight: "4px"
@@ -1273,7 +1273,7 @@ function AdminPanel() {
                         <MDTypography variant="h6" fontWeight="bold" mb={2} color="text.primary">
                           Configure Permissions
                         </MDTypography>
-                        
+
                         {/* FDO Panel Permissions */}
                         <MDBox mb={2} p={2} sx={{ backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                           <MDTypography variant="subtitle2" fontWeight="bold" mb={1} color="#1e293b">
@@ -1710,9 +1710,9 @@ function AdminPanel() {
                                       <MDTypography variant="body2" color="text.secondary" sx={{ minWidth: "70px", fontSize: "0.8rem" }}>
                                         Name:
                                       </MDTypography>
-                                      <MDTypography 
-                                        variant="body1" 
-                                        sx={{ 
+                                      <MDTypography
+                                        variant="body1"
+                                        sx={{
                                           fontSize: "0.9rem",
                                           color: user.name ? "text.primary" : "text.secondary",
                                           fontStyle: user.name ? "normal" : "italic"
@@ -1745,7 +1745,7 @@ function AdminPanel() {
                                   )}
                                 </MDBox>
                               </MDBox>
-                              
+
                               <MDBox
                                 sx={{
                                   display: "inline-flex",
@@ -1753,15 +1753,14 @@ function AdminPanel() {
                                   gap: 0.5,
                                   padding: "2px 8px",
                                   borderRadius: "12px",
-                                  backgroundColor: 
-                                    user.role === "admin" ? "#fef3c7" : 
-                                    user.role === "view_only" ? "#dbeafe" : 
-                                    user.role === "custom" ? "#fdf2f8" : "#dcfce7",
-                                  border: `1px solid ${
-                                    user.role === "admin" ? "#fbbf24" : 
-                                    user.role === "view_only" ? "#3b82f6" : 
-                                    user.role === "custom" ? "#ec4899" : "#22c55e"
-                                  }`,
+                                  backgroundColor:
+                                    user.role === "admin" ? "#fef3c7" :
+                                      user.role === "view_only" ? "#dbeafe" :
+                                        user.role === "custom" ? "#fdf2f8" : "#dcfce7",
+                                  border: `1px solid ${user.role === "admin" ? "#fbbf24" :
+                                      user.role === "view_only" ? "#3b82f6" :
+                                        user.role === "custom" ? "#ec4899" : "#22c55e"
+                                    }`,
                                 }}
                               >
                                 <MDBox
@@ -1769,26 +1768,26 @@ function AdminPanel() {
                                     width: 4,
                                     height: 4,
                                     borderRadius: "50%",
-                                    backgroundColor: 
-                                      user.role === "admin" ? "#f59e0b" : 
-                                      user.role === "view_only" ? "#3b82f6" : 
-                                      user.role === "custom" ? "#ec4899" : "#10b981",
+                                    backgroundColor:
+                                      user.role === "admin" ? "#f59e0b" :
+                                        user.role === "view_only" ? "#3b82f6" :
+                                          user.role === "custom" ? "#ec4899" : "#10b981",
                                   }}
                                 />
                                 <MDTypography
                                   variant="caption"
                                   sx={{
-                                    color: 
-                                      user.role === "admin" ? "#92400e" : 
-                                      user.role === "view_only" ? "#1e40af" : 
-                                      user.role === "custom" ? "#be185d" : "#065f46",
+                                    color:
+                                      user.role === "admin" ? "#92400e" :
+                                        user.role === "view_only" ? "#1e40af" :
+                                          user.role === "custom" ? "#be185d" : "#065f46",
                                     fontWeight: "600",
                                     fontSize: "0.7rem",
                                     textTransform: "uppercase",
                                   }}
                                 >
-                                  {user.role === "custom" ? "CUSTOM" : 
-                                   (user.role || "user").toUpperCase()}
+                                  {user.role === "custom" ? "CUSTOM" :
+                                    (user.role || "user").toUpperCase()}
                                 </MDTypography>
                               </MDBox>
                             </MDBox>
@@ -1798,7 +1797,7 @@ function AdminPanel() {
                                 ? new Date(user.createdDate).toLocaleDateString()
                                 : "Unknown"}
                             </MDTypography>
-                            
+
                             {/* Only show Created By if createdBy exists and is not "System" */}
                             {user.createdBy && user.createdBy !== "System" && (
                               <MDTypography variant="caption" color="text" sx={{ mt: 1, display: 'block' }}>
@@ -1806,7 +1805,7 @@ function AdminPanel() {
                                 {user.createdBy}
                               </MDTypography>
                             )}
-                            
+
                             {/* Show permissions for custom users */}
                             {user.role === "custom" && (
                               <MDBox mt={1}>
@@ -1817,19 +1816,19 @@ function AdminPanel() {
                                   {(() => {
                                     // Try to get permissions from user object or localStorage
                                     let permissions = null;
-                                    
+
                                     if (user.permissions) {
                                       try {
                                         // console.log('Raw permissions for', user.username, ':', user.permissions);
-                                        permissions = typeof user.permissions === 'string' 
-                                          ? JSON.parse(user.permissions) 
+                                        permissions = typeof user.permissions === 'string'
+                                          ? JSON.parse(user.permissions)
                                           : user.permissions;
                                         // console.log('Parsed permissions for', user.username, ':', permissions);
                                       } catch (error) {
                                         console.error('Error parsing user permissions:', error, 'Raw value:', user.permissions);
                                       }
                                     }
-                                    
+
                                     // Fallback to localStorage
                                     if (!permissions) {
                                       try {
@@ -1841,7 +1840,7 @@ function AdminPanel() {
                                         console.error('Error getting permissions from localStorage:', error);
                                       }
                                     }
-                                    
+
                                     if (permissions) {
                                       const permissionList = [];
                                       if (permissions?.fdoPanel?.view) permissionList.push("FDO Panel (View)");
@@ -1857,7 +1856,7 @@ function AdminPanel() {
                                       if (permissions?.monthlyTarget?.view) permissionList.push("Monthly Target (View)");
                                       if (permissions?.monthlyTarget?.complete) permissionList.push("Monthly Target (Complete)");
                                       if (permissions?.resetPassword) permissionList.push("Password Reset");
-                                      
+
                                       return permissionList.length > 0 ? (
                                         <MDTypography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                           {permissionList.join(", ")}
@@ -2493,9 +2492,8 @@ function AdminPanel() {
                                     borderRadius: "20px",
                                     backgroundColor:
                                       record.status === "Success" ? "#dcfce7" : "#fee2e2",
-                                    border: `1px solid ${
-                                      record.status === "Success" ? "#bbf7d0" : "#fecaca"
-                                    }`,
+                                    border: `1px solid ${record.status === "Success" ? "#bbf7d0" : "#fecaca"
+                                      }`,
                                   }}
                                 >
                                   <MDBox
@@ -2563,8 +2561,8 @@ function AdminPanel() {
                                     }}
                                   >
                                     {record.newPassword &&
-                                    record.newPassword !== "••••••••" &&
-                                    record.newPassword !== "N/A"
+                                      record.newPassword !== "••••••••" &&
+                                      record.newPassword !== "N/A"
                                       ? record.newPassword
                                       : "Password not available"}
                                   </MDTypography>
@@ -2598,10 +2596,10 @@ function AdminPanel() {
                                   >
                                     {record.resetDateTime
                                       ? new Date(record.resetDateTime).toLocaleDateString("en-US", {
-                                          month: "short",
-                                          day: "2-digit",
-                                          year: "numeric",
-                                        })
+                                        month: "short",
+                                        day: "2-digit",
+                                        year: "numeric",
+                                      })
                                       : "Unknown Date"}
                                   </MDTypography>
                                 </MDBox>
@@ -2615,16 +2613,16 @@ function AdminPanel() {
                                 >
                                   {record.resetDateTime
                                     ? new Date(record.resetDateTime).toLocaleTimeString("en-US", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    })
                                     : "Unknown Time"}
                                 </MDTypography>
-                                
+
                               </MDBox>
                             </Grid>
-                            
+
                             {/* Actions Column */}
                             <Grid item xs={12} sm={1}>
                               <MDBox display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -2700,16 +2698,16 @@ function AdminPanel() {
                       🎯
                     </MDBox>
                     <MDBox>
-                      <MDTypography 
-                        variant="h4" 
-                        fontWeight="bold" 
+                      <MDTypography
+                        variant="h4"
+                        fontWeight="bold"
                         mb={1}
                         sx={{ color: "#1e293b" }}
                       >
                         Monthly Revenue Setup
                       </MDTypography>
-                      <MDTypography 
-                        variant="body1" 
+                      <MDTypography
+                        variant="body1"
                         sx={{ color: "#64748b", fontSize: "1rem" }}
                       >
                         Set monthly revenue amount and calendar dates to calculate daily and quarterly revenue
@@ -2717,491 +2715,491 @@ function AdminPanel() {
                     </MDBox>
                   </MDBox>
 
-                    <MDBox component="form" onSubmit={handleMonthlyTargetSubmit}>
-                      <Grid container spacing={4}>
-                        {/* Left Column - Form Inputs */}
-                        <Grid item xs={12} lg={6}>
-                          <MDBox>
-                            {/* Monthly Target Amount */}
-                            <MDBox 
-                              mb={4}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #f1f5f9",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDTypography
-                                variant="h6"
-                                fontWeight="700"
-                                sx={{
-                                  color: "#1e293b",
-                                  mb: 2,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                💰 Monthly Revenue Amount (AED)
-                              </MDTypography>
-                              <MDInput
-                                type="text"
-                                label=""
-                                fullWidth
-                                value={monthlyTarget.amount}
-                                onChange={handleMonthlyTargetChange("amount")}
-                                placeholder=""
-                                disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    borderRadius: "12px",
-                                    backgroundColor: "#f8fafc",
-                                    border: "2px solid #e2e8f0",
-                                    fontSize: "1.1rem",
-                                    fontWeight: "600",
-                                    "&:hover": {
-                                      borderColor: "#3b82f6",
-                                    },
-                                    "&.Mui-focused": {
-                                      borderColor: "#3b82f6",
-                                      boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                    },
-                                  },
-                                }}
-                              />
-                            </MDBox>
-
-                            {/* Month and Year Selection */}
-                            <MDBox 
-                              mb={4}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #f1f5f9",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDTypography
-                                variant="h6"
-                                fontWeight="700"
-                                sx={{
-                                  color: "#1e293b",
-                                  mb: 3,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                📅 Revenue Period
-                              </MDTypography>
-                              <Grid container spacing={3}>
-                                <Grid item xs={6}>
-                                  <MDTypography
-                                    variant="body2"
-                                    fontWeight="600"
-                                    sx={{
-                                      color: "#475569",
-                                      fontSize: "0.9rem",
-                                      mb: 1.5,
-                                    }}
-                                  >
-                                    Month
-                                  </MDTypography>
-                                  <FormControl fullWidth>
-                                    <Select
-                                      value={monthlyTarget.selectedMonth}
-                                      onChange={(e) => handleMonthYearChange('selectedMonth', e.target.value)}
-                                      disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                      sx={{
-                                        borderRadius: "12px",
-                                        backgroundColor: "#f8fafc",
-                                        border: "2px solid #e2e8f0",
-                                        "& .MuiOutlinedInput-notchedOutline": {
-                                          border: "none",
-                                        },
-                                        "&:hover": {
-                                          borderColor: "#3b82f6",
-                                        },
-                                        "&.Mui-focused": {
-                                          borderColor: "#3b82f6",
-                                          boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                        },
-                                      }}
-                                    >
-                                      {[
-                                        'January', 'February', 'March', 'April', 'May', 'June',
-                                        'July', 'August', 'September', 'October', 'November', 'December'
-                                      ].map((month, index) => (
-                                        <MenuItem key={index + 1} value={index + 1}>
-                                          <MDBox display="flex" alignItems="center" gap={1}>
-                                            <span>{month}</span>
-                                          </MDBox>
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                </Grid>
-                                <Grid item xs={6}>
-                                  <MDTypography
-                                    variant="body2"
-                                    fontWeight="600"
-                                    sx={{
-                                      color: "#475569",
-                                      fontSize: "0.9rem",
-                                      mb: 1.5,
-                                    }}
-                                  >
-                                    Year
-                                  </MDTypography>
-                                  <FormControl fullWidth>
-                                    <Select
-                                      value={monthlyTarget.selectedYear}
-                                      onChange={(e) => handleMonthYearChange('selectedYear', e.target.value)}
-                                      disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                      sx={{
-                                        borderRadius: "12px",
-                                        backgroundColor: "#f8fafc",
-                                        border: "2px solid #e2e8f0",
-                                        "& .MuiOutlinedInput-notchedOutline": {
-                                          border: "none",
-                                        },
-                                        "&:hover": {
-                                          borderColor: "#3b82f6",
-                                        },
-                                        "&.Mui-focused": {
-                                          borderColor: "#3b82f6",
-                                          boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                        },
-                                      }}
-                                    >
-                                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map(year => (
-                                        <MenuItem key={year} value={year}>
-                                          {year}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                </Grid>
-                              </Grid>
-                            </MDBox>
-
-                            {/* Custom Date Range (Optional) */}
-                            <MDBox 
-                              mb={4}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #f1f5f9",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDTypography
-                                variant="h6"
-                                fontWeight="700"
-                                sx={{
-                                  color: "#1e293b",
-                                  mb: 2,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                🗓️ Custom Date Range
-                              </MDTypography>
-                              <MDTypography
-                                variant="body2"
-                                fontWeight="500"
-                                sx={{
-                                  color: "#6b7280",
-                                  mb: 2,
-                                  display: "block",
-                                }}
-                              >
-                              </MDTypography>
-                              <Grid container spacing={3}>
-                                <Grid item xs={6}>
-                                  <MDTypography
-                                    variant="body2"
-                                    fontWeight="600"
-                                    sx={{
-                                      color: "#374151",
-                                      fontSize: "0.875rem",
-                                      mb: 1,
-                                    }}
-                                  >
-                                    Start Date
-                                  </MDTypography>
-                                  <TextField
-                                    type="date"
-                                    fullWidth
-                                    value={monthlyTarget.startDate ? monthlyTarget.startDate.toISOString().split('T')[0] : ''}
-                                    onChange={(e) => handleDateChange('startDate', e.target.value)}
-                                    disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                    sx={{
-                                      "& .MuiOutlinedInput-root": {
-                                        borderRadius: "12px",
-                                        backgroundColor: "#f8fafc",
-                                        border: "2px solid #e2e8f0",
-                                        "&:hover": {
-                                          borderColor: "#3b82f6",
-                                        },
-                                        "&.Mui-focused": {
-                                          borderColor: "#3b82f6",
-                                          boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                        },
-                                      },
-                                    }}
-                                  />
-                                </Grid>
-                                <Grid item xs={6}>
-                                  <MDTypography
-                                    variant="body2"
-                                    fontWeight="600"
-                                    sx={{
-                                      color: "#374151",
-                                      fontSize: "0.875rem",
-                                      mb: 1,
-                                    }}
-                                  >
-                                    End Date
-                                  </MDTypography>
-                                  <TextField
-                                    type="date"
-                                    fullWidth
-                                    value={monthlyTarget.endDate ? monthlyTarget.endDate.toISOString().split('T')[0] : ''}
-                                    onChange={(e) => handleDateChange('endDate', e.target.value)}
-                                    disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                    sx={{
-                                      "& .MuiOutlinedInput-root": {
-                                        borderRadius: "12px",
-                                        backgroundColor: "#f8fafc",
-                                        border: "2px solid #e2e8f0",
-                                        "&:hover": {
-                                          borderColor: "#3b82f6",
-                                        },
-                                        "&.Mui-focused": {
-                                          borderColor: "#3b82f6",
-                                          boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                        },
-                                      },
-                                    }}
-                                  />
-                                </Grid>
-                              </Grid>
-                            </MDBox>
-
-                            {/* Days in Month (Auto-calculated) */}
-                            <MDBox 
-                              mb={4}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #f1f5f9",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDTypography
-                                variant="h6"
-                                fontWeight="700"
-                                sx={{
-                                  color: "#1e293b",
-                                  mb: 2,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                📊 Days Count
-                              </MDTypography>
-                              <MDInput
-                                type="number"
-                                label=""
-                                fullWidth
-                                value={calculatedTargets.workingDays || monthlyTarget.days}
-                                onChange={handleMonthlyTargetChange("days")}
-                                placeholder="Auto-calculated or enter manually"
-                                inputProps={{ min: 1, max: 31 }}
-                                disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    borderRadius: "12px",
-                                    backgroundColor: "#f8fafc",
-                                    border: "2px solid #e2e8f0",
-                                    fontSize: "1.1rem",
-                                    fontWeight: "600",
-                                    "&:hover": {
-                                      borderColor: "#3b82f6",
-                                    },
-                                    "&.Mui-focused": {
-                                      borderColor: "#3b82f6",
-                                      boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                                    },
-                                  },
-                                }}
-                              />
-                            </MDBox>
-                          </MDBox>
-                        </Grid>
-
-                        {/* Right Column - Calculated Targets Display */}
-                        <Grid item xs={12} lg={6}>
-                          <MDBox>
+                  <MDBox component="form" onSubmit={handleMonthlyTargetSubmit}>
+                    <Grid container spacing={4}>
+                      {/* Left Column - Form Inputs */}
+                      <Grid item xs={12} lg={6}>
+                        <MDBox>
+                          {/* Monthly Target Amount */}
+                          <MDBox
+                            mb={4}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #f1f5f9",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
                             <MDTypography
-                              variant="h5"
-                              fontWeight="bold"
-                              mb={3}
-                              sx={{ color: "#1f2937" }}
+                              variant="h6"
+                              fontWeight="700"
+                              sx={{
+                                color: "#1e293b",
+                                mb: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
                             >
-                              Calculated Revenue
+                              💰 Monthly Revenue Amount (AED)
                             </MDTypography>
-
-                            {/* Monthly Target Display */}
-                            <MDBox
-                              mb={3}
-                              p={3}
+                            <MDInput
+                              type="text"
+                              label=""
+                              fullWidth
+                              value={monthlyTarget.amount}
+                              onChange={handleMonthlyTargetChange("amount")}
+                              placeholder=""
+                              disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
                               sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #667eea",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: "12px",
+                                  backgroundColor: "#f8fafc",
+                                  border: "2px solid #e2e8f0",
+                                  fontSize: "1.1rem",
+                                  fontWeight: "600",
+                                  "&:hover": {
+                                    borderColor: "#3b82f6",
+                                  },
+                                  "&.Mui-focused": {
+                                    borderColor: "#3b82f6",
+                                    boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                  },
+                                },
                               }}
-                            >
-                              <MDBox display="flex" alignItems="center" gap={2} mb={1}>
-                                <MDBox
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: "8px",
-                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "white",
-                                    fontSize: "1rem",
-                                  }}
-                                >
-                                  🎯
-                                </MDBox>
-                                <MDTypography variant="h6" fontWeight="600" sx={{ color: "#667eea" }}>
-                                  Monthly Revenue
-                                </MDTypography>
-                              </MDBox>
-                              <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                AED {formatNumber(calculatedTargets.monthlyTarget)}
-                              </MDTypography>
-                              <MDTypography variant="caption" sx={{ color: "#64748b" }}>
-                                {monthlyTarget.selectedMonth && monthlyTarget.selectedYear ? 
-                                  `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][monthlyTarget.selectedMonth - 1]} ${monthlyTarget.selectedYear}` : 
-                                  'Select month and year'
-                                }
-                              </MDTypography>
-                            </MDBox>
-
-                            {/* Daily Target Display */}
-                            <MDBox
-                              mb={3}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #16a34a",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDBox display="flex" alignItems="center" gap={2} mb={1}>
-                                <MDBox
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: "8px",
-                                    backgroundColor: "#16a34a",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "white",
-                                    fontSize: "1rem",
-                                  }}
-                                >
-                                  📅
-                                </MDBox>
-                                <MDTypography variant="h6" fontWeight="600" sx={{ color: "#16a34a" }}>
-                                  Daily Revenue
-                                </MDTypography>
-                              </MDBox>
-                              <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                AED {formatNumber(calculatedTargets.dailyTarget)}
-                              </MDTypography>
-                              <MDTypography variant="caption" sx={{ color: "#64748b" }}>
-                                Based on {calculatedTargets.workingDays} days
-                              </MDTypography>
-                            </MDBox>
-
-                            {/* Quarterly Target Display */}
-                            <MDBox
-                              mb={3}
-                              p={3}
-                              sx={{
-                                backgroundColor: "#ffffff",
-                                borderRadius: "16px",
-                                border: "2px solid #f59e0b",
-                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <MDBox display="flex" alignItems="center" gap={2} mb={1}>
-                                <MDBox
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: "8px",
-                                    backgroundColor: "#f59e0b",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "white",
-                                    fontSize: "1rem",
-                                  }}
-                                >
-                                  📊
-                                </MDBox>
-                                <MDTypography variant="h6" fontWeight="600" sx={{ color: "#f59e0b" }}>
-                                  Quarterly Revenue
-                                </MDTypography>
-                              </MDBox>
-                              <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
-                                AED {formatNumber(calculatedTargets.quarterlyTarget)}
-                              </MDTypography>
-                              <MDTypography variant="caption" sx={{ color: "#64748b" }}>
-                                3 months projection
-                              </MDTypography>
-                            </MDBox>
+                            />
                           </MDBox>
-                        </Grid>
+
+                          {/* Month and Year Selection */}
+                          <MDBox
+                            mb={4}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #f1f5f9",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDTypography
+                              variant="h6"
+                              fontWeight="700"
+                              sx={{
+                                color: "#1e293b",
+                                mb: 3,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              📅 Revenue Period
+                            </MDTypography>
+                            <Grid container spacing={3}>
+                              <Grid item xs={6}>
+                                <MDTypography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  sx={{
+                                    color: "#475569",
+                                    fontSize: "0.9rem",
+                                    mb: 1.5,
+                                  }}
+                                >
+                                  Month
+                                </MDTypography>
+                                <FormControl fullWidth>
+                                  <Select
+                                    value={monthlyTarget.selectedMonth}
+                                    onChange={(e) => handleMonthYearChange('selectedMonth', e.target.value)}
+                                    disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
+                                    sx={{
+                                      borderRadius: "12px",
+                                      backgroundColor: "#f8fafc",
+                                      border: "2px solid #e2e8f0",
+                                      "& .MuiOutlinedInput-notchedOutline": {
+                                        border: "none",
+                                      },
+                                      "&:hover": {
+                                        borderColor: "#3b82f6",
+                                      },
+                                      "&.Mui-focused": {
+                                        borderColor: "#3b82f6",
+                                        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                      },
+                                    }}
+                                  >
+                                    {[
+                                      'January', 'February', 'March', 'April', 'May', 'June',
+                                      'July', 'August', 'September', 'October', 'November', 'December'
+                                    ].map((month, index) => (
+                                      <MenuItem key={index + 1} value={index + 1}>
+                                        <MDBox display="flex" alignItems="center" gap={1}>
+                                          <span>{month}</span>
+                                        </MDBox>
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <MDTypography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  sx={{
+                                    color: "#475569",
+                                    fontSize: "0.9rem",
+                                    mb: 1.5,
+                                  }}
+                                >
+                                  Year
+                                </MDTypography>
+                                <FormControl fullWidth>
+                                  <Select
+                                    value={monthlyTarget.selectedYear}
+                                    onChange={(e) => handleMonthYearChange('selectedYear', e.target.value)}
+                                    disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
+                                    sx={{
+                                      borderRadius: "12px",
+                                      backgroundColor: "#f8fafc",
+                                      border: "2px solid #e2e8f0",
+                                      "& .MuiOutlinedInput-notchedOutline": {
+                                        border: "none",
+                                      },
+                                      "&:hover": {
+                                        borderColor: "#3b82f6",
+                                      },
+                                      "&.Mui-focused": {
+                                        borderColor: "#3b82f6",
+                                        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                      },
+                                    }}
+                                  >
+                                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                                      <MenuItem key={year} value={year}>
+                                        {year}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Grid>
+                            </Grid>
+                          </MDBox>
+
+                          {/* Custom Date Range (Optional) */}
+                          <MDBox
+                            mb={4}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #f1f5f9",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDTypography
+                              variant="h6"
+                              fontWeight="700"
+                              sx={{
+                                color: "#1e293b",
+                                mb: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              🗓️ Custom Date Range
+                            </MDTypography>
+                            <MDTypography
+                              variant="body2"
+                              fontWeight="500"
+                              sx={{
+                                color: "#6b7280",
+                                mb: 2,
+                                display: "block",
+                              }}
+                            >
+                            </MDTypography>
+                            <Grid container spacing={3}>
+                              <Grid item xs={6}>
+                                <MDTypography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  sx={{
+                                    color: "#374151",
+                                    fontSize: "0.875rem",
+                                    mb: 1,
+                                  }}
+                                >
+                                  Start Date
+                                </MDTypography>
+                                <TextField
+                                  type="date"
+                                  fullWidth
+                                  value={monthlyTarget.startDate ? monthlyTarget.startDate.toISOString().split('T')[0] : ''}
+                                  onChange={(e) => handleDateChange('startDate', e.target.value)}
+                                  disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: "12px",
+                                      backgroundColor: "#f8fafc",
+                                      border: "2px solid #e2e8f0",
+                                      "&:hover": {
+                                        borderColor: "#3b82f6",
+                                      },
+                                      "&.Mui-focused": {
+                                        borderColor: "#3b82f6",
+                                        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                      },
+                                    },
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={6}>
+                                <MDTypography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  sx={{
+                                    color: "#374151",
+                                    fontSize: "0.875rem",
+                                    mb: 1,
+                                  }}
+                                >
+                                  End Date
+                                </MDTypography>
+                                <TextField
+                                  type="date"
+                                  fullWidth
+                                  value={monthlyTarget.endDate ? monthlyTarget.endDate.toISOString().split('T')[0] : ''}
+                                  onChange={(e) => handleDateChange('endDate', e.target.value)}
+                                  disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: "12px",
+                                      backgroundColor: "#f8fafc",
+                                      border: "2px solid #e2e8f0",
+                                      "&:hover": {
+                                        borderColor: "#3b82f6",
+                                      },
+                                      "&.Mui-focused": {
+                                        borderColor: "#3b82f6",
+                                        boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                      },
+                                    },
+                                  }}
+                                />
+                              </Grid>
+                            </Grid>
+                          </MDBox>
+
+                          {/* Days in Month (Auto-calculated) */}
+                          <MDBox
+                            mb={4}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #f1f5f9",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDTypography
+                              variant="h6"
+                              fontWeight="700"
+                              sx={{
+                                color: "#1e293b",
+                                mb: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              📊 Days Count
+                            </MDTypography>
+                            <MDInput
+                              type="number"
+                              label=""
+                              fullWidth
+                              value={calculatedTargets.workingDays || monthlyTarget.days}
+                              onChange={handleMonthlyTargetChange("days")}
+                              placeholder="Auto-calculated or enter manually"
+                              inputProps={{ min: 1, max: 31 }}
+                              disabled={isCustom() && !hasPermission('monthlyTarget', 'complete')}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: "12px",
+                                  backgroundColor: "#f8fafc",
+                                  border: "2px solid #e2e8f0",
+                                  fontSize: "1.1rem",
+                                  fontWeight: "600",
+                                  "&:hover": {
+                                    borderColor: "#3b82f6",
+                                  },
+                                  "&.Mui-focused": {
+                                    borderColor: "#3b82f6",
+                                    boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                                  },
+                                },
+                              }}
+                            />
+                          </MDBox>
+                        </MDBox>
                       </Grid>
 
-                      <MDButton
-                        type="submit"
-                        variant="gradient"
-                        color="success"
-                        fullWidth
-                        size="large"
-                        disabled={loading || !monthlyTarget.amount || calculatedTargets.workingDays <= 0 || (isCustom() && !hasPermission('monthlyTarget', 'complete'))}
-                        sx={{
-                          borderRadius: "12px",
-                          textTransform: "none",
-                          fontSize: "1.1rem",
-                          fontWeight: "600",
-                          py: 1.5,
-                          mt: 3,
-                        }}
-                      >
-                        Set Monthly Revenue
-                      </MDButton>
-                    </MDBox>
+                      {/* Right Column - Calculated Targets Display */}
+                      <Grid item xs={12} lg={6}>
+                        <MDBox>
+                          <MDTypography
+                            variant="h5"
+                            fontWeight="bold"
+                            mb={3}
+                            sx={{ color: "#1f2937" }}
+                          >
+                            Calculated Revenue
+                          </MDTypography>
+
+                          {/* Monthly Target Display */}
+                          <MDBox
+                            mb={3}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #667eea",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDBox display="flex" alignItems="center" gap={2} mb={1}>
+                              <MDBox
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "8px",
+                                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "white",
+                                  fontSize: "1rem",
+                                }}
+                              >
+                                🎯
+                              </MDBox>
+                              <MDTypography variant="h6" fontWeight="600" sx={{ color: "#667eea" }}>
+                                Monthly Revenue
+                              </MDTypography>
+                            </MDBox>
+                            <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
+                              AED {formatNumber(calculatedTargets.monthlyTarget)}
+                            </MDTypography>
+                            <MDTypography variant="caption" sx={{ color: "#64748b" }}>
+                              {monthlyTarget.selectedMonth && monthlyTarget.selectedYear ?
+                                `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][monthlyTarget.selectedMonth - 1]} ${monthlyTarget.selectedYear}` :
+                                'Select month and year'
+                              }
+                            </MDTypography>
+                          </MDBox>
+
+                          {/* Daily Target Display */}
+                          <MDBox
+                            mb={3}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #16a34a",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDBox display="flex" alignItems="center" gap={2} mb={1}>
+                              <MDBox
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "8px",
+                                  backgroundColor: "#16a34a",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "white",
+                                  fontSize: "1rem",
+                                }}
+                              >
+                                📅
+                              </MDBox>
+                              <MDTypography variant="h6" fontWeight="600" sx={{ color: "#16a34a" }}>
+                                Daily Revenue
+                              </MDTypography>
+                            </MDBox>
+                            <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
+                              AED {formatNumber(calculatedTargets.dailyTarget)}
+                            </MDTypography>
+                            <MDTypography variant="caption" sx={{ color: "#64748b" }}>
+                              Based on {calculatedTargets.workingDays} days
+                            </MDTypography>
+                          </MDBox>
+
+                          {/* Quarterly Target Display */}
+                          <MDBox
+                            mb={3}
+                            p={3}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              borderRadius: "16px",
+                              border: "2px solid #f59e0b",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <MDBox display="flex" alignItems="center" gap={2} mb={1}>
+                              <MDBox
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "8px",
+                                  backgroundColor: "#f59e0b",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "white",
+                                  fontSize: "1rem",
+                                }}
+                              >
+                                📊
+                              </MDBox>
+                              <MDTypography variant="h6" fontWeight="600" sx={{ color: "#f59e0b" }}>
+                                Quarterly Revenue
+                              </MDTypography>
+                            </MDBox>
+                            <MDTypography variant="h4" fontWeight="bold" sx={{ color: "#1e293b" }}>
+                              AED {formatNumber(calculatedTargets.quarterlyTarget)}
+                            </MDTypography>
+                            <MDTypography variant="caption" sx={{ color: "#64748b" }}>
+                              3 months projection
+                            </MDTypography>
+                          </MDBox>
+                        </MDBox>
+                      </Grid>
+                    </Grid>
+
+                    <MDButton
+                      type="submit"
+                      variant="gradient"
+                      color="success"
+                      fullWidth
+                      size="large"
+                      disabled={loading || !monthlyTarget.amount || calculatedTargets.workingDays <= 0 || (isCustom() && !hasPermission('monthlyTarget', 'complete'))}
+                      sx={{
+                        borderRadius: "12px",
+                        textTransform: "none",
+                        fontSize: "1.1rem",
+                        fontWeight: "600",
+                        py: 1.5,
+                        mt: 3,
+                      }}
+                    >
+                      Set Monthly Revenue
+                    </MDButton>
+                  </MDBox>
                 </Card>
               </Grid>
             </Grid>
@@ -3248,14 +3246,14 @@ function AdminPanel() {
             </MDBox>
           </MDBox>
         </DialogTitle>
-        
+
         <DialogContent sx={{ py: 2 }}>
           <DialogContentText sx={{ fontSize: "1rem", color: "#374151", lineHeight: 1.6 }}>
-            Are you sure you want to delete user <strong>"{deleteDialog.username}"</strong>? 
+            Are you sure you want to delete user <strong>"{deleteDialog.username}"</strong>?
             This will permanently remove the user account and all associated data.
           </DialogContentText>
         </DialogContent>
-        
+
         <DialogActions sx={{ pt: 2, gap: 1 }}>
           <Button
             onClick={cancelDeleteUser}
@@ -3336,13 +3334,13 @@ function AdminPanel() {
             </MDBox>
           </MDBox>
         </DialogTitle>
-        
+
         <DialogContent sx={{ py: 2 }}>
           <DialogContentText sx={{ fontSize: "1rem", color: "#374151", lineHeight: 1.6 }}>
             Are you sure you want to permanently delete the password history record for <strong>"{deletePasswordHistoryDialog.username}"</strong>?
           </DialogContentText>
         </DialogContent>
-        
+
         <DialogActions sx={{ pt: 2, gap: 1 }}>
           <Button
             onClick={cancelDeletePasswordHistory}

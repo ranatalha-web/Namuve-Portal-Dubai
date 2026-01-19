@@ -30,16 +30,16 @@ const MONTHLY_TABLE_ID = 'tblgqswZdUmCUeUzgs0'; // Monthly Revenue Actual table
 function getPakistanDateTime() {
   const now = new Date();
   const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
-  
+
   const year = pakistanTime.getUTCFullYear();
   const month = (pakistanTime.getUTCMonth() + 1).toString().padStart(2, '0');
   const day = pakistanTime.getUTCDate().toString().padStart(2, '0');
   const hours = pakistanTime.getUTCHours().toString().padStart(2, '0');
   const minutes = pakistanTime.getUTCMinutes().toString().padStart(2, '0');
   const seconds = pakistanTime.getUTCSeconds().toString().padStart(2, '0');
-  
+
   const dateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  
+
   return {
     dateTime,
     pakistanTime,
@@ -48,13 +48,77 @@ function getPakistanDateTime() {
 }
 
 /**
+ * Helper function to fetch all records with pagination using fetch
+ * FIXED VERSION - Can handle unlimited records
+ */
+async function fetchAllRecords(token, pageSize = 100) {
+  const allRecords = [];
+  let skip = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record?take=${pageSize}&skip=${skip}`;
+
+    console.log(`📡 Fetching from URL: ${url}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(`📨 Response status: ${response.status}`);
+
+      if (!response.ok) {
+        console.error(`❌ Teable API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ Error details:`, errorText);
+        throw new Error(`Failed to fetch from Teable: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.records || !Array.isArray(data.records)) {
+        throw new Error('Invalid response format from Teable');
+      }
+
+      const records = data.records;
+
+      // If no records returned, we're done
+      if (records.length === 0) {
+        hasMore = false;
+      } else {
+        allRecords.push(...records);
+        skip += pageSize;
+
+        // If we got fewer records than requested, we've reached the end
+        if (records.length < pageSize) {
+          hasMore = false;
+        }
+      }
+
+      console.log(`📥 Fetched ${allRecords.length} records so far...`);
+    } catch (error) {
+      console.error(`❌ Teable API error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  return allRecords;
+}
+
+
+/**
  * POST /api/dubai-monthly-revenue-post/post
  * Get latest daily revenue and post it to monthly revenue table
  */
 router.post('/post', async (req, res) => {
   try {
     console.log('\n🏙️ Monthly Revenue Posting - Get Latest Daily & Post to Monthly');
-    
+
     // Get token
     const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
     if (!finalToken) {
@@ -64,40 +128,22 @@ router.post('/post', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Step 1: Get latest daily revenue
     console.log('📊 Step 1: Getting latest daily revenue...');
-    
-    const dailyUrl = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record`;
-    
-    const dailyResponse = await fetch(dailyUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${finalToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
 
-    if (!dailyResponse.ok) {
-      return res.status(dailyResponse.status).json({
-        success: false,
-        message: `Failed to fetch daily revenue: ${dailyResponse.status}`,
-        timestamp: new Date().toISOString()
-      });
-    }
+    const allRecords = await fetchAllRecords(finalToken);
 
-    const dailyData = await dailyResponse.json();
-    
-    if (!dailyData.records || !Array.isArray(dailyData.records) || dailyData.records.length === 0) {
+    if (allRecords.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'No daily revenue records found',
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Sort records by date/time to get the latest one
-    const sortedRecords = dailyData.records
+    const sortedRecords = allRecords
       .filter(record => {
         const dateTime = record.fields['Date and Time '] || record.fields['Date and Time'];
         const revenue = record.fields['Daily Revenue Actual'] || record.fields['Daily Revenue'];
@@ -108,7 +154,7 @@ router.post('/post', async (req, res) => {
         const dateB = b.fields['Date and Time '] || b.fields['Date and Time'];
         return new Date(dateB) - new Date(dateA); // Sort descending (latest first)
       });
-    
+
     if (sortedRecords.length === 0) {
       return res.status(404).json({
         success: false,
@@ -116,11 +162,11 @@ router.post('/post', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     const latestRecord = sortedRecords[0];
     const latestRevenue = latestRecord.fields['Daily Revenue Actual'] || latestRecord.fields['Daily Revenue'];
     const latestDateTime = latestRecord.fields['Date and Time '] || latestRecord.fields['Date and Time'];
-    
+
     const revenueValue = parseFloat(latestRevenue);
     if (isNaN(revenueValue)) {
       return res.status(400).json({
@@ -129,16 +175,16 @@ router.post('/post', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     console.log(`📊 Latest daily revenue: ${revenueValue.toFixed(2)} AED`);
     console.log(`📅 From: ${latestDateTime}`);
-    
+
     // Step 2: Post to monthly revenue table
     console.log('💰 Step 2: Posting to monthly revenue table...');
-    
+
     const { dateTime } = getPakistanDateTime();
     const monthlyRevenue = revenueValue.toFixed(2);
-    
+
     // Prepare Teable record for monthly table
     const monthlyRecord = {
       records: [
@@ -150,11 +196,11 @@ router.post('/post', async (req, res) => {
         }
       ]
     };
-    
+
     console.log('📤 Posting record:', JSON.stringify(monthlyRecord, null, 2));
-    
+
     const monthlyUrl = `${TEABLE_BASE_URL}/api/table/${MONTHLY_TABLE_ID}/record`;
-    
+
     const monthlyResponse = await fetch(monthlyUrl, {
       method: 'POST',
       headers: {
@@ -175,9 +221,9 @@ router.post('/post', async (req, res) => {
     }
 
     const monthlyResult = await monthlyResponse.json();
-    
+
     console.log('✅ Successfully posted to monthly revenue table!');
-    
+
     res.status(200).json({
       success: true,
       message: 'Latest daily revenue posted to monthly table successfully',
@@ -191,7 +237,7 @@ router.post('/post', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ Error posting monthly revenue:', error);
     res.status(500).json({
@@ -210,7 +256,7 @@ router.post('/post', async (req, res) => {
 router.get('/preview', async (req, res) => {
   try {
     console.log('\n🏙️ Monthly Revenue Preview - Show what would be posted');
-    
+
     // Get token
     const finalToken = process.env.TEABLE_BEARER_TOKEN || config.TEABLE_BEARER_TOKEN;
     if (!finalToken) {
@@ -220,38 +266,20 @@ router.get('/preview', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Get latest daily revenue (same logic as post)
-    const dailyUrl = `${TEABLE_BASE_URL}/api/table/${DAILY_TABLE_ID}/record`;
-    
-    const dailyResponse = await fetch(dailyUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${finalToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const allRecords = await fetchAllRecords(finalToken);
 
-    if (!dailyResponse.ok) {
-      return res.status(dailyResponse.status).json({
-        success: false,
-        message: `Failed to fetch daily revenue: ${dailyResponse.status}`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const dailyData = await dailyResponse.json();
-    
-    if (!dailyData.records || !Array.isArray(dailyData.records) || dailyData.records.length === 0) {
+    if (allRecords.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'No daily revenue records found',
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Get latest record
-    const sortedRecords = dailyData.records
+    const sortedRecords = allRecords
       .filter(record => {
         const dateTime = record.fields['Date and Time '] || record.fields['Date and Time'];
         const revenue = record.fields['Daily Revenue Actual'] || record.fields['Daily Revenue'];
@@ -262,7 +290,7 @@ router.get('/preview', async (req, res) => {
         const dateB = b.fields['Date and Time '] || b.fields['Date and Time'];
         return new Date(dateB) - new Date(dateA);
       });
-    
+
     if (sortedRecords.length === 0) {
       return res.status(404).json({
         success: false,
@@ -270,13 +298,13 @@ router.get('/preview', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     const latestRecord = sortedRecords[0];
     const latestRevenue = latestRecord.fields['Daily Revenue Actual'] || latestRecord.fields['Daily Revenue'];
     const latestDateTime = latestRecord.fields['Date and Time '] || latestRecord.fields['Date and Time'];
-    
+
     const { dateTime } = getPakistanDateTime();
-    
+
     res.status(200).json({
       success: true,
       message: 'Preview of what would be posted to monthly table',
@@ -293,7 +321,7 @@ router.get('/preview', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ Error previewing monthly revenue:', error);
     res.status(500).json({

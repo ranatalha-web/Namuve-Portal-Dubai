@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authService = require('../services/authService');
+const localhostOnly = require('../middleware/localhostOnly');
 
 // Middleware to log all authentication requests
 const logAuthRequest = (req, res, next) => {
@@ -499,6 +500,62 @@ router.delete('/admin/delete-password-history', async (req, res) => {
   } catch (error) {
     console.error('❌ Delete password history error:', error.message);
     res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Request One-Time Decryption Key Route (LOCALHOST ONLY)
+router.post('/request-decryption-key', localhostOnly, async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    // Validate input
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username is required'
+      });
+    }
+
+    console.log(`🔑 Decryption key requested for: ${username}`);
+
+    // Generate one-time key
+    const result = await authService.requestDecryptionKey(username);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ Request decryption key error:', error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Decrypt Password with One-Time Key Route (LOCALHOST ONLY)
+router.post('/decrypt-password', localhostOnly, async (req, res) => {
+  try {
+    const { username, oneTimeKey } = req.body;
+
+    // Validate input
+    if (!username || !oneTimeKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and one-time key are required'
+      });
+    }
+
+    console.log(`🔓 Password decryption requested for: ${username}`);
+
+    // Decrypt password
+    const result = await authService.decryptPasswordWithKey(username, oneTimeKey);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ Decrypt password error:', error.message);
+    res.status(400).json({
       success: false,
       message: error.message
     });
