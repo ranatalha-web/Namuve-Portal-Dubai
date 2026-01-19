@@ -1,4 +1,6 @@
 // API Configuration
+import VERCEL_BACKEND_URL from './vercelConfig';
+
 const getApiBaseUrl = () => {
   // Get hostname and protocol
   const hostname = window.location.hostname;
@@ -16,11 +18,9 @@ const getApiBaseUrl = () => {
     return `${protocol}//${hostname}`;
   }
 
-  // Vercel Deployments - MUST point to the external backend
+  // Vercel Deployments - Use the dedicated Vercel config
   if (hostname.includes('vercel.app')) {
-    // Return the production backend URL
-    // MUST be HTTPS to avoid Mixed Content errors
-    return 'https://portal.namuve.com';
+    return VERCEL_BACKEND_URL;
   }
 
   // If not localhost, assume it's production and use same protocol
