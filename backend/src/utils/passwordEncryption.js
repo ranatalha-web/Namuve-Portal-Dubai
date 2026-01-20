@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const argon2 = require('argon2');
+const keyManager = require('./keyManager');
 
 /**
  * Password Encryption Service using Argon2
@@ -18,8 +19,10 @@ class PasswordEncryption {
             saltLength: 16         // 16 bytes salt
         };
 
-        // Master encryption key for additional layer (optional)
-        this.MASTER_KEY = process.env.PASSWORD_ENCRYPTION_KEY || this.generateMasterKey();
+        // Master encryption key - loaded securely via KeyManager
+        // In development: decrypted from PASSWORD_ENCRYPTION_KEY_ENCRYPTED with master password
+        // In production: loaded from environment variable
+        this.MASTER_KEY = null;
 
         // Store one-time keys temporarily (in memory only)
         this.oneTimeKeys = new Map();
@@ -29,16 +32,37 @@ class PasswordEncryption {
     }
 
     /**
-     * Generate a master encryption key (only needed once)
-     * Store this in your .env file as PASSWORD_ENCRYPTION_KEY
+     * Initialize the encryption service with the master key
+     * This must be called after keyManager.initialize()
      */
-    generateMasterKey() {
-        const key = crypto.randomBytes(32).toString('hex');
-        console.warn('⚠️  No PASSWORD_ENCRYPTION_KEY found in environment!');
-        console.warn('⚠️  Generated temporary key (will be lost on restart):');
-        console.warn(`PASSWORD_ENCRYPTION_KEY=${key}`);
-        console.warn('⚠️  Add this to your .env file for persistence!');
-        return key;
+    async initializeKey() {
+        try {
+            if (keyManager.isReady()) {
+                this.MASTER_KEY = keyManager.getKey();
+            } else {
+                // Fallback to environment variable if KeyManager not initialized
+                this.MASTER_KEY = process.env.PASSWORD_ENCRYPTION_KEY || this.generateMasterKey();
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize encryption key:', error.message);
+            this.MASTER_KEY = this.generateMasterKey();
+        }
+    }
+
+    /**
+     * Get the master key (lazy initialization)
+     */
+    getMasterKey() {
+        if (!this.MASTER_KEY) {
+            // Try to get from KeyManager first
+            if (keyManager.isReady()) {
+                this.MASTER_KEY = keyManager.getKey();
+            } else {
+                // Fallback to environment variable
+                this.MASTER_KEY = process.env.PASSWORD_ENCRYPTION_KEY || this.generateMasterKey();
+            }
+        }
+        return this.MASTER_KEY;
     }
 
     /**
@@ -100,7 +124,7 @@ class PasswordEncryption {
             // Create cipher
             const cipher = crypto.createCipheriv(
                 'aes-256-gcm',
-                Buffer.from(this.MASTER_KEY, 'hex'),
+                Buffer.from(this.getMasterKey(), 'hex'),
                 iv
             );
 
@@ -143,7 +167,7 @@ class PasswordEncryption {
             // Create decipher
             const decipher = crypto.createDecipheriv(
                 'aes-256-gcm',
-                Buffer.from(this.MASTER_KEY, 'hex'),
+                Buffer.from(this.getMasterKey(), 'hex'),
                 iv
             );
 

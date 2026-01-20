@@ -29,6 +29,7 @@ node_modules/
 .env.production.local
 .env.vercel
 backend/.env
+backend/.env.local
 frontend/.env
 .env.example.local
 

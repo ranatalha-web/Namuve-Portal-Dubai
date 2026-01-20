@@ -2,7 +2,10 @@
 
 // Load environment variables - Vercel handles this automatically in production
 if (process.env.NODE_ENV !== 'production') {
+  // Load .env first (base configuration)
   require("dotenv").config({ path: "../.env" });
+  // Then load .env.local (sensitive keys - gitignored)
+  require("dotenv").config({ path: "../.env.local" });
 }
 
 const app = require("./app");

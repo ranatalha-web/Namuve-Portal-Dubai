@@ -18,7 +18,9 @@
 
 const readline = require('readline');
 const axios = require('axios');
+// Load environment variables (including .env.local for sensitive keys)
 require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 
 // Create readline interface
 const rl = readline.createInterface({
@@ -40,13 +42,31 @@ async function main() {
     console.log('║     🔐 Password Decryption Tool (One-Time Key)       ║');
     console.log('╚════════════════════════════════════════════════════════╝\n');
 
-    // Strict Security Check: Block execution on non-Windows servers (Production is Linux)
-    if (process.platform !== 'win32') {
+    // Strict Security Check: Block execution on production servers
+    // Allow ONLY on local development machines (Windows/macOS with development environment)
+
+    // Check 1: Platform must be Windows or macOS
+    const allowedPlatforms = ['win32', 'darwin'];
+    if (!allowedPlatforms.includes(process.platform)) {
         console.log('🛑 SECURITY ALERT: This tool is BLOCKED on this server.');
-        console.log('Reason: Decryption is only allowed on authorized LOCAL Windows machines.');
+        console.log('Reason: Decryption is only allowed on LOCAL development machines.');
         console.log('Your OS: ' + process.platform);
+        console.log('Allowed platforms: Windows (win32), macOS (darwin)');
         process.exit(1);
     }
+
+    // Check 2: Must be in development environment (not production)
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    if (nodeEnv === 'production') {
+        console.log('🛑 SECURITY ALERT: This tool is BLOCKED in production environment.');
+        console.log('Reason: Decryption is only allowed on LOCAL development machines.');
+        console.log('Current NODE_ENV: ' + nodeEnv);
+        console.log('This tool will NOT run on production servers (Vercel, Digital Ocean, etc.)');
+        process.exit(1);
+    }
+
+    console.log('✅ Security check passed: Running on local development machine');
+    console.log(`   Platform: ${process.platform}, Environment: ${nodeEnv}\n`);
 
     try {
         // Step 1: Get username
