@@ -26,6 +26,8 @@ import Link from '@mui/icons-material/Link';
 import OpenInNewIcon from "@mui/icons-material/OpenInNew"; // add this at the top
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import SyncIcon from '@mui/icons-material/Sync';
 import SearchIcon from "@mui/icons-material/Search";
 import InputBase from "@mui/material/InputBase";
@@ -104,6 +106,10 @@ import Notifications from "components/Notifications/index";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
+// Configure dayjs plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // Clear console on component load
 //console.clear();
@@ -1354,7 +1360,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           <MDTypography variant="body2" sx={{ fontSize: "0.85rem" }}>
             Booking Date:{" "}
             {bookingDate
-              ? dayjs(bookingDate).format("D MMM, YYYY")
+              ? dayjs(bookingDate).tz("Asia/Karachi").format("D MMM, YYYY")
               : "Not provided"}
           </MDTypography>
         </MDBox>
@@ -1363,7 +1369,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           <MDTypography variant="body2" sx={{ fontSize: "0.85rem" }}>
             {guest.arrivalDate && guest.departureDate ? (
               <>
-                {`${dayjs(guest.arrivalDate).format("D MMM")} – ${dayjs(guest.departureDate).format("D MMM, YYYY")}`}
+                {`${dayjs(guest.arrivalDate).tz("Asia/Karachi").format("D MMM")} – ${dayjs(guest.departureDate).tz("Asia/Karachi").format("D MMM, YYYY")}`}
               </>
             ) : (
               "N/A"
