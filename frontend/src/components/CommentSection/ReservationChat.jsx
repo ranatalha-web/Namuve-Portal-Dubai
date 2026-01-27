@@ -146,17 +146,24 @@ export default function ReservationChat({ guest, bookingDate }) {
         if (!reservationId) return;
         setFetching(true);
         try {
-            const res = await fetch(TABLE_URL, {
-                headers: { Authorization: `Bearer ${TEABLE_TOKEN}` },
-            });
+            // Server-side filter to avoid 100 record limit
+            // Mimicking the pattern used in fetchReplies: ?search=VALUE&search=FIELD&search=true
+            const res = await fetch(
+                `${TABLE_URL}?search=${reservationId}&search=ReservationID&search=true`,
+                {
+                    headers: { Authorization: `Bearer ${TEABLE_TOKEN}` },
+                }
+            );
             const data = await res.json();
+
             if (data.records) {
                 const filtered = data.records
-                    .filter((r) => r.fields.ReservationID === reservationId)
+                    // Keep client-side filter as backup, but ensure type safety
+                    .filter((r) => String(r.fields.ReservationID || "").trim() === String(reservationId || "").trim())
                     .map((r) => ({
                         id: r.id,
                         teableId: r.id,
-                        commentId: r.fields.ID, // ← FULL STRING: "14.002025..."
+                        commentId: r.fields.ID,
                         text: r.fields.Comment || "",
                         author: r.fields.User || "Unknown",
                         timestamp: r.fields.Time || new Date().toISOString(),
@@ -165,7 +172,7 @@ export default function ReservationChat({ guest, bookingDate }) {
                     .reverse();
 
                 setComments(filtered);
-                setReplies({}); // ← CLEAR OLD REPLIES
+                setReplies({});
             }
         } catch (err) {
             console.error("Fetch comments error:", err);
