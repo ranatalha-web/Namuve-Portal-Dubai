@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const config = require('../config/config');
 const { getSafeError } = require('../utils/sanitizer');
-const passwordEncryption = require('../utils/passwordEncryption');
+// const passwordEncryption = require('../utils/passwordEncryption'); // DISABLED
 
 class AuthService {
   constructor() {
