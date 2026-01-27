@@ -29,6 +29,7 @@ vercel.json
 tools/encryptEnvKey.js
 tools/decryptPassword.js
 utils/keymanager.js
+utils/passwordEncryption.js
 utils/Password Encryption.js
 src/middleware/localhostOnly.js
 
