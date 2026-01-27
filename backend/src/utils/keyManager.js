@@ -81,7 +81,9 @@ class KeyManager {
                 this.decryptedKey = process.env.PASSWORD_ENCRYPTION_KEY;
 
                 if (!this.decryptedKey) {
-                    throw new Error('PASSWORD_ENCRYPTION_KEY not set in production environment');
+                    console.warn('⚠️  PASSWORD_ENCRYPTION_KEY not set in production environment. PasswordEncryption service will use a temporary generated key.');
+                    // Don't throw, let the app start. PasswordEncryption will handle the fallback.
+                    return null;
                 }
 
                 this.isInitialized = true;

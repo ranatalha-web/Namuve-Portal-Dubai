@@ -84,6 +84,7 @@ import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import PersonIcon from "@mui/icons-material/Person";
 import PeopleIcon from "@mui/icons-material/People";
 import ApartmentIcon from "@mui/icons-material/Apartment";
+import SecurityIcon from "@mui/icons-material/Security";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import Divider from '@mui/material/Divider';
 
@@ -140,6 +141,8 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   const [openDatePickerDialog, setOpenDatePickerDialog] = useState(false);
   const [openCheckOutDialog, setOpenCheckOutDialog] = useState(false);
   const [checkOutDateTime, setCheckOutDateTime] = useState(dayjs());
+  const [securityDeposit, setSecurityDeposit] = useState(0);
+  const [channelName, setChannelName] = useState("");
 
   const HOSTAWAY_API = "https://api.hostaway.com/v1/reservations";
   const HOSTAWAY_TOKEN =
@@ -1185,10 +1188,35 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
         setNumberOfGuests(null);
       }
 
+      // Channel Name
+      const fetchedChannelName = data?.result?.channelName || "";
+      setChannelName(fetchedChannelName);
+
+      // 🛡️ Security Deposit (Extract from finance fields)
+      let secDep = 0;
+      if (Array.isArray(data?.result?.financeField)) {
+        const field = data.result.financeField.find(
+          (f) => f.alias === "Security Deposit" && f.isDeleted === 0
+        );
+        if (field) {
+          secDep = field.total ?? field.value ?? 0;
+        }
+      }
+
+      // 🔹 Apply Default of 2000 for Booking.com or Direct if API returned 0
+      if (Number(secDep) === 0 && (fetchedChannelName.toLowerCase() === "booking.com" || fetchedChannelName.toLowerCase() === "direct")) {
+        secDep = 2000;
+        console.log("ℹ️ Defaulting Security Deposit to 2000 for", fetchedChannelName);
+      }
+
+      setSecurityDeposit(secDep);
+
     } catch (error) {
       console.error("❌ Error fetching reservation extras:", error);
       setBookingDate(null);
       setNumberOfGuests(null);
+      setSecurityDeposit(0);
+      setChannelName("");
     }
   };
 
@@ -1422,6 +1450,19 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
             Number of Guests: {numberOfGuests !== null ? numberOfGuests : "N/A"}
           </MDTypography>
         </MDBox>
+
+        {/* 🛡️ SECURITY DEPOSIT BOX - Only for Upcoming Stay */}
+        {/* 🛡️ SECURITY DEPOSIT BOX - Only for Upcoming Stay + Booking/Direct */}
+        {guest.stack === "Upcoming Stay" &&
+          Number(securityDeposit) > 0 &&
+          (channelName?.toLowerCase() === "booking.com" || channelName?.toLowerCase() === "direct") && (
+            <MDBox display="flex" alignItems="center" mt={1} mb={1}>
+              <SecurityIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+              <MDTypography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                Security Deposit: {Number(securityDeposit).toLocaleString()} AED
+              </MDTypography>
+            </MDBox>
+          )}
 
         {/* Tags + Comment Icon */}
         {
@@ -2292,6 +2333,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
                                 : reservationDetails?.paymentStatus || "N/A"}
                             </td>
                           </tr>
+                          {/* Removed Description Row as per request */}
                           {/*<tr>
                         <td>
                           <strong>Security Deposit</strong>

@@ -33,12 +33,12 @@ function getTodayDate() {
   // Get UAE date and time (+4 hours)
   const now = new Date();
   const uaeTime = new Date(now.getTime() + (4 * 60 * 60 * 1000));
-  
+
   // Format as YYYY-MM-DD
   const year = uaeTime.getUTCFullYear();
   const month = (uaeTime.getUTCMonth() + 1).toString().padStart(2, '0');
   const day = uaeTime.getUTCDate().toString().padStart(2, '0');
-  
+
   return `${year}-${month}-${day}`;
 }
 
@@ -48,17 +48,17 @@ function getTodayDate() {
 function categorizeApartment(listing) {
   const name = (listing.name || '').toLowerCase();
   const bedrooms = listing.bedrooms || 0;
-  
+
   // Check by name first
   if (name.includes('studio')) return 'Studio';
   if (name.includes('1br') || name.includes('1 br') || name.includes('one bedroom')) return '1BR';
   if (name.includes('2br') || name.includes('2 br') || name.includes('two bedroom')) return '2BR';
-  
+
   // Check by bedroom count
   if (bedrooms === 0) return 'Studio';
   if (bedrooms === 1) return '1BR';
   if (bedrooms === 2) return '2BR';
-  
+
   // Default fallback
   return 'Unknown';
 }
@@ -69,53 +69,53 @@ function categorizeApartment(listing) {
 async function fetchTodayReservations() {
   try {
     console.log('🔄 Fetching today\'s Dubai reservations from Hostaway API...');
-    
+
     const authToken = process.env.HOSTAWAY_AUTH_TOKEN;
     if (!authToken) {
       throw new Error('HOSTAWAY_AUTH_TOKEN not configured');
     }
-    
+
     const today = getTodayDate();
     console.log(`📅 Today's date (UAE timezone): ${today}`);
-    
+
     // Fetch reservations with pagination
     let allReservations = [];
     let page = 1;
     const limit = 100;
     let hasMorePages = true;
-    
+
     while (hasMorePages) {
       console.log(`📄 Fetching page ${page} (limit: ${limit})...`);
-      
+
       // Fetch recent reservations (last 7 days) to find today's relevant reservations
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-      
+
       // Request specific fields including dates
       const fields = 'id,hostawayReservationId,guestName,arrivalDate,departureDate,checkInDate,checkOutDate,startDate,endDate,totalPrice,isPaid,paymentStatus,currency,numberOfGuests,nights,listingMapId,createdAt,modifiedAt';
       const url = `https://api.hostaway.com/v1/reservations?limit=${limit}&offset=${(page - 1) * limit}&modifiedSince=${sevenDaysAgoStr}&fields=${fields}`;
-      
+
       const response = await fetch(url, {
         headers: {
           'Authorization': authToken,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Hostaway API error: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       const pageReservations = data.result || [];
-      
+
       console.log(`📦 Page ${page}: ${pageReservations.length} reservations`);
-      
+
       if (pageReservations.length > 0) {
         allReservations = allReservations.concat(pageReservations);
         page++;
-        
+
         // If we got fewer than the limit, we've reached the last page
         if (pageReservations.length < limit) {
           hasMorePages = false;
@@ -123,22 +123,22 @@ async function fetchTodayReservations() {
       } else {
         hasMorePages = false;
       }
-      
+
       // Safety check to prevent infinite loops
       if (page > 50) {
         console.log(`⚠️ Reached maximum page limit (50), stopping pagination`);
         hasMorePages = false;
       }
     }
-    
+
     console.log(`📦 Total reservations fetched: ${allReservations.length} from ${page - 1} pages`);
     console.log(`📋 Processing ${allReservations.length} reservations for today`);
-    
+
     // First, get Dubai listings to filter reservations
     console.log('🇦🇪 Fetching Dubai listings for filtering...');
     let dubaiListingIds = [];
     let listingsWithCategories = {};
-    
+
     try {
       const listingsResponse = await fetch('https://api.hostaway.com/v1/listings?limit=200', {
         headers: {
@@ -146,17 +146,17 @@ async function fetchTodayReservations() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (listingsResponse.ok) {
         const listingsData = await listingsResponse.json();
         if (listingsData?.result) {
           // Filter Dubai listings
-          const dubaiListings = listingsData.result.filter(listing => 
+          const dubaiListings = listingsData.result.filter(listing =>
             listing.country === 'United Arab Emirates' && listing.id && listing.name
           );
-          
+
           dubaiListingIds = dubaiListings.map(listing => Number(listing.id));
-          
+
           // Create categories mapping
           dubaiListings.forEach(listing => {
             listingsWithCategories[listing.id] = {
@@ -166,7 +166,7 @@ async function fetchTodayReservations() {
               bedrooms: listing.bedrooms || 0
             };
           });
-          
+
           console.log(`🇦🇪 Found ${dubaiListingIds.length} Dubai listings: [${dubaiListingIds.join(', ')}]`);
           console.log(`🏠 Categories:`, Object.values(listingsWithCategories).reduce((acc, listing) => {
             acc[listing.category] = (acc[listing.category] || 0) + 1;
@@ -177,90 +177,93 @@ async function fetchTodayReservations() {
     } catch (error) {
       console.error('❌ Error fetching Dubai listings:', error.message);
     }
-    
+
     console.log(`🔍 Processing reservations for today: ${today}`);
     console.log(`📊 Total reservations to process: ${allReservations.length}`);
-    
+
     // Filter reservations for Dubai listings and today's activity
     const filteredReservations = allReservations.filter(reservation => {
       // Must be for Dubai listings (use listingMapId from Hostaway API)
       if (!dubaiListingIds.includes(Number(reservation.listingMapId))) {
         return false;
       }
-      
+
       // Must have valid dates
       if (!reservation.arrivalDate || !reservation.departureDate) {
         return false;
       }
-      
+
       // Filter only NEW or MODIFIED reservations
       const isNewOrModified = reservation.status === 'new' || reservation.status === 'modified';
       if (!isNewOrModified) {
         return false;
       }
-      
+
       const arrival = new Date(reservation.arrivalDate);
       const departure = new Date(reservation.departureDate);
       const todayDate = new Date(today);
-      
+
       // Include if: currently staying, checking in today, or checking out today
       // EXCLUDE: upcoming stay (future reservations)
       const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
       const isCheckingInToday = arrival.toDateString() === todayDate.toDateString();
       const isCheckingOutToday = departure.toDateString() === todayDate.toDateString();
-      
+
       return isWithinStayPeriod || isCheckingInToday || isCheckingOutToday;
     });
-    
+
     console.log(`✅ Filtered to ${filteredReservations.length} Dubai reservations for today`);
     console.log(`📊 DEBUG: Total reservations fetched: ${allReservations.length}`);
     console.log(`🇦🇪 DEBUG: Dubai listings found: ${dubaiListingIds.length}`);
     console.log(`🏠 DEBUG: Dubai listing IDs: [${dubaiListingIds.join(', ')}]`);
-    
+
     // Debug stats
     const debugStats = {
       withinStayPeriod: 0,
       checkingInToday: 0,
       checkingOutToday: 0
     };
-    
+
     // Count stay period matches
     allReservations.forEach(res => {
       if (res.arrivalDate && res.departureDate) {
         const arrival = new Date(res.arrivalDate);
         const departure = new Date(res.departureDate);
         const todayDate = new Date(today);
-        
+
         const isWithinStayPeriod = (todayDate >= arrival && todayDate < departure);
         const isCheckingInToday = arrival.toDateString() === todayDate.toDateString();
         const isCheckingOutToday = departure.toDateString() === todayDate.toDateString();
-        
+
         if (isWithinStayPeriod) debugStats.withinStayPeriod++;
         if (isCheckingInToday) debugStats.checkingInToday++;
         if (isCheckingOutToday) debugStats.checkingOutToday++;
       }
     });
-    
+
     console.log(`📈 Debug Stats:`, debugStats);
     console.log(`📊 Breakdown: Staying(${debugStats.withinStayPeriod}) + CheckIn(${debugStats.checkingInToday}) + CheckOut(${debugStats.checkingOutToday}) = ${debugStats.withinStayPeriod + debugStats.checkingInToday + debugStats.checkingOutToday} potential matches`);
-    
+
     // Transform data for frontend with finance data
     const transformedReservations = await Promise.all(filteredReservations.map(async (reservation) => {
       // Log original payment status from Hostaway
       console.log(`📋 Reservation ${reservation.id} - Original Hostaway payment status: "${reservation.paymentStatus}" (isPaid: ${reservation.isPaid})`);
-      
+
       // Get listing category using listingMapId (the correct field from Hostaway)
       const listingInfo = listingsWithCategories[reservation.listingMapId] || {};
-      
+
       // Determine payment status and calculate amounts
       let paymentStatus = 'Unpaid';
       const totalAmount = reservation.totalPrice || 0;
       let paidAmount = 0;
       let remainingAmount = totalAmount;
-      
+
       // Fetch accurate payment data from Hostaway Finance API
       let financeData = null;
       try {
+        // Add delay to prevent rate limiting and reduce server load
+        await new Promise(resolve => setTimeout(resolve, 150));
+
         const financeUrl = `https://api.hostaway.com/v1/financeCalculatedField/reservation/${reservation.id}`;
         const financeResponse = await fetch(financeUrl, {
           method: 'GET',
@@ -269,15 +272,15 @@ async function fetchTodayReservations() {
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (financeResponse.ok) {
           const financeResult = await financeResponse.json();
           if (financeResult.result && Array.isArray(financeResult.result)) {
             // Find the finance data with formulaFilled
-            financeData = financeResult.result.find(item => 
+            financeData = financeResult.result.find(item =>
               item.formulaFilled && item.formulaFilled.includes('-')
             );
-            
+
             if (financeData) {
               console.log(`💰 Finance data found for reservation ${reservation.id}:`, {
                 formulaFilled: financeData.formulaFilled,
@@ -289,7 +292,7 @@ async function fetchTodayReservations() {
       } catch (financeError) {
         console.log(`⚠️ Could not fetch finance data for reservation ${reservation.id}:`, financeError.message);
       }
-      
+
       // Use finance data if available for accurate calculations
       if (financeData && financeData.formulaFilled) {
         const formulaParts = financeData.formulaFilled.split('-');
@@ -297,11 +300,11 @@ async function fetchTodayReservations() {
           const totalFromFormula = parseFloat(formulaParts[0]) || 0;
           const paidFromFormula = parseFloat(formulaParts[1]) || 0;
           const remainingFromFormula = financeData.formulaResult || 0;
-          
+
           // Use finance data for accurate amounts
           paidAmount = paidFromFormula;
           remainingAmount = remainingFromFormula;
-          
+
           // Determine status based on amounts
           if (remainingFromFormula <= 0 && paidFromFormula > 0) {
             paymentStatus = 'Paid';
@@ -340,7 +343,7 @@ async function fetchTodayReservations() {
         } else if (reservation.paymentStatus) {
           // Handle other payment statuses, convert only 'unknown' and 'pending' to 'Due'
           if (reservation.paymentStatus.toLowerCase() === 'unknown' ||
-              reservation.paymentStatus.toLowerCase() === 'pending') {
+            reservation.paymentStatus.toLowerCase() === 'pending') {
             paymentStatus = 'Due';
           } else {
             paymentStatus = reservation.paymentStatus;
@@ -349,7 +352,7 @@ async function fetchTodayReservations() {
           remainingAmount = totalAmount;
         }
       }
-      
+
       // Debug: Log calculated amounts with original status comparison
       console.log(`💰 Reservation ${reservation.id} calculated amounts:`, {
         originalHostawayStatus: reservation.paymentStatus || 'N/A',
@@ -359,18 +362,18 @@ async function fetchTodayReservations() {
         finalStatus: paymentStatus,
         listingCategory: listingInfo.category || 'Unknown'
       });
-      
+
       // Determine reservation status
       const todayDate = new Date(today);
       const arrival = new Date(reservation.arrivalDate);
       const departure = new Date(reservation.departureDate);
-      
+
       let reservationStatus = 'Upcoming stay';
-      
+
       const isCheckingInToday = arrival.toDateString() === todayDate.toDateString();
       const isCheckingOutToday = departure.toDateString() === todayDate.toDateString();
       const isStayingToday = (todayDate >= arrival && todayDate < departure);
-      
+
       if (isCheckingInToday) {
         reservationStatus = 'Check in';
       } else if (isCheckingOutToday) {
@@ -378,11 +381,11 @@ async function fetchTodayReservations() {
       } else if (isStayingToday) {
         reservationStatus = 'Staying guest';
       }
-      
+
       // Try multiple date field names from Hostaway
       const arrivalDate = reservation.arrivalDate || reservation.checkInDate || reservation.startDate || 'N/A';
       const departureDate = reservation.departureDate || reservation.checkOutDate || reservation.endDate || 'N/A';
-      
+
       // Log if dates are missing - show ALL available fields for debugging
       if (!reservation.arrivalDate && !reservation.checkInDate && !reservation.startDate) {
         console.warn(`⚠️ Reservation ${reservation.id} (${reservation.guestName}): Missing dates!`);
@@ -398,7 +401,7 @@ async function fetchTodayReservations() {
         });
         console.warn(`   ALL reservation fields:`, Object.keys(reservation).sort());
       }
-      
+
       return {
         id: reservation.hostawayReservationId || reservation.id,
         reservationId: reservation.hostawayReservationId || reservation.id,
@@ -424,26 +427,26 @@ async function fetchTodayReservations() {
         bedrooms: listingInfo.bedrooms || 0
       };
     }));
-    
+
     // Sort by modification date (newest first)
     transformedReservations.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
-    
+
     console.log(`✅ Successfully processed ${transformedReservations.length} Dubai reservations`);
-    
+
     // Log category breakdown
     const categoryBreakdown = transformedReservations.reduce((acc, res) => {
       acc[res.listingCategory] = (acc[res.listingCategory] || 0) + 1;
       return acc;
     }, {});
     console.log(`🏠 Reservation category breakdown:`, categoryBreakdown);
-    
+
     return {
       success: true,
       data: transformedReservations,
       total: transformedReservations.length,
       date: today
     };
-    
+
   } catch (error) {
     console.error('❌ Error fetching Dubai reservations:', error);
     throw error;
@@ -457,9 +460,9 @@ async function fetchTodayReservations() {
 router.get('/today-reservations', async (req, res) => {
   try {
     console.log('🔄 API call: GET /api/dubai-payment/today-reservations');
-    
+
     const result = await fetchTodayReservations();
-    
+
     // Sync reservations to Teable (DELETE old ones, PATCH existing, POST new ones)
     if (result.success && result.data && Array.isArray(result.data)) {
       try {
@@ -471,9 +474,9 @@ router.get('/today-reservations', async (req, res) => {
         // Don't fail the API call, just log the warning
       }
     }
-    
+
     res.json(result);
-    
+
   } catch (error) {
     console.error('❌ Error in /today-reservations:', error);
     res.status(500).json({
@@ -491,33 +494,33 @@ router.get('/today-reservations', async (req, res) => {
 router.get('/debug', async (req, res) => {
   try {
     console.log('🔍 DEBUG: Fetching raw reservation data...');
-    
+
     const authToken = process.env.HOSTAWAY_AUTH_TOKEN;
     if (!authToken) {
       return res.json({ error: 'HOSTAWAY_AUTH_TOKEN not configured' });
     }
-    
+
     // Fetch recent reservations (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-    
+
     const url = `https://api.hostaway.com/v1/reservations?limit=50&modifiedSince=${thirtyDaysAgoStr}`;
-    
+
     const response = await fetch(url, {
       headers: {
         'Authorization': authToken,
         'Content-Type': 'application/json'
       }
     });
-    
+
     if (!response.ok) {
       return res.json({ error: `Hostaway API error: ${response.status}` });
     }
-    
+
     const data = await response.json();
     const reservations = data.result || [];
-    
+
     // Also fetch Dubai listings
     const listingsResponse = await fetch('https://api.hostaway.com/v1/listings?limit=200', {
       headers: {
@@ -525,17 +528,17 @@ router.get('/debug', async (req, res) => {
         'Content-Type': 'application/json'
       }
     });
-    
+
     let dubaiListings = [];
     if (listingsResponse.ok) {
       const listingsData = await listingsResponse.json();
       if (listingsData?.result) {
-        dubaiListings = listingsData.result.filter(listing => 
+        dubaiListings = listingsData.result.filter(listing =>
           listing.country === 'United Arab Emirates'
         );
       }
     }
-    
+
     res.json({
       success: true,
       debug: {
@@ -556,7 +559,7 @@ router.get('/debug', async (req, res) => {
         }))
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Debug error:', error);
     res.status(500).json({
@@ -574,14 +577,14 @@ router.get('/reservation/:id', async (req, res) => {
   try {
     const reservationId = req.params.id;
     console.log(`🔄 API call: GET /api/dubai-payment/reservation/${reservationId}`);
-    
+
     // For now, return not implemented
     res.json({
       success: false,
       data: null,
       error: 'Individual reservation details not yet implemented'
     });
-    
+
   } catch (error) {
     console.error(`❌ Error fetching Dubai reservation ${req.params.id}:`, error);
     res.status(500).json({

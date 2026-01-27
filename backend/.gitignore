@@ -25,6 +25,13 @@ node_modules/
 properties.json
 vercel.json
 
+# Encryption and security files
+tools/encryptEnvKey.js
+tools/decryptPassword.js
+utils/keymanager.js
+utils/Password Encryption.js
+src/middleware/localhostOnly.js
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

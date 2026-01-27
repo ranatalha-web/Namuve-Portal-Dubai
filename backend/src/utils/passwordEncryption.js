@@ -50,6 +50,15 @@ class PasswordEncryption {
     }
 
     /**
+     * Generate a random master key for fallback
+     */
+    generateMasterKey() {
+        console.warn('⚠️  Generating temporary master key (data will not be decryptable after restart)');
+        this.isTemporaryKey = true; // Flag for debugging
+        return crypto.randomBytes(32).toString('hex');
+    }
+
+    /**
      * Get the master key (lazy initialization)
      */
     getMasterKey() {
@@ -148,7 +157,7 @@ class PasswordEncryption {
      * @param {string} encryptedPassword - Encrypted password in format: iv:authTag:encryptedData
      * @returns {string} Decrypted plain text password
      */
-    decryptPassword(encryptedPassword) {
+    decryptPassword(encryptedPassword, customKey = null) {
         try {
             if (!encryptedPassword) return '';
 
@@ -164,10 +173,12 @@ class PasswordEncryption {
             const iv = Buffer.from(ivHex, 'hex');
             const authTag = Buffer.from(authTagHex, 'hex');
 
+            const keyHex = customKey || this.getMasterKey();
+
             // Create decipher
             const decipher = crypto.createDecipheriv(
                 'aes-256-gcm',
-                Buffer.from(this.getMasterKey(), 'hex'),
+                Buffer.from(keyHex, 'hex'),
                 iv
             );
 
@@ -181,7 +192,7 @@ class PasswordEncryption {
             return decrypted;
         } catch (error) {
             console.error('❌ Decryption error:', error.message);
-            throw new Error('Failed to decrypt password');
+            throw new Error(`Failed to decrypt password: ${error.message}`);
         }
     }
 

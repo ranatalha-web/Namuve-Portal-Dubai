@@ -449,79 +449,56 @@ async function fetchMonthlyRevenueRecords(take = 100, skip = 0) {
     console.log(`✅ After filtering: ${sortedRecords.length} valid records`);
     console.log(`📋 Sorted records:`, sortedRecords.slice(0, 5).map(r => ({ dateTime: r.dateTime, revenue: r.monthlyRevenue })));
 
-    // Get current month's revenue with 2nd of month logic
+    // Get current month's revenue logic - Back to Monthly Table Summation
     const { monthYear } = getCurrentMonthRange();
     const currentDate = new Date();
     const currentDay = currentDate.getDate();
-
-    console.log(`📅 Current date: ${currentDate.toISOString().split('T')[0]} (Day ${currentDay})`);
+    console.log(`🔍 Calculating actual monthly revenue from MONTHLY TABLE RECORDS...`);
 
     let currentMonthRevenue = 0;
 
-    // Check if we have passed the 2nd of the month (day >= 2 means 2nd or later)
-    const hasPassedSecondOfMonth = currentDay >= 2;
+    // Check if we have passed the 1st of the month (day >= 1)
+    const hasPassedFirstOfMonth = currentDay >= 1;
 
-    if (hasPassedSecondOfMonth) {
-      // Sum ALL records from current month (from 2nd onwards)
-      console.log(`🔍 Summing all records from month: ${monthYear}`);
-      console.log(`📋 Looking through ${sortedRecords.length} records...`);
-
+    if (hasPassedFirstOfMonth) {
       const currentMonthRecords = sortedRecords.filter(record => {
-        if (!record.dateTime) {
-          console.log(`   ⚠️ Record has no dateTime`);
-          return false;
-        }
+        if (!record.dateTime) return false;
         const recordMonth = record.dateTime.substring(0, 7); // YYYY-MM
         const recordDate = new Date(record.dateTime);
         const recordDay = recordDate.getDate();
-
-        const isCurrentMonth = recordMonth === monthYear;
-        const isFromSecondOrLater = recordDay >= 2;
-        const isMatch = isCurrentMonth && isFromSecondOrLater;
-
-        console.log(`   📅 Record: ${record.dateTime} | Month: ${recordMonth} | Day: ${recordDay} | CurrentMonth: ${isCurrentMonth} | FromSecondOrLater: ${isFromSecondOrLater} | Include: ${isMatch}`);
-
-        return isMatch;
+        // Include all records from day 1 onwards
+        return recordMonth === monthYear && recordDay >= 1;
       });
 
-      // Sum all matching records
+      // Sum revenue from monthly table records
       currentMonthRevenue = currentMonthRecords.reduce((sum, record) => sum + record.monthlyRevenue, 0);
 
-      console.log(`✅ Found ${currentMonthRecords.length} records from month ${monthYear}`);
-      console.log(`💰 Total revenue from current month (2nd onwards): ${currentMonthRevenue} AED`);
-
-      // If no records found, log warning
-      if (currentMonthRecords.length === 0) {
-        console.log(`⚠️ WARNING: No records found in Monthly Revenue table for ${monthYear}`);
-        console.log(`📋 Total records in table: ${sortedRecords.length}`);
-        if (sortedRecords.length > 0) {
-          console.log(`📋 Sample records:`, sortedRecords.slice(0, 3).map(r => ({ dateTime: r.dateTime, revenue: r.monthlyRevenue })));
-        }
-      }
-
-      console.log(`📊 Month logic: Today is day ${currentDay} (>= 2), showing total revenue from month: ${currentMonthRevenue} AED`);
+      console.log(`✅ Found ${currentMonthRecords.length} records in Monthly Table for ${monthYear}`);
+      console.log(`💰 Calculated Revenue from Monthly Table: ${currentMonthRevenue} AED`);
     } else {
-      console.log(`📊 Month logic: Today is day ${currentDay} (< 2), showing 0 (2nd hasn't arrived yet)`);
+      console.log('Month has not started yet (Day < 1)');
       currentMonthRevenue = 0;
     }
+
+    console.log(`📊 Final Current Month Revenue: ${currentMonthRevenue} AED`);
 
     // Get latest (most recent) revenue
     const latestRecord = sortedRecords[0];
 
     console.log(`📅 Current month (${monthYear}): ${currentMonthRevenue} AED`);
     console.log(`📊 Latest record:`, latestRecord ? `${latestRecord.monthlyRevenue} AED (${latestRecord.dateTime})` : 'No data');
-    console.log(`📊 Month status: ${hasPassedSecondOfMonth ? 'PASSED 2ND' : 'BEFORE 2ND'}`);
+    console.log(`📊 Month status: ${hasPassedFirstOfMonth ? 'PASSED 1ST' : 'BEFORE 1ST'}`);
 
     return {
       success: true,
       data: {
         records: sortedRecords,
         totalRecords: sortedRecords.length,
-        currentMonthRevenue: currentMonthRevenue, // Using new 2nd of month logic
+        currentMonthRevenue: currentMonthRevenue,
         latestRevenue: latestRecord?.monthlyRevenue || 0,
         latestDateTime: latestRecord?.dateTime || null,
         currentMonth: monthYear,
-        hasPassedSecondOfMonth: hasPassedSecondOfMonth,
+        hasPassedSecondOfMonth: hasPassedFirstOfMonth, // Keep key for compatibility, map to new value
         currentDay: currentDay
       },
       timestamp: new Date().toISOString()

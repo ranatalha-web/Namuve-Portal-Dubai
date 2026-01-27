@@ -562,6 +562,63 @@ router.post('/decrypt-password', localhostOnly, async (req, res) => {
   }
 });
 
+// Decrypt Login Attempt Route (Strict Local Windows/Mac Only)
+router.post('/admin/decrypt-login', async (req, res) => {
+  try {
+    const { adminPassword, recordNumber, customKey } = req.body;
+
+    // 1. Strict Environment Check (User Requirement: Local Windows/Mac Only, No Linux/Server)
+    const os = require('os');
+    const platform = os.platform();
+    const isLocalWindowsOrMac = (platform === 'win32' || platform === 'darwin');
+    const isNotProduction = (process.env.NODE_ENV !== 'production');
+
+    // Explicitly block if not Windows/Mac or if running in Production
+    if (!isLocalWindowsOrMac || !isNotProduction) {
+      console.warn(`🛑 Blocked decryption attempt on unauthorized environment: Platform=${platform}, Env=${process.env.NODE_ENV}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: This feature is restricted to local Windows/Mac environments only.'
+      });
+    }
+
+    if (!adminPassword || !recordNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin password and record number are required'
+      });
+    }
+
+    // 2. Verify Admin Password
+    // Allow "bypass" for local development convenience (consistent with other admin routes)
+    if (adminPassword !== "bypass") {
+      const isValidAdmin = await authService.verifyAdminPassword(adminPassword);
+      if (!isValidAdmin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin password'
+        });
+      }
+    }
+
+    console.log(`🔓 Admin decrypting login attempt record #${recordNumber}`);
+
+    // 3. Get Decrypted Record
+    const result = await authService.getDecryptedLoginAttempt(recordNumber, customKey);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('❌ Decrypt login error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.status(200).json({

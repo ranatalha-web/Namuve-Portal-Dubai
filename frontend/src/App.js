@@ -287,7 +287,7 @@ function AppContent() {
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
           <Route path="*" element={<Navigate to={getDefaultRedirect()} replace />} />
         </Routes>
-      )}
+      )}}
     </ThemeProvider>
   );
 }

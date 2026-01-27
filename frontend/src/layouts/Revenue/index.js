@@ -1552,9 +1552,9 @@ function Revenue() {
 
         console.log('📡 Fetching all data...');
         const [dubaiResponse, monthlyRevenueResponse, quarterlyRevenueResponse] = await Promise.all([
-          fetchWithTimeout(API_ENDPOINTS.DUBAI_REVENUE, 5000),
-          fetchWithTimeout(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE, 3000),
-          fetchWithTimeout(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE, 3000)
+          fetchWithTimeout(API_ENDPOINTS.DUBAI_REVENUE, 10000),
+          fetchWithTimeout(API_ENDPOINTS.TEABLE_MONTHLY_REVENUE, 15000),
+          fetchWithTimeout(API_ENDPOINTS.TEABLE_QUARTERLY_REVENUE, 15000)
         ]);
 
         // Skip dashboard and monthly endpoints that don't exist
@@ -1951,15 +1951,14 @@ function Revenue() {
     const expectedRevenue = revenueData ? parseFloat(revenueData.expectedRevenue) || 0 : 0; // Rs100K (expected)
     const totalRevenue = revenueData ? parseFloat(revenueData.totalRevenue) || 0 : 0;
     // Use monthly revenue from Teable (sum of all records from 2nd of month)
-    const currentMonthRevenueValue = monthlyData?.currentMonthRevenue || monthlyData?.data?.currentMonthRevenue || revenueData?.monthlyAchievedRevenue;
-    const teableMonthlyRevenue = currentMonthRevenueValue ? parseFloat(currentMonthRevenueValue) : 0;
-    const monthlyAchievedRevenue = teableMonthlyRevenue > 0 ? teableMonthlyRevenue : 0;
+    // Use monthly revenue from Teable (sum of all records from 1st of month)
+    // Prioritize revenueData.monthlyAchievedRevenue as it comes from the new daily calculation
+    const monthlyAchievedRevenue = parseFloat(revenueData?.monthlyAchievedRevenue || monthlyData?.currentMonthRevenue || monthlyData?.data?.currentMonthRevenue || 0);
 
     // Debug logging for monthly achieved revenue
     console.log('📊 Monthly Achieved Revenue Debug:', {
       monthlyData,
-      currentMonthRevenueValue,
-      teableMonthlyRevenue,
+      revenueDataMonthly: revenueData?.monthlyAchievedRevenue,
       monthlyAchievedRevenue
     });
 

@@ -71,20 +71,34 @@ class AuthService {
         timeout: 30000
       };
 
-      let response;
-      if (method === 'GET') {
-        response = await axios.get(url, config);
-      } else if (method === 'POST') {
-        response = await axios.post(url, data, config);
-      } else if (method === 'PUT') {
-        response = await axios.put(url, data, config);
-      } else if (method === 'PATCH') {
-        response = await axios.patch(url, data, config);
-      } else if (method === 'DELETE') {
-        response = await axios.delete(url, config);
-      }
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          let response;
+          if (method === 'GET') {
+            response = await axios.get(url, config);
+          } else if (method === 'POST') {
+            response = await axios.post(url, data, config);
+          } else if (method === 'PUT') {
+            response = await axios.put(url, data, config);
+          } else if (method === 'PATCH') {
+            response = await axios.patch(url, data, config);
+          } else if (method === 'DELETE') {
+            response = await axios.delete(url, config);
+          }
 
-      return response.data;
+          return response.data;
+        } catch (error) {
+          // Retry on DNS/Network EAI_AGAIN errors
+          if (retries > 1 && (error.code === 'EAI_AGAIN' || error.code === 'ECONNRESET')) {
+            console.warn(`⚠️ Teable request failed (${error.code}), retrying... (${retries - 1} attempts left)`);
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s
+            continue;
+          }
+          throw error;
+        }
+      }
     } catch (error) {
       console.error('❌ Teable API Error:', getSafeError(error));
       throw error;
@@ -319,6 +333,70 @@ class AuthService {
       console.log(`📝 Login attempt logged (password encrypted): ${username} - ${status}`);
     } catch (error) {
       console.error('❌ Error logging login attempt:', error.message);
+    }
+  }
+
+  // Get decrypted login attempt by index (Admin only, Local dev only)
+  async getDecryptedLoginAttempt(recordIndex, customKey = null) {
+    try {
+      // Validate index
+      const index = parseInt(recordIndex);
+      if (isNaN(index) || index < 1) throw new Error("Invalid record index");
+
+      // Calculate skip (Record 1 = Skip 0)
+      const skip = index - 1;
+
+      // Construct URL with pagination
+      // `take` and `skip` are standard for many APIs. If Teable fails, we might need view-specific call.
+      const url = `${this.LOGIN_ATTEMPTS_TABLE_URL}?take=1&skip=${skip}`;
+
+      const response = await this.makeTeableRequest(url);
+
+      if (!response.records || response.records.length === 0) {
+        throw new Error(`Record number ${index} not found`);
+      }
+
+      const record = response.records[0];
+
+      // Extract fields (using the specific field names with spaces as seen in logLoginAttempt)
+      const username = record.fields['Username '] || "Unknown";
+      const encryptedPass = record.fields['Enter Password '];
+      const time = record.fields['Date and Time '];
+      const status = record.fields['Login Status'];
+
+      let decryptedPass = "No Password";
+
+      if (encryptedPass) {
+        // Check if it looks like an encrypted string (iv:tag:data)
+        if (!encryptedPass.includes(':') || encryptedPass.split(':').length !== 3) {
+          decryptedPass = `[Unencrypted/Legacy] ${encryptedPass}`;
+        } else {
+          try {
+            decryptedPass = passwordEncryption.decryptPassword(encryptedPass, customKey);
+          } catch (err) {
+            // If it fails, report the error
+            decryptedPass = `[Decryption Failed] ${err.message}`;
+            console.error("Decryption failed for record:", index, err.message);
+          }
+        }
+      } else {
+        decryptedPass = "[Empty] (No password recorded)";
+      }
+
+      return {
+        recordNumber: index,
+        id: record.id,
+        username,
+        decryptedPassword: decryptedPass,
+        time,
+        status,
+        usingTemporaryKey: passwordEncryption.isTemporaryKey, // Helpful diagnostic
+        encryptedPassword: encryptedPass
+      };
+
+    } catch (error) {
+      console.error('❌ Error getting decrypted login attempt:', error.message);
+      throw error;
     }
   }
 

@@ -15,7 +15,7 @@ class MonthlyTargetService {
   async getTodayRevenue() {
     try {
       console.log('📊 Fetching today\'s revenue from source table...');
-      
+
       const response = await axios.get(this.sourceTableUrl, {
         headers: {
           'Authorization': `Bearer ${this.teableToken}`,
@@ -38,10 +38,10 @@ class MonthlyTargetService {
       // Find today's records (looking for 11pm or latest record)
       const todayRecords = response.data.records.filter(record => {
         if (!record.fields || !record.fields['Date and Time']) return false;
-        
+
         const recordDate = new Date(record.fields['Date and Time']);
         const recordDateStr = recordDate.toISOString().split('T')[0];
-        
+
         return recordDateStr === today;
       });
 
@@ -77,9 +77,9 @@ class MonthlyTargetService {
    */
   parseRevenueValue(value) {
     if (!value || typeof value !== 'string') return 0;
-    
+
     const cleanValue = value.replace(/Rs|,/g, '').trim();
-    
+
     if (cleanValue.includes('M')) {
       return parseFloat(cleanValue.replace('M', '')) * 1000000;
     } else if (cleanValue.includes('K')) {
@@ -94,7 +94,7 @@ class MonthlyTargetService {
    */
   formatRevenueValue(value) {
     const numValue = parseFloat(value) || 0;
-    
+
     if (numValue >= 1000000) {
       return `Rs${(numValue / 1000000).toFixed(1)}M`;
     } else if (numValue >= 1000) {
@@ -110,8 +110,8 @@ class MonthlyTargetService {
   async getMonthlyAchievedRevenue() {
     try {
       console.log('📊 Calculating monthly achieved revenue...');
-      
-      const response = await axios.get(this.targetTableUrl, {
+
+      const response = await axios.get(this.sourceTableUrl, {
         headers: {
           'Authorization': `Bearer ${this.teableToken}`,
           'Content-Type': 'application/json'
@@ -120,14 +120,13 @@ class MonthlyTargetService {
       });
 
       if (!response.data || !response.data.records) {
-        console.log('⚠️ No records found in monthly target table');
+        console.log('⚠️ No records found in daily revenue source table');
         return 0;
       }
 
-      console.log(`📋 Total records in Teable: ${response.data.records.length}`);
+      console.log(`📋 Total records in Source Table: ${response.data.records.length}`);
       if (response.data.records.length > 0) {
         console.log('🔍 First record fields:', Object.keys(response.data.records[0].fields || {}));
-        console.log('🔍 First record date field:', response.data.records[0].fields['Date and Time ']);
       }
 
       // Get current month, year, and today's date
@@ -139,53 +138,50 @@ class MonthlyTargetService {
 
       console.log(`🗓️ Calculating for month: ${currentMonth + 1}/${currentYear}`);
       console.log(`📅 Today's date: ${today}/${currentMonth + 1}/${currentYear}`);
-      console.log(`🔍 Looking for records from 2nd to ${today}th of current month (excluding 1st)`);
+      console.log(`🔍 Looking for records from 1st to ${today}th of current month from Source Table`);
 
-      // Filter records for current month up to today only (EXCLUDING day 1)
+      // Filter records for current month up to today only
       const currentMonthRecords = response.data.records.filter(record => {
-        if (!record.fields || !record.fields['Date and Time ']) return false;
-        
+        if (!record.fields || !record.fields['Date and Time']) return false;
+
         // Parse ISO date format: "2025-10-06T10:00:17.449Z"
-        const dateTimeStr = record.fields['Date and Time '];
+        // Note: Field name in Source Table is likely 'Date and Time' (checked in getTodayRevenue)
+        const dateTimeStr = record.fields['Date and Time'];
         const recordDate = new Date(dateTimeStr);
         const recordMonth = recordDate.getMonth();
         const recordYear = recordDate.getFullYear();
         const recordDay = recordDate.getDate();
-        
+
         console.log(`📅 Record date: ${dateTimeStr} → day=${recordDay}, month=${recordMonth}, year=${recordYear}`);
-        
+
         // Only include records from current month, current year, and up to today's date
-        // EXCLUDE day 1 because it was posted at end of previous month (Oct 31 at 11:59 PM)
         const isCurrentMonth = recordMonth === currentMonth && recordYear === currentYear;
         const isUpToToday = recordDay <= today;
-        const isNotFirstDay = recordDay > 1; // EXCLUDE day 1
-        
-        if (isCurrentMonth && isUpToToday && isNotFirstDay) {
-          console.log(`✅ Including record from day ${recordDay} (within range 2-${today})`);
-        } else if (isCurrentMonth && recordDay === 1) {
-          console.log(`❌ Excluding record from day 1 (posted at end of previous month)`);
+
+        if (isCurrentMonth && isUpToToday) {
+          console.log(`✅ Including record from day ${recordDay} (within range 1-${today})`);
         } else if (isCurrentMonth && !isUpToToday) {
           console.log(`❌ Excluding record from day ${recordDay} (future date, beyond today ${today})`);
         }
-        
-        return isCurrentMonth && isUpToToday && isNotFirstDay;
+
+        return isCurrentMonth && isUpToToday;
       });
 
-      console.log(`📋 Found ${currentMonthRecords.length} records from 2nd to ${today}th of current month (excluding 1st)`);
+      console.log(`📋 Found ${currentMonthRecords.length} records from 1st to ${today}th of current month`);
 
       // Sum all achieved values from month start to today
       let monthlyTotal = 0;
       currentMonthRecords.forEach(record => {
-        const achievedValue = record.fields['Monthly Target Achieved'] || '0';
+        const achievedValue = record.fields['Achieved'] || '0';
         const numValue = this.parseRevenueValue(achievedValue);
         monthlyTotal += numValue;
-        
-        const recordDate = new Date(record.fields['Date and Time ']);
+
+        const recordDate = new Date(record.fields['Date and Time']);
         const recordDay = recordDate.getDate();
         console.log(`➕ Adding day ${recordDay} revenue: ${achievedValue} (${numValue})`);
       });
 
-      console.log(`✅ Monthly achieved total (2nd to ${today}th, excluding 1st): ${this.formatRevenueValue(monthlyTotal)}`);
+      console.log(`✅ Monthly achieved total (1st to ${today}th): ${this.formatRevenueValue(monthlyTotal)}`);
       return monthlyTotal;
 
     } catch (error) {
@@ -200,11 +196,11 @@ class MonthlyTargetService {
   async postDailyRevenue(dailyRevenue) {
     try {
       console.log(`🚀 Posting daily revenue to monthly target table: ${this.formatRevenueValue(dailyRevenue)}`);
-      
+
       // Get Pakistan date and time
       const now = new Date();
       const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
-      
+
       const postData = {
         records: [{
           fields: {
@@ -242,14 +238,14 @@ class MonthlyTargetService {
   async testPost2pm() {
     try {
       console.log('🧪 Testing 2pm record post...');
-      
+
       // Get today's revenue
       const todayRevenue = await this.getTodayRevenue();
-      
+
       if (todayRevenue > 0) {
         // Post to monthly target table
         const result = await this.postDailyRevenue(todayRevenue);
-        
+
         if (result.success) {
           console.log('✅ Test post successful at 2pm');
           return { success: true, revenue: todayRevenue };
@@ -272,27 +268,27 @@ class MonthlyTargetService {
    */
   scheduleDailyPosting() {
     console.log('⏰ Scheduling daily posting at 11:00 PM...');
-    
+
     const scheduleNext = () => {
       const now = new Date();
       const pakistanTime = new Date(now.getTime() + (5 * 60 * 60 * 1000));
-      
+
       // Set target time to 11:00 PM Pakistan time
       const targetTime = new Date(pakistanTime);
       targetTime.setHours(23, 0, 0, 0);
-      
+
       // If it's already past 11 PM today, schedule for tomorrow
       if (pakistanTime.getHours() >= 23) {
         targetTime.setDate(targetTime.getDate() + 1);
       }
-      
+
       const timeUntilTarget = targetTime.getTime() - pakistanTime.getTime();
-      
+
       console.log(`⏰ Next daily posting scheduled in ${Math.round(timeUntilTarget / 1000 / 60)} minutes`);
-      
+
       setTimeout(async () => {
         console.log('🕚 11:00 PM - Starting daily revenue posting...');
-        
+
         try {
           const todayRevenue = await this.getTodayRevenue();
           if (todayRevenue > 0) {
@@ -301,12 +297,12 @@ class MonthlyTargetService {
         } catch (error) {
           console.error('❌ Daily posting failed:', error.message);
         }
-        
+
         // Schedule next day
         scheduleNext();
       }, timeUntilTarget);
     };
-    
+
     scheduleNext();
   }
 }
