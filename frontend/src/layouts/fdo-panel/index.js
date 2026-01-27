@@ -316,7 +316,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
   const fetchCommentCount = async (reservationId) => {
     try {
       const res = await fetch(
-        "https://teable.namuve.com/api/table/tblSeofkNz53TgqghsR/record",
+        `https://teable.namuve.com/api/table/tblSeofkNz53TgqghsR/record?search=${reservationId}&search=ReservationID&search=true`,
         {
           headers: {
             Authorization: "Bearer teable_accSgExX4MAOnJiOick_6KEQ+PtM6qBj74bo9YtuXJ+Ieu9dWt2+z1NyZ8eT3wg=",
@@ -325,7 +325,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       );
       const data = await res.json();
 
-      const filtered = data.records?.filter(r => r.fields.ReservationID === reservationId) || [];
+      const filtered = data.records?.filter(r => String(r.fields.ReservationID || "").trim() === String(reservationId || "").trim()) || [];
 
       const count = filtered.length;
       setCommentCount(count);
