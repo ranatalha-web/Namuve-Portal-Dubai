@@ -1204,7 +1204,7 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
       }
 
       // 🔹 Apply Default of 2000 for Booking.com or Direct if API returned 0
-      if (Number(secDep) === 0 && (fetchedChannelName.toLowerCase() === "booking.com" || fetchedChannelName.toLowerCase() === "direct")) {
+      if (Number(secDep) === 0 && (fetchedChannelName.toLowerCase().includes("booking") || fetchedChannelName.toLowerCase().includes("direct"))) {
         secDep = 2000;
         console.log("ℹ️ Defaulting Security Deposit to 2000 for", fetchedChannelName);
       }
@@ -1303,7 +1303,6 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
     updateAgentInTeable(newAgent);
   };
 
-  // Fetch when component mounts or guest changes
   useEffect(() => {
     if (guest?.reservationId) {
       fetchPrintButtonStatus(guest.reservationId);
@@ -1451,11 +1450,10 @@ function ReservationCard({ guest, setSnackbar, stack, isViewOnly, isCustom, hasP
           </MDTypography>
         </MDBox>
 
-        {/* 🛡️ SECURITY DEPOSIT BOX - Only for Upcoming Stay */}
-        {/* 🛡️ SECURITY DEPOSIT BOX - Only for Upcoming Stay + Booking/Direct */}
-        {guest.stack === "Upcoming Stay" &&
-          Number(securityDeposit) > 0 &&
-          (channelName?.toLowerCase() === "booking.com" || channelName?.toLowerCase() === "direct") && (
+        {/* 🛡️ SECURITY DEPOSIT BOX - Booking/Direct */}
+        {guest.stack?.includes("Upcoming Stay") &&
+          Number(String(securityDeposit).replace(/,/g, '')) > 0 &&
+          ((channelName?.toLowerCase() || "").includes("booking") || (channelName?.toLowerCase() || "").includes("direct")) && (
             <MDBox display="flex" alignItems="center" mt={1} mb={1}>
               <SecurityIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
               <MDTypography variant="body2" sx={{ fontSize: "0.85rem" }}>
