@@ -22,9 +22,12 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function with proper cleanup
   const logout = () => {
+    // Log logout to backend
+    sessionService.logUserLogout();
+
     // End session monitoring
     sessionService.endSession();
-    
+
     // Clear all authentication data
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
@@ -49,7 +52,7 @@ export const AuthProvider = ({ children }) => {
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        
+
         // Check if session is still valid
         if (sessionService.isSessionValid()) {
           setUser(parsedUser);
@@ -80,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("userRole", userData.role || "user"); // Save role separately for easy access
     setUser(userData);
     setIsAuthenticated(true);
-    
+
     // Start session timeout monitoring
     sessionService.startSession(logout);
   };
@@ -114,16 +117,16 @@ export const AuthProvider = ({ children }) => {
   // Check specific permissions for custom users
   const hasPermission = (page, level = 'view') => {
     // Removed excessive console logging for performance
-    
+
     if (user?.role !== 'custom') return false;
-    
+
     // First try to get permissions from user object
     if (user?.permissions) {
       try {
-        const permissions = typeof user.permissions === 'string' 
-          ? JSON.parse(user.permissions) 
+        const permissions = typeof user.permissions === 'string'
+          ? JSON.parse(user.permissions)
           : user.permissions;
-        
+
         return permissions?.[page]?.[level] === true;
       } catch (error) {
         // Error parsing permissions - logging removed for silent mode
@@ -140,7 +143,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
-    
+
     // Fallback: get permissions from localStorage
     try {
       const storedPermissions = localStorage.getItem(`permissions_${user.username}`);
@@ -151,7 +154,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // Error getting permissions from localStorage - logging removed for silent mode
     }
-    
+
     return false;
   };
 

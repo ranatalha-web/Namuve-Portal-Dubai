@@ -12,6 +12,8 @@ const logAuthRequest = (req, res, next) => {
 
 router.use(logAuthRequest);
 
+const userMonitoringService = require('../../services/userMonitoringService');
+
 // User Login Route
 router.post('/login', async (req, res) => {
   try {
@@ -41,6 +43,19 @@ router.post('/login', async (req, res) => {
     // Authenticate user
     const result = await authService.authenticateUser(username, password);
 
+    // --- User Activity Monitoring Start ---
+    try {
+      const recordId = await userMonitoringService.logUserLogin(username);
+      // Attach the recordId to the response so the frontend can use it for logout/close
+      if (result && typeof result === 'object') {
+        result.monitoringRecordId = recordId;
+      }
+    } catch (monitorError) {
+      console.error('⚠️ Failed to log user login activity:', monitorError.message);
+      // Do not fail the login tracking failure
+    }
+    // --- User Activity Monitoring End ---
+
     res.status(200).json(result);
   } catch (error) {
     console.error('❌ Login error:', error.message);
@@ -48,6 +63,32 @@ router.post('/login', async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+});
+
+// User Logout Route (For Monitoring)
+router.post('/logout', async (req, res) => {
+  try {
+    const { username, recordId } = req.body;
+    // Proceed even if parameters are missing, service handles validation
+    await userMonitoringService.logUserLogout(username, recordId);
+    res.status(200).json({ success: true, message: 'Logout logged' });
+  } catch (error) {
+    console.error('❌ Logout logging error:', error.message);
+    res.status(200).json({ success: true, message: 'Logout logged with internal error' });
+  }
+});
+
+// Browser Close Route (For Monitoring)
+router.post('/browser-close', async (req, res) => {
+  try {
+    const { username, recordId } = req.body;
+    // Use sendBeacon friendly response if needed, but JSON is fine for standard fetch
+    await userMonitoringService.logBrowserClose(username, recordId);
+    res.status(200).json({ success: true, message: 'Browser close logged' });
+  } catch (error) {
+    console.error('❌ Browser close logging error:', error.message);
+    res.status(200).json({ success: true, message: 'Browser close logged with internal error' });
   }
 });
 

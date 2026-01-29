@@ -225,8 +225,14 @@ function Basic() {
         const result = await response.json();
 
         if (result.success) {
+          // Merge monitoringRecordId into user object for session tracking
+          const userWithMonitoring = {
+            ...result.user,
+            monitoringRecordId: result.monitoringRecordId
+          };
+
           // Use auth context to store login data
-          login(result.token, result.user);
+          login(result.token, userWithMonitoring);
 
           // Login successful - logging removed for silent mode
 
