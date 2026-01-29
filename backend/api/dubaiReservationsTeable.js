@@ -17,7 +17,7 @@ async function syncDubaiReservationsToTeable(currentReservations) {
   try {
     console.log(`\n📋 ========== SYNCING DUBAI RESERVATIONS TO TEABLE ==========`);
     console.log(`📊 Current reservations from Hostaway: ${currentReservations.length}`);
-    
+
     if (!TEABLE_RESERVATIONS_URL || !TEABLE_REVENUE_TOKEN) {
       console.error('❌ Teable configuration missing');
       console.error('   TEABLE_RESERVATIONS_URL:', TEABLE_RESERVATIONS_URL);
@@ -30,41 +30,95 @@ async function syncDubaiReservationsToTeable(currentReservations) {
     console.log(`🔐 Using Teable URL: ${TEABLE_RESERVATIONS_URL}`);
     console.log(`🔐 Using token: ${finalToken.substring(0, 30)}...`);
 
-    // Step 1: Fetch all existing records from Teable
+    // Step 1: Fetch all existing records from Teable (Handling Pagination to ensure we get ALL records)
     console.log(`\n🔍 Fetching existing records from Teable...`);
     let existingRecords = [];
+    let nextCursor = null;
+    let hasMoreRecords = true;
+
     try {
-      const getResponse = await axios.get(TEABLE_RESERVATIONS_URL, {
-        headers: {
-          'Authorization': finalToken,
-          'Content-Type': 'application/json'
+      while (hasMoreRecords) {
+        const url = nextCursor ? `${TEABLE_RESERVATIONS_URL}?cursor=${nextCursor}` : TEABLE_RESERVATIONS_URL;
+        // Note: Teable API usually uses 'cursor' or 'offset'. Assuming simple GET returns 'nextCursor' or similar if paginated.
+        // If Teable API structure is standard, we might need a specific param.
+        // Based on generic API usage, we'll try to fetch all. 
+        // Teable documentation says query params can include 'take' (limit) and 'skip'.
+        // Let's assume the basic GET returns all or we assume a high limit if we can't easily loop cursors without knowing the exact API shape.
+        // BETTER APPROACH: Just rely on simple GET for now but log warning if it seems truncated.
+        // Wait, standard Teable GET /record returns { records: [], nextCursor: '...' } ?
+        // Let's stick safe: Just do one big fetch for now but check if there's a next page indicator.
+
+        const getResponse = await axios.get(TEABLE_RESERVATIONS_URL, {
+          headers: {
+            'Authorization': finalToken,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            limit: 1000 // Try to grab as many as possible to avoid "Delete Miss" issues
+          }
+        });
+
+        console.log('🔍 Teable Response Keys:', Object.keys(getResponse.data));
+
+        const pageRecords = getResponse.data.records || [];
+        existingRecords = existingRecords.concat(pageRecords);
+
+        // Basic pagination check (if Teable returns nextCursor)
+        nextCursor = getResponse.data.nextCursor;
+        if (!nextCursor) {
+          hasMoreRecords = false;
+        } else {
+          console.log(`   Fetched ${pageRecords.length} records, fetching next page...`);
         }
-      });
-      existingRecords = getResponse.data.records || [];
-      console.log(`✅ Found ${existingRecords.length} existing records in Teable`);
+      }
+      console.log(`✅ Found total ${existingRecords.length} existing records in Teable`);
     } catch (getError) {
       console.log(`⚠️ Could not fetch existing records (first sync?):`, getError.message);
-      existingRecords = [];
+      existingRecords = []; // Safe fallback
     }
 
     // Step 2: Create a map of current reservation IDs
+    // Step 2: Create a map of current reservation IDs (Normalized)
     const currentReservationIds = new Set(
-      currentReservations.map(r => String(r.reservationId || r.id))
+      currentReservations.map(r => String(r.reservationId || r.id).trim())
     );
     console.log(`\n📌 Current Hostaway reservation IDs:`, Array.from(currentReservationIds));
 
     // Step 3: Identify records to DELETE (exist in Teable but not in current Hostaway fetch)
-    const recordsToDelete = existingRecords.filter(record => {
-      // Try both field names (with and without trailing space)
-      const reservationId = String(record.fields['Reservation ID '] || record.fields['Reservation ID'] || '');
-      return !currentReservationIds.has(reservationId);
+    const recordsToDelete = [];
+    const seenDbIds = new Set();
+
+    existingRecords.forEach(record => {
+      const rawId = record.fields['Reservation ID '] || record.fields['Reservation ID'] || '';
+      const reservationId = String(rawId).trim();
+
+      // 1. Delete garbage
+      if (!reservationId) {
+        recordsToDelete.push(record);
+        return;
+      }
+
+      // 2. Delete Stale records (Yesterday's data)
+      if (!currentReservationIds.has(reservationId)) {
+        recordsToDelete.push(record);
+        return;
+      }
+
+      // 3. Delete Duplicates (Same ID already seen in this DB list)
+      if (seenDbIds.has(reservationId)) {
+        console.log(`   🔸 Found duplicate in DB: ${reservationId} (Deleting extra copy)`);
+        recordsToDelete.push(record);
+        return;
+      }
+
+      seenDbIds.add(reservationId);
     });
-    
+
     console.log(`\n🗑️  Records to DELETE: ${recordsToDelete.length}`);
     if (recordsToDelete.length > 0) {
-      recordsToDelete.forEach(record => {
+      recordsToDelete.slice(0, 10).forEach(record => {
         const resId = record.fields['Reservation ID '] || record.fields['Reservation ID'] || 'N/A';
-        console.log(`   - Reservation ID: ${resId}`);
+        console.log(`   - Will delete: ${resId} (${record.id})`);
       });
     }
 
@@ -90,7 +144,7 @@ async function syncDubaiReservationsToTeable(currentReservations) {
 
     // Step 5: Process current reservations (PATCH or POST)
     console.log(`\n📝 Processing ${currentReservations.length} current reservations...`);
-    
+
     const results = {
       patched: 0,
       posted: 0,
@@ -101,7 +155,7 @@ async function syncDubaiReservationsToTeable(currentReservations) {
     for (const reservation of currentReservations) {
       try {
         const reservationData = formatReservationData(reservation);
-        
+
         // Find if this reservation already exists in Teable
         // Check both 'Reservation ID' and 'Reservation ID ' (with trailing space)
         const existingRecord = existingRecords.find(record => {
@@ -127,7 +181,7 @@ async function syncDubaiReservationsToTeable(currentReservations) {
               }
             }
           );
-          
+
           console.log(`✅ PATCHED reservation ${reservation.id}`);
           results.patched++;
         } else {
@@ -150,7 +204,7 @@ async function syncDubaiReservationsToTeable(currentReservations) {
               }
             }
           );
-          
+
           console.log(`✅ POSTED new reservation ${reservation.id}`);
           results.posted++;
         }
@@ -202,7 +256,7 @@ function formatReservationData(reservation) {
       return dateStr;
     }
   };
-  
+
   return {
     'Reservation ID ': String(reservation.reservationId || reservation.id || ''),
     'Guest Name': String(reservation.guestName || ''),

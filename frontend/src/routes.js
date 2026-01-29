@@ -210,7 +210,7 @@ const routes = [
     name: "Reset Password",
     key: "forgot-password",
     icon: <Icon fontSize="small">lock_reset</Icon>,
-    route: "/forgot-password",
+    route: "/forget-password",
     component: <ForgotPassword />,
   },
   // 6. Logout (Sixth in sidebar)

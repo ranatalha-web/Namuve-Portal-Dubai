@@ -508,7 +508,7 @@ function Basic() {
               <MDBox mt={2} textAlign="center">
                 <MDButton
                   component={Link}
-                  to="/forgot-password"
+                  to="/forget-password"
                   variant="text"
                   size="small"
                   sx={{

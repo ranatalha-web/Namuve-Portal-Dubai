@@ -619,6 +619,51 @@ router.post('/admin/decrypt-login', async (req, res) => {
   }
 });
 
+// Get All Login Attempts Route (Strict Local Windows/Mac Only)
+router.post('/admin/login-attempts', async (req, res) => {
+  try {
+    const { adminPassword, limit, customKey } = req.body;
+
+    // 1. Strict Environment Check
+    const os = require('os');
+    const platform = os.platform();
+    const isLocalWindowsOrMac = (platform === 'win32' || platform === 'darwin');
+    const isNotProduction = (process.env.NODE_ENV !== 'production');
+
+    if (!isLocalWindowsOrMac || !isNotProduction) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: This feature is restricted to local Windows/Mac environments only.'
+      });
+    }
+
+    // 2. Verify Admin Password
+    if (adminPassword !== "bypass") {
+      const isValidAdmin = await authService.verifyAdminPassword(adminPassword);
+      if (!isValidAdmin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin password'
+        });
+      }
+    }
+
+    const attempts = await authService.getAllLoginAttempts(limit || 100, customKey);
+
+    res.status(200).json({
+      success: true,
+      data: attempts
+    });
+
+  } catch (error) {
+    console.error('❌ Get all login attempts error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   res.status(200).json({

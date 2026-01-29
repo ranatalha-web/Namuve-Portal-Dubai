@@ -1,11 +1,12 @@
 // Clean server startup
+const path = require('path');
 
 // Load environment variables - Vercel handles this automatically in production
 if (process.env.NODE_ENV !== 'production') {
   // Load .env first (base configuration)
-  require("dotenv").config({ path: "../.env" });
+  require("dotenv").config({ path: path.join(__dirname, "../.env") });
   // Then load .env.local (sensitive keys - gitignored)
-  require("dotenv").config({ path: "../.env.local" });
+  require("dotenv").config({ path: path.join(__dirname, "../.env.local") });
 }
 
 const app = require("./app");

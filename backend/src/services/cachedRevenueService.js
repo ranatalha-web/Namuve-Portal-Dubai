@@ -1,133 +1,169 @@
-const cacheService = require('./cacheService');
-const { getRevenueAndOccupancy } = require('./revenueService');
+const axios = require('axios');
+const revenueService = require('./revenueService');
+
+/**
+ * Cached Revenue Service
+ * Provides caching layer for revenue data with configurable TTL
+ */
 
 class CachedRevenueService {
   constructor() {
-    // Cache keys
-    this.REVENUE_CACHE_KEY = 'revenue_data';
-    this.LISTINGS_CACHE_KEY = 'listings_data';
-    this.EXCHANGE_RATE_CACHE_KEY = 'exchange_rate';
-    
-    // Cache durations (in seconds)
-    this.REVENUE_CACHE_DURATION = parseInt(process.env.CACHE_DURATION) || 300; // 5 minutes
-    this.LISTINGS_CACHE_DURATION = parseInt(process.env.LISTINGS_CACHE_DURATION) || 1800; // 30 minutes
-    this.EXCHANGE_RATE_CACHE_DURATION = parseInt(process.env.EXCHANGE_RATE_CACHE_DURATION) || 3600; // 1 hour
-    
-    console.log('🚀 Cached Revenue Service initialized');
-    console.log(`📊 Revenue cache duration: ${this.REVENUE_CACHE_DURATION}s`);
-    console.log(`🏠 Listings cache duration: ${this.LISTINGS_CACHE_DURATION}s`);
-    console.log(`💱 Exchange rate cache duration: ${this.EXCHANGE_RATE_CACHE_DURATION}s`);
+    this.cache = null;
+    this.cacheTimestamp = null;
+    this.cacheDuration = 5 * 60 * 1000; // 5 minutes default
+    this.isRefreshing = false;
   }
 
   /**
    * Get revenue data with caching
+   * @returns {Promise<Object>} Revenue data with cache metadata
    */
   async getRevenueData() {
-    const startTime = Date.now();
-    
     try {
-      // Try to get from cache first
-      const cachedData = cacheService.get(this.REVENUE_CACHE_KEY);
+      const now = Date.now();
       
-      if (cachedData) {
-        const cacheTime = Date.now() - startTime;
-        console.log(`✅ Revenue data served from CACHE in ${cacheTime}ms`);
+      // Return cached data if valid
+      if (this.cache && this.cacheTimestamp && (now - this.cacheTimestamp) < this.cacheDuration) {
+        console.log('✅ Serving cached revenue data');
         return {
-          ...cachedData,
+          ...this.cache,
           cached: true,
-          cacheTime: cacheTime
+          cacheAge: Math.floor((now - this.cacheTimestamp) / 1000)
         };
       }
+      
+      // Fetch fresh data if cache expired or doesn't exist
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        try {
+          const freshData = await revenueService.getRevenueAndOccupancy();
+          this.cache = freshData;
+          this.cacheTimestamp = Date.now();
+          
+          return {
+            ...freshData,
+            cached: false,
+            cacheAge: 0
+          };
+        } finally {
+          this.isRefreshing = false;
+        }
+      } else {
+        // If already refreshing, return stale cache or null
+        console.log('⏳ Refresh in progress, returning stale cache');
+        if (this.cache) {
+          return {
+            ...this.cache,
+            cached: true,
+            stale: true,
+            cacheAge: Math.floor((now - this.cacheTimestamp) / 1000)
+          };
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in getRevenueData:', error.message);
+      
+      // Return cached data even if expired during error
+      if (this.cache) {
+        return {
+          ...this.cache,
+          cached: true,
+          error: 'Error fetching fresh data, serving stale cache',
+          cacheAge: Math.floor((Date.now() - this.cacheTimestamp) / 1000)
+        };
+      }
+      
+      // Return error response if no cache available
+      return {
+        success: false,
+        error: error.message,
+        cached: false,
+        actualRevenue: 0,
+        expectedRevenue: 0,
+        occupancyRate: 0
+      };
+    }
+  }
 
-      // If not in cache, fetch fresh data
-      console.log('🔄 Fetching fresh revenue data (cache miss)...');
-      const freshData = await getRevenueAndOccupancy();
+  /**
+   * Manually refresh cache
+   * @returns {Promise<Object>} Fresh revenue data
+   */
+  async refreshCache() {
+    try {
+      console.log('🔄 Manually refreshing revenue cache...');
       
-      // Store in cache
-      cacheService.set(this.REVENUE_CACHE_KEY, freshData, this.REVENUE_CACHE_DURATION);
+      const freshData = await revenueService.getRevenueAndOccupancy();
+      this.cache = freshData;
+      this.cacheTimestamp = Date.now();
       
-      const fetchTime = Date.now() - startTime;
-      console.log(`✅ Fresh revenue data fetched and cached in ${fetchTime}ms`);
+      console.log('✅ Cache refreshed successfully');
       
       return {
         ...freshData,
         cached: false,
-        fetchTime: fetchTime
+        refreshed: true,
+        refreshTime: new Date(this.cacheTimestamp).toISOString()
       };
-      
     } catch (error) {
-      console.error('❌ Error in cached revenue service:', error.message);
-      
-      // Try to return stale cache data if available
-      const staleData = cacheService.get(this.REVENUE_CACHE_KEY + '_stale');
-      if (staleData) {
-        console.log('⚠️ Returning stale cache data due to error');
-        return {
-          ...staleData,
-          cached: true,
-          stale: true,
-          error: error.message
-        };
-      }
-      
+      console.error('❌ Error refreshing cache:', error.message);
       throw error;
     }
   }
 
   /**
-   * Force refresh cache
+   * Clear cache
    */
-  async refreshCache() {
-    console.log('🔄 Force refreshing revenue cache...');
-    
-    // Clear existing cache
-    cacheService.del(this.REVENUE_CACHE_KEY);
-    
-    // Fetch fresh data
-    return await this.getRevenueData();
+  clearCache() {
+    this.cache = null;
+    this.cacheTimestamp = null;
+    console.log('🗑️ Revenue cache cleared');
   }
 
   /**
    * Get cache statistics
+   * @returns {Object} Cache stats
    */
   getCacheStats() {
-    const stats = cacheService.getStats();
+    const now = Date.now();
+    const isValid = this.cache && this.cacheTimestamp && (now - this.cacheTimestamp) < this.cacheDuration;
     
     return {
-      ...stats,
-      revenueDataCached: cacheService.has(this.REVENUE_CACHE_KEY),
-      listingsDataCached: cacheService.has(this.LISTINGS_CACHE_KEY),
-      exchangeRateCached: cacheService.has(this.EXCHANGE_RATE_CACHE_KEY)
+      hasCache: !!this.cache,
+      isValid,
+      age: this.cacheTimestamp ? Math.floor((now - this.cacheTimestamp) / 1000) : null,
+      duration: Math.floor(this.cacheDuration / 1000),
+      timestamp: this.cacheTimestamp ? new Date(this.cacheTimestamp).toISOString() : null,
+      isRefreshing: this.isRefreshing
     };
   }
 
   /**
-   * Clear all revenue-related cache
+   * Set custom cache duration
+   * @param {number} milliseconds - Cache duration in milliseconds
    */
-  clearCache() {
-    console.log('🧹 Clearing all revenue cache...');
-    
-    cacheService.del(this.REVENUE_CACHE_KEY);
-    cacheService.del(this.LISTINGS_CACHE_KEY);
-    cacheService.del(this.EXCHANGE_RATE_CACHE_KEY);
-    
-    console.log('✅ Revenue cache cleared');
+  setCacheDuration(milliseconds) {
+    this.cacheDuration = milliseconds;
+    console.log(`⏱️ Cache duration set to ${Math.floor(milliseconds / 1000)} seconds`);
   }
 
   /**
-   * Warm up cache (pre-load data)
+   * Warm cache by fetching data
+   * @returns {Promise<Object>} Warming result
    */
-  async warmUpCache() {
-    console.log('🔥 Warming up revenue cache...');
-    
+  async warmCache() {
     try {
-      await this.getRevenueData();
-      console.log('✅ Cache warmed up successfully');
+      console.log('🔥 Warming cache...');
+      return await this.refreshCache();
     } catch (error) {
-      console.error('❌ Failed to warm up cache:', error.message);
+      console.error('❌ Error warming cache:', error.message);
+      throw error;
     }
   }
 }
 
-// Export singleton instance
-module.exports = new CachedRevenueService();
+// Create singleton instance
+const instance = new CachedRevenueService();
+
+// Export instance
+module.exports = instance;

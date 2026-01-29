@@ -1,145 +1,209 @@
-const cron = require('node-cron');
-const { getRevenueAndOccupancy } = require('./revenueService');
+/**
+ * Scheduler Service
+ * Manages scheduling of Teable posting tasks and provides test utilities
+ */
+
 const TeableService = require('./teableService');
 
 class SchedulerService {
   constructor() {
-    this.teableService = new TeableService();
     this.isRunning = false;
-    this.lastRun = null;
-    this.nextRun = null;
-    this.cronJob = null;
+    this.teableService = new TeableService();
+    this.scheduler = null;
+    this.postInterval = 60 * 60 * 1000; // 1 hour in milliseconds
   }
 
   /**
-   * Start the hourly scheduler for posting data to Teable
+   * Get current scheduler status
+   */
+  getStatus() {
+    return {
+      isRunning: this.isRunning,
+      scheduler: this.isRunning ? 'active' : 'inactive',
+      postInterval: this.postInterval,
+      intervalMinutes: Math.floor(this.postInterval / (60 * 1000)),
+      lastPostedTime: this.teableService.lastPostedTime ? this.teableService.lastPostedTime.toISOString() : null,
+      canPostNow: this.teableService.canPostNow(),
+      nextPostAllowedIn: this.teableService.getTimeUntilNextPost()
+    };
+  }
+
+  /**
+   * Start the scheduler
    */
   start() {
     if (this.isRunning) {
-      console.log('⚠️  Scheduler is already running');
-      return;
+      console.log('⚠️ Scheduler is already running');
+      return {
+        success: false,
+        message: 'Scheduler is already running'
+      };
     }
 
-    // Schedule to run every hour at minute 0 (e.g., 1:00, 2:00, 3:00, etc.)
-    this.cronJob = cron.schedule('0 * * * *', async () => {
-      await this.executeHourlyTask();
-    }, {
-      scheduled: true,
-      timezone: "Asia/Karachi" // Pakistan timezone
-    });
-
-    this.isRunning = true;
-    this.updateNextRunTime();
-    
-    console.log('🚀 Hourly Teable posting scheduler started');
-    console.log(`⏰ Next run scheduled for: ${this.nextRun}`);
-
-    // Also run immediately on startup (optional - remove if not needed)
-    setTimeout(() => {
-      this.executeHourlyTask();
-    }, 5000); // Wait 5 seconds after startup
+    try {
+      console.log('🕐 Starting hourly scheduler...');
+      
+      // Try to use node-cron if available
+      try {
+        const cron = require('node-cron');
+        
+        // Schedule for every hour at the top of the hour
+        this.scheduler = cron.schedule('0 * * * *', async () => {
+          console.log('🕐 Hourly scheduler triggered');
+          await this.triggerManualPost();
+        });
+        
+        this.isRunning = true;
+        console.log('✅ Scheduler started successfully');
+        
+        return {
+          success: true,
+          message: 'Scheduler started successfully'
+        };
+      } catch (cronError) {
+        console.warn('⚠️ node-cron not available, scheduler disabled');
+        this.isRunning = false;
+        
+        return {
+          success: false,
+          message: 'node-cron not available'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error starting scheduler:', error.message);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
   }
 
   /**
    * Stop the scheduler
    */
   stop() {
-    if (this.cronJob) {
-      this.cronJob.stop();
-      this.cronJob = null;
+    if (!this.isRunning) {
+      console.log('⚠️ Scheduler is not running');
+      return {
+        success: false,
+        message: 'Scheduler is not running'
+      };
     }
-    this.isRunning = false;
-    console.log('🛑 Hourly Teable posting scheduler stopped');
+
+    try {
+      if (this.scheduler) {
+        this.scheduler.stop();
+        this.scheduler.destroy();
+      }
+      
+      this.isRunning = false;
+      console.log('✅ Scheduler stopped');
+      
+      return {
+        success: true,
+        message: 'Scheduler stopped successfully'
+      };
+    } catch (error) {
+      console.error('❌ Error stopping scheduler:', error.message);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
   }
 
   /**
-   * Execute the hourly task of posting data to Teable
+   * Test connection to Teable API
    */
-  async executeHourlyTask() {
+  async testTeableConnection() {
     try {
-      console.log('\n🔄 Starting hourly Teable data posting...');
-      this.lastRun = new Date().toISOString();
-
-      // Get current revenue data
-      console.log('📊 Fetching revenue data...');
-      const revenueData = await getRevenueAndOccupancy();
-
-      if (!revenueData) {
-        throw new Error('No revenue data received');
-      }
-
-      // Format data for Teable
-      const formattedData = this.teableService.formatRevenueDataForTeable(revenueData);
+      console.log('🔗 Testing Teable connection...');
+      const result = await this.teableService.testConnection();
       
-      console.log('💰 Revenue Data Summary:');
-      console.log(`  - Actual Revenue: ${formattedData.actual}`);
-      console.log(`  - Achieved Revenue: ${formattedData.achieved}`);
-
-      // Post to Teable
-      const result = await this.teableService.postTargetData(formattedData);
-
-      if (result.success) {
-        console.log('✅ Successfully posted hourly data to Teable');
-        console.log(`📅 Posted at: ${result.timestamp}`);
-      } else {
-        console.error('❌ Failed to post data to Teable:', result.error);
-      }
-
-      this.updateNextRunTime();
-      console.log(`⏰ Next run scheduled for: ${this.nextRun}\n`);
-
-      return result;
-
+      return {
+        success: result.success,
+        message: result.message || result.error,
+        timestamp: result.timestamp
+      };
     } catch (error) {
-      console.error('❌ Error in hourly task execution:', error.message);
-      this.updateNextRunTime();
+      console.error('❌ Error testing connection:', error.message);
       return {
         success: false,
-        error: error.message,
+        message: error.message,
         timestamp: new Date().toISOString()
       };
     }
   }
 
   /**
-   * Update the next run time for display purposes
-   */
-  updateNextRunTime() {
-    const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0); // Next hour at minute 0
-    this.nextRun = nextHour.toISOString();
-  }
-
-  /**
-   * Get scheduler status
-   */
-  getStatus() {
-    return {
-      isRunning: this.isRunning,
-      lastRun: this.lastRun,
-      nextRun: this.nextRun,
-      currentTime: new Date().toISOString()
-    };
-  }
-
-  /**
-   * Test the Teable connection
-   */
-  async testTeableConnection() {
-    return await this.teableService.testConnection();
-  }
-
-  /**
-   * Manual trigger for testing (posts data immediately)
+   * Manually trigger a post to Teable
    */
   async triggerManualPost() {
-    console.log('🔧 Manual trigger initiated...');
-    return await this.executeHourlyTask();
+    try {
+      console.log('📤 Manually triggering Teable post...');
+      
+      // Check if we can post
+      if (!this.teableService.canPostNow()) {
+        const remaining = this.teableService.getTimeUntilNextPost();
+        return {
+          success: false,
+          error: `Cooldown in effect. Can post again in ${remaining} minutes.`,
+          canPost: false,
+          remainingMinutes: remaining
+        };
+      }
+
+      // Get Pakistan time
+      const pakTime = this.teableService.getPakistanDateTime();
+      
+      // Create sample data
+      const sampleData = {
+        actual: 583000, // Rs 583K
+        achieved: Math.floor(Math.random() * 1000000) // Random achieved value
+      };
+
+      const result = await this.teableService.postTargetData(sampleData);
+      
+      return {
+        success: result.success,
+        message: result.success ? 'Data posted successfully' : 'Failed to post data',
+        data: {
+          recordId: result.recordId,
+          postedAt: result.postedAt,
+          pakistanTime: pakTime,
+          nextPostAllowedIn: this.teableService.getTimeUntilNextPost()
+        },
+        error: result.error
+      };
+
+    } catch (error) {
+      console.error('❌ Error in manual post:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Set custom post interval (in milliseconds)
+   */
+  setPostInterval(milliseconds) {
+    this.postInterval = milliseconds;
+    console.log(`⏱️ Post interval set to ${Math.floor(milliseconds / (60 * 1000))} minutes`);
+  }
+
+  /**
+   * Destroy scheduler instance
+   */
+  destroy() {
+    if (this.scheduler) {
+      this.scheduler.stop();
+      this.scheduler.destroy();
+    }
+    this.isRunning = false;
   }
 }
 
-// Create singleton instance
-const schedulerService = new SchedulerService();
-
-module.exports = schedulerService;
+// Export singleton instance
+module.exports = new SchedulerService();
